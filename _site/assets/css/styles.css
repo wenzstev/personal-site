@@ -1,0 +1,55 @@
+body { font-family: "Open Sans", sans-serif; background-color: antiquewhite; margin: 0; }
+
+header { display: flex; background-color: burlywood; padding: .75rem; }
+
+li { list-style-type: none; }
+
+ul { padding-left: .5rem; }
+
+h3 { margin: 0; }
+
+.container { display: flex; justify-content: space-around; align-items: flex-start; }
+
+.projects { margin: .5rem 0; }
+
+.projects h2 { margin: 1rem; }
+
+.projects h3 { color: slategray; }
+
+.projects p { font-size: .9rem; }
+
+.projects a { font-weight: bold; color: black; font-size: .75rem; }
+
+.projects a:hover { color: darkgray; }
+
+.projects li { margin: .5rem; background-color: khaki; padding: .5rem; border-radius: 3px; }
+
+.blog { margin: .25rem; border: 1px solid black; border-radius: 3px; max-width: 30%; }
+
+.blog h2 { text-align: center; }
+
+.blog h4 { margin-bottom: 0; }
+
+.blog h5 { font-style: italic; color: darkgray; }
+
+.blog h5, p { margin: .25rem; }
+
+.small-nav { display: flex; align-items: center; }
+
+.small-nav img, a { margin: .5rem; text-decoration: none; }
+
+.current { color: green; }
+
+.nav-item { margin: .5rem; text-decoration: none; }
+
+.heading { margin-bottom: 0; }
+
+.subheading { margin: .25rem; }
+
+.title-image { width: 10rem; height: 10rem; border-radius: 100%; }
+
+.subsection { margin: 1rem; }
+
+.top-nav { background-color: lightgray; padding: .5rem; }
+
+/*# sourceMappingURL=styles.css.map */

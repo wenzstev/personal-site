@@ -1,0 +1,101 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Where I've Been</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="content">
+    <h1>Where I've Been</h1>
+<p>
+  03 Oct 2020
+  
+  
+</p>
+
+<p>Well, it’s been a little while since I last made an update here. <!--more--> I’ve got some new projects in the pipeline, so expect some posts about that coming soon. First, however, I want to talk a little bit about what I’ve been working on.</p>
+
+<p>Presenting <a href="stevenwenzel.com">stevenwenzel.com</a>, my portfolio site! It’s still got a lot of work to be done on it, but I wanted to have something out that I could put on job applications to show what I’m working on. The site is built with React and most of it is bog standard enough to not really warrant posts about it, but I do want to touch on one area that I made use of more extensively than I have in the past: a Redux store.</p>
+
+<p>I liked the idea of giving visitors to the site something to “play with” to show off a little bit of frontend knowledge. What I landed on was a simple palette color change, where a user could click on several different buttons in order to try out different themes and backgrounds. I decided to incorporate Redux as a way to store all of the changes, and I structured my code so that the actual theme could be stored in a JavaScript object, minimizing the amount of code that would need to be rewritten.</p>
+
+<p>Here’s my Redux store:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="k">import</span> <span class="p">{</span><span class="nx">basicTheme</span><span class="p">}</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">../Assets/ThemePacks</span><span class="dl">"</span>
+
+
+<span class="kd">const</span> <span class="nx">backgroundReducer</span> <span class="o">=</span> <span class="p">(</span><span class="nx">state</span><span class="o">=</span><span class="nx">basicTheme</span><span class="p">.</span><span class="nx">background</span><span class="p">,</span> <span class="nx">action</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">switch</span><span class="p">(</span><span class="nx">action</span><span class="p">.</span><span class="nx">type</span><span class="p">){</span>
+    <span class="k">case</span> <span class="dl">"</span><span class="s2">SETTHEME</span><span class="dl">"</span><span class="p">:</span>
+      <span class="k">return</span> <span class="nx">action</span><span class="p">.</span><span class="nx">payload</span><span class="p">.</span><span class="nx">background</span>
+    <span class="na">default</span><span class="p">:</span>
+      <span class="k">return</span> <span class="nx">state</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">const</span> <span class="nx">headerReducer</span> <span class="o">=</span> <span class="p">(</span><span class="nx">state</span><span class="o">=</span><span class="nx">basicTheme</span><span class="p">.</span><span class="nx">header</span><span class="p">,</span> <span class="nx">action</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">switch</span><span class="p">(</span><span class="nx">action</span><span class="p">.</span><span class="nx">type</span><span class="p">){</span>
+    <span class="k">case</span> <span class="dl">"</span><span class="s2">SETTHEME</span><span class="dl">"</span><span class="p">:</span>
+      <span class="k">return</span> <span class="nx">action</span><span class="p">.</span><span class="nx">payload</span><span class="p">.</span><span class="nx">header</span>
+    <span class="na">default</span><span class="p">:</span>
+      <span class="k">return</span> <span class="nx">state</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="c1">// ... more of the same ...</span>
+
+
+<span class="kd">const</span> <span class="nx">rootReducer</span> <span class="o">=</span> <span class="nx">combineReducers</span><span class="p">({</span>
+  <span class="na">name</span><span class="p">:</span> <span class="nx">nameReducer</span><span class="p">,</span>
+  <span class="na">background</span><span class="p">:</span> <span class="nx">backgroundReducer</span><span class="p">,</span>
+  <span class="na">header</span><span class="p">:</span> <span class="nx">headerReducer</span><span class="p">,</span>
+  <span class="na">body</span><span class="p">:</span> <span class="nx">bodyReducer</span><span class="p">,</span>
+  <span class="na">input</span><span class="p">:</span> <span class="nx">inputReducer</span><span class="p">,</span>
+  <span class="na">buttons</span><span class="p">:</span> <span class="nx">buttonReducer</span><span class="p">,</span>
+  <span class="na">surfaces</span><span class="p">:</span> <span class="nx">surfaceReducer</span>
+<span class="p">})</span></code></pre></figure>
+
+<p>Each piece of the reducer is named after a different stylistic change. Crucially, however, they all operate off of a single action, “SETTHEME”. The payload of SETTHEME contains the actual styling differences. Here’s the one for the default page:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="k">export</span> <span class="kd">const</span> <span class="nx">basicTheme</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="na">name</span><span class="p">:</span> <span class="dl">"</span><span class="s2">basic</span><span class="dl">"</span><span class="p">,</span>
+  <span class="na">background</span><span class="p">:</span> <span class="nx">forestBackground</span><span class="p">,</span>
+  <span class="na">thumbnail</span><span class="p">:</span> <span class="nx">forestBackground</span><span class="p">,</span>
+  <span class="na">frontPageLinkColors</span><span class="p">:</span> <span class="p">{</span>
+    <span class="na">about</span><span class="p">:</span> <span class="dl">"</span><span class="s2">#1C3C51</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">portfolio</span><span class="p">:</span> <span class="dl">"</span><span class="s2">#546B86</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">blog</span><span class="p">:</span> <span class="dl">"</span><span class="s2">#547484</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">contact</span><span class="p">:</span> <span class="dl">"</span><span class="s2">#BFD3E5</span><span class="dl">"</span>
+  <span class="p">},</span>
+  <span class="na">header</span><span class="p">:</span> <span class="p">{</span>
+    <span class="na">color</span><span class="p">:</span> <span class="dl">"</span><span class="s2">black</span><span class="dl">"</span>
+  <span class="p">},</span>
+  <span class="na">body</span><span class="p">:</span> <span class="p">{</span><span class="nx">S</span>
+    <span class="na">color</span><span class="p">:</span> <span class="dl">"</span><span class="s2">black</span><span class="dl">"</span>
+  <span class="p">},</span>
+  <span class="na">input</span><span class="p">:</span> <span class="p">{</span>
+    <span class="na">backgroundColor</span><span class="p">:</span> <span class="dl">"</span><span class="s2">lightgray</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">borderColor</span><span class="p">:</span> <span class="dl">"</span><span class="s2">black</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">borderColorHover</span><span class="p">:</span> <span class="dl">"</span><span class="s2">darkgray</span><span class="dl">"</span>
+  <span class="p">},</span>
+  <span class="na">surfaces</span><span class="p">:</span> <span class="p">{</span>
+    <span class="na">backgroundPanel</span><span class="p">:</span> <span class="p">{</span>
+      <span class="na">backgroundColor</span><span class="p">:</span> <span class="dl">"</span><span class="s2">rgba(255, 255, 255, .8)</span><span class="dl">"</span>
+    <span class="p">},</span>
+    <span class="na">cards</span><span class="p">:</span> <span class="p">{</span>
+      <span class="na">backgroundColor</span><span class="p">:</span> <span class="dl">"</span><span class="s2">#dfe8f2</span><span class="dl">"</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>These are then inserted as inline CSS for the various components that require them.</p>
+
+<p>This isn’t a huge feature and there are certainly ways I could shrink the code in the future. But one nice thing about it is that I can hypothetically create as many themes as I want and swap them out whenever; now that the boilerplate is in it’s simple to make variations. But at the same time, I’m not sure how long I’ll be keeping this version of the portfolio site, so I didn’t want to spend too much time on it if it was only going to be a temporary thing.</p>
+
+
+    </div>
+  </body>
+</html>

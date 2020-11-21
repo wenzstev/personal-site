@@ -1,0 +1,50 @@
+---
+layout: default
+title: Home
+---
+<header>
+<img src="/assets/images/cropped_picture.jpg" class="title-image" />
+  <div class="subsection">
+    <h1 class="heading">Steve Wenzel</h1>
+    <h3 class="subheading">Full Stack Developer</h3>
+    <nav class="small-nav">
+      <img src="/assets/images/iconmonstr-linkedin-3.svg" />
+      <img src="/assets/images/iconmonstr-github-1.svg" />
+      <img src="/assets/images/iconmonstr-email-10.svg" />
+    </nav>
+  </div>
+</header>
+
+<div class="container">
+  <div class="projects">
+    <h2>Projects</h2>
+    <ul>
+      {% for project in site.projects %}
+      <li class="project-list">
+        <h3>{{ project.name }}</h3>
+        {{project.content | markdownify }}
+        {% if project.live_site %}
+        <a href="{{project.live_site}}">Live Site</a>
+        {% endif %}
+        {% if project.github %}
+        <a href="{{project.github}}">GitHub</a>
+        {% endif %}
+
+      </li>
+      {% endfor %}
+    </ul>
+    </div>
+      <div class="blog">
+        <h2>Latest Posts</h2>
+        <ul>
+        {% for post in site.posts limit: 3 %}
+          <li>
+            <h4>{{ post.title }}</h4>
+            <h5>{{post.date | date_to_string }}</h5>
+            {{ post.excerpt }}
+          </li>
+        {% endfor %}
+        </ul>
+        <a style="display:block;text-align:center;" href="/blog">Archive</a>
+      </div>
+</div>

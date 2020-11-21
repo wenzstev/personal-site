@@ -1,0 +1,90 @@
+I";<p>This is an introduction to a new idea that I’ve been wanting to work on for some time. <!--more--> I’ve been interested in the idea of collaborative storytelling, building a shared world with numerous authors contributing their own parts. This is my attempt to create something in that vein, inspired by the <a href="https://stellaris.paradoxwikis.com/Anomaly">Anomaly</a> feature in the game <em>Stellaris</em>. I have a lot of ideas for where this could go, but my most basic implementation is that of numerous small stories (“Anomalies”) that users create and share with each other. You can read other Anomalies and vote on them, which in turn makes them rise up the “leaderboard.” You can also write your own Anomalies and see how they’re ranked by other people.</p>
+
+<p>Because I’m mindful of the amount of time that everything takes, I want to try a somewhat different approach to development than I did before. Rather than try to complete all of the program’s functions and features in one go and then publishing it, I’m going to try and develop a Minimum Viable Product, push it, and then iterate from there. With that in mind, I went full steam ahead with my Python backend.</p>
+
+<h3 id="the-backend">The Backend</h3>
+
+<p>I’m building this backend essentially the same was as my previous work with SousChef: it’s a Flask backend serving an API. Following in the footsteps of my previous project enabled me to get it off the ground faster, and it only took a few hours for me to get the base code down.</p>
+
+<p>Currently, the database has only one model: the <code class="language-plaintext highlighter-rouge">Anomaly</code>, which is pretty much just a title, some text, and a score.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="kn">from</span> <span class="nn">src</span> <span class="kn">import</span> <span class="n">db</span>
+
+
+<span class="k">class</span> <span class="nc">Anomaly</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">__tablename__</span><span class="o">=</span><span class="s">"anomaly"</span>
+    <span class="n">id_</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">title</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">String</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+    <span class="n">body</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">String</span><span class="p">(),</span> <span class="n">nullable</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+    <span class="n">score</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Integer</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span></code></pre></figure>
+
+<p>It’s dead simple, and in time I would like to expand it to add users, types of anomaly, and ways to link them together. But for now, this will do just fine. I also set up a schema (using Marshmallow), but it’s so dead simple that it’s not really worth showing. I also adapted my code from the SousChef backend to create a number of helper methods for adding and retrieving resources.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">get_resource_or_404</span><span class="p">(</span><span class="n">resource_type</span><span class="p">,</span> <span class="n">identifier</span><span class="p">):</span>
+    <span class="n">resource</span> <span class="o">=</span> <span class="n">resource_type</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">resource</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"Resource not found"</span><span class="p">,</span> <span class="mi">404</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">resource</span>
+
+
+<span class="k">def</span> <span class="nf">load_resource_from_schema</span><span class="p">(</span><span class="n">resource_type</span><span class="p">,</span> <span class="n">new_resource_json</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">new_resource_json</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"Data formatted incorrectly."</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">new_resource</span> <span class="o">=</span> <span class="n">schemas_to_models</span><span class="p">[</span><span class="n">resource_type</span><span class="p">.</span><span class="n">__tablename__</span><span class="p">].</span><span class="n">load</span><span class="p">(</span><span class="n">new_resource_json</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">new_resource</span>
+    <span class="k">except</span> <span class="n">ValidationError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"Data formatted incorrectly."</span><span class="p">,</span> <span class="n">payload</span><span class="o">=</span><span class="n">e</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">post_new_resource</span><span class="p">(</span><span class="n">resource_type</span><span class="p">,</span> <span class="n">new_resource_json</span><span class="p">):</span>
+    <span class="n">new_resource</span> <span class="o">=</span> <span class="n">load_resource_from_schema</span><span class="p">(</span><span class="n">resource_type</span><span class="p">,</span> <span class="n">new_resource_json</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">new_resource</span><span class="p">)</span>
+        <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">new_resource</span>
+    <span class="k">except</span> <span class="n">IntegrityError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"You're trying to load something that is already in the database."</span><span class="p">,</span> <span class="n">payload</span><span class="o">=</span><span class="s">"IntegrityError"</span><span class="p">)</span></code></pre></figure>
+
+<p>These aren’t strictly necessary for just one resource, but I think they’ll prove useful when I start adding a number of different resources to the database. Plus they keep the routes extremely clean:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">routes</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/api/anomalies"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"GET"</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">get_anomalies</span><span class="p">():</span>
+    <span class="n">anomalies</span> <span class="o">=</span> <span class="n">get_anomalies_by_params</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">args</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">anomalies_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">anomalies</span><span class="p">))</span>
+
+
+<span class="o">@</span><span class="n">routes</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/api/anomalies"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"POST"</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">post_anomaly</span><span class="p">():</span>
+    <span class="n">new_anomaly</span> <span class="o">=</span> <span class="n">post_new_resource</span><span class="p">(</span><span class="n">Anomaly</span><span class="p">,</span> <span class="n">request</span><span class="p">.</span><span class="n">json</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">anomaly_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">new_anomaly</span><span class="p">)),</span> <span class="mi">201</span>
+
+
+<span class="o">@</span><span class="n">routes</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/api/anomalies/&lt;int:id_&gt;"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"GET"</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">get_specific_anomaly</span><span class="p">(</span><span class="n">id_</span><span class="p">):</span>
+    <span class="n">current_anomaly</span> <span class="o">=</span> <span class="n">get_resource_or_404</span><span class="p">(</span><span class="n">Anomaly</span><span class="p">,</span> <span class="n">id_</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">anomaly_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">current_anomaly</span><span class="p">))</span></code></pre></figure>
+
+<p>In addition to the basic routes, I also created a <code class="language-plaintext highlighter-rouge">vote</code> route that allows a score to be added or subtracted from the anomaly. This is what the frontend will use to alter the score.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">routes</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/api/anomalies/&lt;int:id_&gt;/vote"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"PUT"</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">upvote_anomaly</span><span class="p">(</span><span class="n">id_</span><span class="p">):</span>
+    <span class="n">current_anomaly</span> <span class="o">=</span> <span class="n">get_resource_or_404</span><span class="p">(</span><span class="n">Anomaly</span><span class="p">,</span> <span class="n">id_</span><span class="p">)</span>
+    <span class="n">current_anomaly</span><span class="p">.</span><span class="n">score</span> <span class="o">+=</span> <span class="n">request</span><span class="p">.</span><span class="n">json</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"increment"</span><span class="p">)</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">anomaly_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">current_anomaly</span><span class="p">))</span></code></pre></figure>
+
+<p>Finally, I also added a function to return a random anomaly, if requested. This is part of the basic <code class="language-plaintext highlighter-rouge">GET</code> request, and is active if provided if the “Random” parameter is set to “true.”</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">get_anomalies_by_params</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">params</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"random"</span><span class="p">):</span>
+        <span class="n">anomalies</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">query</span><span class="p">(</span><span class="n">Anomaly</span><span class="p">).</span><span class="n">order_by</span><span class="p">(</span><span class="n">func</span><span class="p">.</span><span class="n">random</span><span class="p">())</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">anomalies</span><span class="p">.</span><span class="n">first</span><span class="p">()]</span>
+    <span class="k">return</span> <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">query</span><span class="p">(</span><span class="n">Anomaly</span><span class="p">).</span><span class="nb">all</span><span class="p">()</span></code></pre></figure>
+
+<p>And that’s about it! The backend is extremely simple right now, but that’s the point. I want to have a working version of this up and running as soon as possible. If you want to check out the code (currently embedded in a React project), you can take a look <a href="https://github.com/wenzstev/anomaly-finder">here</a>.</p>
+
+<p>Next up is the frontend–stay tuned!</p>
+:ET
