@@ -1,0 +1,25 @@
+footer {
+  background-color: burlywood;
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  padding: .75rem 0;
+}
+
+footer span {
+  font-size: .75rem;
+  margin-left: .5rem;
+}
+
+.content {
+  padding-bottom: 4rem;
+}
+
+p {
+  margin: 1rem 0;
+}
+
+.full-page {
+  position: relative;
+  min-height: 100vh;
+}

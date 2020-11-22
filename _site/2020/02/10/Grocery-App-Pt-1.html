@@ -1,0 +1,122 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>The Grocery App Part 1 -- Building the Skeleton</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-header">
+      <h2>The Grocery App Part 1 -- Building the Skeleton</h2>
+      <small>10 Feb 2020</small>
+  </div>
+</header>
+
+<div class="margin">
+<p>And so begins the new adventure: a Flask application that makes use of the trained spaCy model to generate combined grocery lists. I started by creating a new Flask application. I decided to structure it with <code class="language-plaintext highlighter-rouge">Blueprints</code> from the beginning to avoid having to refactor later, and to make sure the lessons I’d learned were absorbed. Started with a single “main” blueprint for now.</p>
+
+<p>The Flask tutorials I watched used Bootstrap, and so I decided to use it too. I understand that there’s a <code class="language-plaintext highlighter-rouge">flask-bootstrap</code> module, but I decided that it would be better for me to take one thing at a time, and use basic Bootstrap to elevate it above the pure ugliness of raw HTML. I’ll work on making everything look pretty later.</p>
+
+<p>Before anything, I needed a form. I wanted something extremely simple that could be used to post a url:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">class</span> <span class="nc">RecipeURLForm</span><span class="p">(</span><span class="n">FlaskForm</span><span class="p">):</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">StringField</span><span class="p">(</span><span class="s">'URL'</span><span class="p">,</span> <span class="n">validators</span><span class="o">=</span><span class="p">[</span><span class="n">DataRequired</span><span class="p">(),</span> <span class="n">URL</span><span class="p">()])</span>
+    <span class="n">submit</span> <span class="o">=</span> <span class="n">SubmitField</span><span class="p">(</span><span class="s">"Find Ingredients"</span><span class="p">)</span></code></pre></figure>
+
+<p>I then put the form in a <code class="language-plaintext highlighter-rouge">jumbotron</code> div like so, and routed it to <code class="language-plaintext highlighter-rouge">'/'</code>. The idea is that first time users will come to this page and be prompted to enter a url for a recipe they like. The rest of the app will then be introduced later.</p>
+
+<p>Again, nothing serious, just getting it out. But it works!</p>
+
+<p><img src="/assets/img/posts/app-1/welcome-jumbotron.png" alt="alt text" /></p>
+
+<p>At the same time, I’m now realizing a limitation of using jekyll for my blog: the <code class="language-plaintext highlighter-rouge">Jinja2</code> templates that I’m using in my html are picked up by jekyll, and are mucking up my code. So I’m afraid I’m going to have to stick to python code for the time being. Perhaps this is a strong sign that I should migrate this thing to something a bit more powerful.</p>
+
+<p>But I digress. After building the basic form and loading page, I briefly tried to build a new route to direct the user to after they enter the url, but I soon realized that I wouldn’t be able to pass enough information along without first parsing the relevant information into a database. So it was time to set up the basic database structure.</p>
+
+<p>Still not entirely sure if I’m going to keep the database as is, but my basic structure stores a class of entries called <code class="language-plaintext highlighter-rouge">GList</code> that will have a name, id, and other important characteristics, and a reference to a series of <code class="language-plaintext highlighter-rouge">Lines</code>, a second structure class that will store the actual relevant information. Later, I’m going to link each <code class="language-plaintext highlighter-rouge">List</code> to a <code class="language-plaintext highlighter-rouge">User</code> class, but I’m getting ahead of myself.</p>
+
+<p>First attempt at the basic database went as follows:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="kn">from</span> <span class="nn">grocerylistapp</span> <span class="kn">import</span> <span class="n">db</span>
+
+<span class="k">class</span> <span class="nc">GList</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>  <span class="c1"># the primary key
+</span>    <span class="n">name</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">String</span><span class="p">(</span><span class="mi">20</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s">"Unnamed List"</span><span class="p">)</span>  <span class="c1"># user created name, optional
+</span>    <span class="n">hash_name</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">String</span><span class="p">(</span><span class="mi">20</span><span class="p">),</span> <span class="n">unique</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>  <span class="c1"># name for database
+</span>    <span class="n">image_file</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">String</span><span class="p">(</span><span class="mi">20</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s">'default.jpg'</span><span class="p">)</span>  <span class="c1"># image for list
+</span>    <span class="n">lines</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">relationship</span><span class="p">(</span><span class="s">'Line'</span><span class="p">,</span> <span class="n">backref</span><span class="o">=</span><span class="s">'list'</span><span class="p">,</span> <span class="n">lazy</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>  <span class="c1"># the lines of the list
+</span>
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">f"</span><span class="si">{</span><span class="bp">self</span><span class="p">.</span><span class="n">name</span><span class="si">}</span><span class="s">"</span>
+
+<span class="k">class</span> <span class="nc">Line</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>  <span class="c1"># the primary key
+</span>    <span class="n">full_text</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">String</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>  <span class="c1"># the text of the line
+</span>    <span class="n">list_id</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Integer</span><span class="p">,</span> <span class="n">db</span><span class="p">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="s">'g_list.id'</span><span class="p">))</span>  <span class="c1"># the id of the list for the line
+</span>
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">f"</span><span class="si">{</span><span class="bp">self</span><span class="p">.</span><span class="n">full_text</span><span class="si">}</span><span class="s">"</span></code></pre></figure>
+
+<p>Follows my basic idea above, a <code class="language-plaintext highlighter-rouge">List</code> that’s linked to a bunch of <code class="language-plaintext highlighter-rouge">Line</code>s. It shouldn’t be that hard to add users later. Additionally, however, there is going to be some interplay between this <code class="language-plaintext highlighter-rouge">Line</code> object and the actual interior structure that spaCy finds; I think I may need to create a different database model for the actual grocery list lines; that way one can be edited independently of the other. Also note that I added an <code class="language-plaintext highlighter-rouge">image_file</code> line, mostly as a way to maybe add pictures to lists later on. It’s not going to do much right now, though.</p>
+
+<p>But for now we’re just trying to get everything in and working. One thing I will note here is that I got briefly stuck with my <code class="language-plaintext highlighter-rouge">ForeignKey</code> reference, because at first I wasn’t sure how <code class="language-plaintext highlighter-rouge">SQLAlchemy</code> named its models. This led to a quick crash course on the SQLAlchemy homepage, so that’s something I’m putting in my list of things to learn. But I caught the error, and was able to properly initialize the database from the python shell.</p>
+
+<p>Returned to the home route and wrote code to create a new list after the url is entered:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">main</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">'/'</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">'GET'</span><span class="p">,</span> <span class="s">'POST'</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">home</span><span class="p">():</span>
+    <span class="n">form</span> <span class="o">=</span> <span class="n">RecipeURLForm</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">form</span><span class="p">.</span><span class="n">validate_on_submit</span><span class="p">():</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="n">form</span><span class="p">.</span><span class="n">url</span><span class="p">.</span><span class="n">data</span>
+        <span class="n">recipe_lines</span> <span class="o">=</span> <span class="n">get_recipe_lines</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+        <span class="n">random_hex</span> <span class="o">=</span> <span class="n">secrets</span><span class="p">.</span><span class="n">token_urlsafe</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+        <span class="n">glist</span> <span class="o">=</span> <span class="n">GList</span><span class="p">(</span><span class="n">hex_name</span><span class="o">=</span><span class="n">random_hex</span><span class="p">)</span>
+        <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">glist</span><span class="p">)</span>
+        <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">recipe_lines</span><span class="p">:</span>
+            <span class="n">recipe_line</span> <span class="o">=</span> <span class="n">Line</span><span class="p">(</span><span class="n">full_text</span><span class="o">=</span><span class="n">line</span><span class="p">,</span> <span class="nb">list</span><span class="o">=</span><span class="n">glist</span><span class="p">)</span>
+            <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">recipe_line</span><span class="p">)</span>
+        <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">url_for</span><span class="p">(</span><span class="s">'main.list_page'</span><span class="p">,</span> <span class="n">list_id</span><span class="o">=</span><span class="n">glist</span><span class="p">.</span><span class="n">hex_name</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">render_template</span><span class="p">(</span><span class="s">'home.html'</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s">"Welcome!"</span><span class="p">,</span> <span class="n">form</span><span class="o">=</span><span class="n">form</span><span class="p">)</span>
+
+<span class="o">@</span><span class="n">main</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">'/list/&lt;string:list_id&gt;'</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">'GET'</span><span class="p">,</span> <span class="s">'POST'</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">list_page</span><span class="p">(</span><span class="n">list_id</span><span class="p">):</span>
+        <span class="n">glist</span> <span class="o">=</span> <span class="n">GList</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">list_id</span><span class="o">=</span><span class="n">list_id</span><span class="p">).</span><span class="n">first_or_404</span><span class="p">()</span>
+        <span class="n">list_lines</span> <span class="o">=</span> <span class="n">Line</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="nb">list</span><span class="o">=</span><span class="n">glist</span><span class="p">).</span><span class="nb">all</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">render_template</span><span class="p">(</span><span class="s">'glist.html'</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s">"Your List"</span><span class="p">,</span> <span class="n">glist</span><span class="o">=</span><span class="n">glist</span><span class="p">,</span> <span class="n">list_lines</span><span class="o">=</span><span class="n">list_lines</span><span class="p">)</span></code></pre></figure>
+
+<p>A few things to note here:</p>
+<ul>
+  <li>I query for the given list from the URL, and then pass the database into the template from there.</li>
+  <li>I’m using a <code class="language-plaintext highlighter-rouge">secrets.token_urlsafe()</code> to generate a url-safe name for my list. Although the user will be able to rename it whatever they want, this is the name that the database will remember, and that the url will link to.</li>
+  <li>The <code class="language-plaintext highlighter-rouge">get_recipe_lines()</code> method, right now, is just a <code class="language-plaintext highlighter-rouge">beautifulsoup</code> parser that only works for AllRecipes.com. It’s what I used for my old command line app. This actually gave me a bit of a headache, because AllRecipes decided to change the name of the class that they use for recipe lines, and I had a bad moment where I thought my fancy new Flask database was messing up, when it was really just an error of web scraping. I caught the error, but it’s something I need to keep in mind for the future; I may need to figure out a more robust way to scrape this data, if companies change these tags regularly.</li>
+</ul>
+
+<p>I then created a basic template page to show that the information was going through. It’s more of a proof of concept than anything else, but I wanted to be able to see that I could list the ingredients on the relevant page before I actually uploaded the spaCy model.</p>
+
+<p>But finally, I was ready to test. And just look at this beauty!</p>
+
+<p><img src="/assets/img/posts/app-1/list-works.png" alt="alt text" /></p>
+
+<p>Yup. That’s the hex name of my list, and all the ingredients from the recipe. It’s a real thing of beauty, and although I’ve still got a <em>long</em> way to go, I feel that this project is off to a great start.</p>
+
+</div>
+
+    </div>
+    <footer>
+      <span><a href="/index.html">Home</a></span>
+      <span><a href="/blog">Blog</a></span>
+      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+    </footer>
+    </div>
+  </body>
+</html>

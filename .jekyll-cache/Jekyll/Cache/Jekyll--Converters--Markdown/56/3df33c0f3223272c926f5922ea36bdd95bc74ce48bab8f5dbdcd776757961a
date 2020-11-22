@@ -1,0 +1,186 @@
+I"�v<p>Next, I wanted to add the ability to edit lines after they were already entered into the list. I felt that this would be useful for situations where a line was entered wrong and needed to be changed, or if a user wanted to alter two ingredients to combine them (say, “all-purpose flour” and “flour”).</p>
+
+<p>At first, I experimented with adding the same functionality from the “clean list” page onto the main page, but it honestly seemed very cumbersome, and left open the possibility that someone would change it by accident. So instead, I opted to add some additional information to the raw lines, and a link to edit them:</p>
+
+<p><img src="/assets/img/posts/recipe-line-info/line-partially-working.png" alt="alt text" /></p>
+
+<p>The CSS styling here has been surprisingly tricky, and it’s the main reason why I haven’t made a blog post in the last few days. I wanted to float the button on the right, but they didn’t stay in the line when I shrank the window, and wouldn’t be good for mobile users. I played with a lot of options and currently have settled on just setting the absolute position:</p>
+
+<p><img src="/assets/img/posts/recipe-line-info/edit-position-absolute.png" alt="alt text" /></p>
+
+<p>Which works, except the text is then covered up. I may or may not keep this, because I kind of like the idea of having the button appear when hovered over. At the same time, though, not sure if that’s a good idea for mobile users. So I may be in the business of making two (slightly) different designs here. But I’ll keep what I’ve got for now.</p>
+
+<p>Next, I modified the button into an anchor tag and added a <code class="language-plaintext highlighter-rouge">url_for()</code> link to direct the user to the appropriate “clean list” page:</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html"><span class="nt">&lt;a</span> <span class="na">href=</span><span class="s">"{{ url_for('main.add_recipe', list_name=comp_list.hex_name, new_recipe=raw_line.recipe.hex_name)}}"</span>  <span class="na">class=</span><span class="s">"edit-button"</span><span class="nt">&gt;</span>Edit<span class="nt">&lt;/a&gt;</span></code></pre></figure>
+
+<p>This… didn’t work. When I tried to click the link, it didn’t click. However, when I right clicked the link and clicked “open in new tab,” it worked just fine. As is often the case in times of trouble, I turned to StackOverflow, and found <a href="https://stackoverflow.com/questions/15050095/a-link-not-working-by-clicking-only-work-by-open-link-in-new-tab-command">this</a> helpful answer. It seemed that there was some JavaScript that was messing up the default functioning of the link. I was able to go into the inspector and found the culprit pretty easily:</p>
+
+<p><img src="/assets/img/posts/recipe-line-info/jquery-killing-link.png" alt="alt text" /></p>
+
+<p>Removing this script made the link work just fine. Of course, removing that script also broke the jQuery on my page: no collapsible menus. Quite the conundrum.</p>
+
+<p>Luckily, the solution was to be found on the same StackOverflow question: override the <code class="language-plaintext highlighter-rouge">preventDefault()</code> command with an <code class="language-plaintext highlighter-rouge">onClick()</code> command of my own. I added this to the (already quite long) <code class="language-plaintext highlighter-rouge">&lt;a&gt;</code> tag, with the additional <code class="language-plaintext highlighter-rouge">_self</code> parameter in place to ensure that it didn’t open in a new tab:</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html"><span class="nt">&lt;a</span> <span class="na">href=</span><span class="s">"{{ url_for('main.add_recipe', list_name=comp_list.hex_name, new_recipe=raw_line.recipe.hex_name)}}"</span>
+<span class="na">onclick=</span><span class="s">"window.open('{{url_for('main.add_recipe', list_name=comp_list.hex_name, new_recipe=raw_line.recipe.hex_name)}}','_self')"</span> <span class="na">class=</span><span class="s">"edit-button"</span><span class="nt">&gt;</span>Edit_<span class="nt">&lt;/a&gt;</span></code></pre></figure>
+
+<p>This made the link work. Hooray! We are on our way. Or are we?</p>
+
+<p>I tested the function of the link by altering one of the recipe lines, changing “angel hair pasta” to just “angel hair.” When I saved the changes, I discovered a new, rather annoying bug:</p>
+
+<p><img src="/assets/img/posts/recipe-line-info/angel-hair-doubled.png" alt="alt text" /></p>
+
+<p>The recipe added the new line, but didn’t remove the old one. Consequently, I now had two lines that described thin pasta with very fine, almost angelic, texture. To make matters worse, the link on the original angel hair was broken; see here that it no longer has a green dot next to it, and I can’t click on it to reveal the line.</p>
+
+<p>It was evident that I had forgotten to delete the previous line from my database. I decided to do this in the <code class="language-plaintext highlighter-rouge">validate_on_submit()</code> function call on the “clean list” page:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># check if rawline already has a cleanedline
+</span>    <span class="k">if</span> <span class="n">line</span><span class="p">.</span><span class="n">cline_id</span><span class="p">:</span>
+      <span class="c1"># remove the old line
+</span>      <span class="n">cleaned_line_to_delete</span> <span class="o">=</span> <span class="n">CleanedLine</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">line</span><span class="p">.</span><span class="n">cline_id</span><span class="p">).</span><span class="n">first</span><span class="p">()</span>
+      <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">delete</span><span class="p">(</span><span class="n">cleaned_line_to_delete</span><span class="p">)</span>
+      <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span></code></pre></figure>
+
+<p>This just checks to see if the <code class="language-plaintext highlighter-rouge">RawLine</code> is already attached to a <code class="language-plaintext highlighter-rouge">CleanedLine</code>. If it is, that means that we’re editing a previous cleaned line, and so we delete it before proceeding onto the new line.</p>
+
+<p>However, writing this out now, I’m realizing that it discounts another important case: this code will delete a <code class="language-plaintext highlighter-rouge">CompiledLine</code>, even if there are <code class="language-plaintext highlighter-rouge">RawLine</code>s from other recipes that point to it.</p>
+
+<p>Luckily, this is also an easy fix. I query all of the <code class="language-plaintext highlighter-rouge">RawLine</code>s that point to the <code class="language-plaintext highlighter-rouge">CleanedLine</code> I want to delete. If it’s okay to delete that line, there will only be one, and I delete it. Otherwise, I leave it alone:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># check if rawline already has a cleanedline
+</span><span class="k">if</span> <span class="n">line</span><span class="p">.</span><span class="n">cline_id</span><span class="p">:</span>
+    <span class="c1"># remove the old line
+</span>    <span class="n">cleaned_line_to_delete</span> <span class="o">=</span> <span class="n">CleanedLine</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">line</span><span class="p">.</span><span class="n">cline_id</span><span class="p">).</span><span class="n">first</span><span class="p">()</span>
+    <span class="n">raw_line_check_list</span> <span class="o">=</span> <span class="n">RawLine</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">cleaned_line</span><span class="o">=</span><span class="n">cleaned_line_to_delete</span><span class="p">).</span><span class="nb">all</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">raw_line_check_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>  <span class="c1"># check if other RawLines link to this CompiledLine
+</span>        <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">delete</span><span class="p">(</span><span class="n">cleaned_line_to_delete</span><span class="p">)</span>
+        <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span></code></pre></figure>
+
+<p>With this solved, it was time to fix the “Add Line” button.</p>
+
+<h4 id="fixing-add-line">Fixing “Add Line”</h4>
+
+<p>First, I decided to take the “Add Line” button and input out of the form it was in. I did this because I wanted to have a greater amount of control over what would happen when I clicked the “Add Line” button; I didn’t just want to have the form submit. I created a few lines of HTML to add a new line and button:</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html"><span class="nt">&lt;input</span> <span class="na">id=</span><span class="s">"add-line-input"</span> <span class="na">class=</span><span class="s">"form-control"</span> <span class="na">type=</span><span class="s">"text"</span><span class="nt">&gt;</span>
+<span class="nt">&lt;button</span> <span class="na">id=</span><span class="s">"add-line-submit"</span> <span class="na">class=</span><span class="s">"btn btn-secondary"</span><span class="nt">&gt;</span> Add Line <span class="nt">&lt;/button&gt;</span></code></pre></figure>
+
+<p>Then, it was time for some jQuery. I decided that I wanted to pass the line through the spaCy model with an ajax request, because I wanted the user to be able to modify it in real time before submitting it to the list. To that end, I bound a <code class="language-plaintext highlighter-rouge">click</code> event to the “Add Line” button and submitted a request:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="nx">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#add-line-submit</span><span class="dl">"</span><span class="p">).</span><span class="nx">on</span><span class="p">(</span><span class="dl">"</span><span class="s2">click</span><span class="dl">"</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(){</span>
+  <span class="kd">var</span> <span class="nx">new_line</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#add-line-input</span><span class="dl">"</span><span class="p">).</span><span class="nx">val</span><span class="p">()</span>
+
+  <span class="kd">var</span> <span class="nx">data</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="dl">'</span><span class="s1">line_text</span><span class="dl">'</span><span class="p">:</span> <span class="nx">new_line</span>
+  <span class="p">}</span>
+
+  <span class="nx">$</span><span class="p">.</span><span class="nx">ajax</span><span class="p">({</span>
+    <span class="na">type</span><span class="p">:</span> <span class="dl">'</span><span class="s1">POST</span><span class="dl">'</span><span class="p">,</span>
+    <span class="na">url</span><span class="p">:</span> <span class="nx">$SCRIPT_ROOT</span> <span class="o">+</span> <span class="dl">'</span><span class="s1">/clean/parse_line</span><span class="dl">'</span><span class="p">,</span>
+    <span class="na">data</span><span class="p">:</span> <span class="nx">data</span><span class="p">,</span>
+    <span class="na">dataType</span><span class="p">:</span> <span class="dl">'</span><span class="s1">json</span><span class="dl">'</span><span class="p">,</span>
+    <span class="na">success</span><span class="p">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">jsonData</span><span class="p">){</span>
+      <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">'</span><span class="s1">success!</span><span class="dl">'</span><span class="p">)</span>
+      <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">jsonData</span><span class="p">)</span>
+    <span class="p">}</span>
+  <span class="p">})</span></code></pre></figure>
+
+<p>Then, I created a new route in my <code class="language-plaintext highlighter-rouge">main.py</code> folder that parsed an individual line that was sent to it:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">main</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">'/clean/parse_line'</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">'GET'</span><span class="p">,</span> <span class="s">'POST'</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">parse_line</span><span class="p">():</span>
+    <span class="n">new_line</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">form</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'line_text'</span><span class="p">,</span> <span class="s">''</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">new_line</span><span class="p">)</span>
+    <span class="n">parsed_line</span> <span class="o">=</span> <span class="n">color_entities_in_line</span><span class="p">(</span><span class="n">new_line</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">parsed_line</span><span class="p">)</span>
+
+    <span class="n">new_raw_line</span> <span class="o">=</span> <span class="n">RawLine</span><span class="p">(</span><span class="n">id_in_list</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">full_text</span><span class="o">=</span><span class="n">new_line</span><span class="p">,</span> <span class="n">text_to_colors</span><span class="o">=</span><span class="n">parsed_line</span><span class="p">)</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">new_raw_line</span><span class="p">)</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">parsed_line</span></code></pre></figure>
+
+<p>This then would return the parsed line to the client. Now I just needed to figure out what to do with it. I decided that I wanted to use the same button format that I had on the “clean list” page, except just for the single line. The user could then edit the line as necessary and click a final button to “commit” the line to the database. The page would then refresh, with the new line changed as necessary. I wrote the following function in the <code class="language-plaintext highlighter-rouge">success</code> line of the ajax command:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">var</span> <span class="nx">compiled_list</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span><span class="dl">'</span><span class="s1">#compiled-list</span><span class="dl">'</span><span class="p">)</span>
+<span class="nx">compiled_list</span><span class="p">.</span><span class="nx">append</span><span class="p">(</span><span class="dl">"</span><span class="s2">&lt;div id='clean-line' class='list-group-item btn-group'&gt;&lt;/div&gt;</span><span class="dl">"</span><span class="p">)</span>
+
+<span class="kd">var</span> <span class="nx">clean_line</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#clean-line</span><span class="dl">"</span><span class="p">)</span>
+
+<span class="kd">var</span> <span class="nx">word_buttons</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">word</span> <span class="k">in</span> <span class="nx">jsonData</span><span class="p">){</span>
+  <span class="nx">clean_line</span><span class="p">.</span><span class="nx">append</span><span class="p">(</span><span class="dl">"</span><span class="s2">&lt;button class=</span><span class="dl">"</span> <span class="o">+</span> <span class="nx">jsonData</span><span class="p">[</span><span class="nx">word</span><span class="p">]</span> <span class="o">+</span> <span class="dl">"</span><span class="s2"> word-button&gt;</span><span class="dl">"</span> <span class="o">+</span> <span class="nx">word</span> <span class="o">+</span> <span class="dl">"</span><span class="s2">&lt;/button&gt;</span><span class="dl">"</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="nx">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#add-line-submit</span><span class="dl">"</span><span class="p">).</span><span class="nx">toggleClass</span><span class="p">(</span><span class="dl">"</span><span class="s2">hidden</span><span class="dl">"</span><span class="p">)</span>
+<span class="nx">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#add-line-input</span><span class="dl">"</span><span class="p">).</span><span class="nx">toggleClass</span><span class="p">(</span><span class="dl">"</span><span class="s2">hidden</span><span class="dl">"</span><span class="p">)</span>
+
+<span class="nx">clean_line</span><span class="p">.</span><span class="nx">append</span><span class="p">(</span><span class="dl">"</span><span class="s2">&lt;div id='commit-new-line' class='button-panel recipe-div'&gt;&lt;/div&gt;</span><span class="dl">"</span><span class="p">)</span>
+
+<span class="nx">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#commit-new-line</span><span class="dl">"</span><span class="p">).</span><span class="nx">append</span><span class="p">(</span><span class="dl">"</span><span class="s2">&lt;a class='edit-button' href='</span><span class="dl">"</span> <span class="o">+</span> <span class="nx">$SCRIPT_ROOT</span> <span class="o">+</span> <span class="dl">"</span><span class="s2">/list/</span><span class="dl">"</span> <span class="o">+</span> <span class="nx">$LIST_HEX</span> <span class="o">+</span> <span class="dl">"</span><span class="s2">/commit</span><span class="dl">"</span> <span class="o">+</span> <span class="dl">"</span><span class="s2">'&gt;Commit&lt;/a&gt;</span><span class="dl">"</span><span class="p">)</span></code></pre></figure>
+
+<p>This created a set of buttons and appended them to the recipe list. I also hid the “Add Line” button and input so that the user wouldn’t be able to add more than one line at a time.</p>
+
+<p><img src="/assets/img/posts/recipe-line-info/add-line-buttons.png" alt="alt text" /></p>
+
+<p>Not quite done, though. I still needed to implement a version of the code that’s on my “Clean List” page: the ability to click the words, have them change, and commit those changes through an ajax call.</p>
+
+<p>To do this, I adapted code from my <code class="language-plaintext highlighter-rouge">clean_list.js</code> file, adding a note to refactor this later to reduce repeated code.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="c1">// TODO: refactor so there isn't reused javascript like this</span>
+    <span class="kd">var</span> <span class="nx">b_dict</span> <span class="o">=</span> <span class="p">{</span>
+      <span class="dl">'</span><span class="s1">btn-base</span><span class="dl">'</span><span class="p">:</span> <span class="dl">'</span><span class="s1">btn-ingredient</span><span class="dl">'</span><span class="p">,</span>
+      <span class="dl">'</span><span class="s1">btn-ingredient</span><span class="dl">'</span><span class="p">:</span> <span class="dl">'</span><span class="s1">btn-measurement</span><span class="dl">'</span><span class="p">,</span>
+      <span class="dl">'</span><span class="s1">btn-measurement</span><span class="dl">'</span><span class="p">:</span> <span class="dl">'</span><span class="s1">btn-amount</span><span class="dl">'</span><span class="p">,</span>
+      <span class="dl">'</span><span class="s1">btn-amount</span><span class="dl">'</span><span class="p">:</span> <span class="dl">'</span><span class="s1">btn-base</span><span class="dl">'</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="kd">var</span> <span class="nx">patt</span> <span class="o">=</span> <span class="sr">/btn-</span><span class="se">[\w]</span><span class="sr">+/</span>  <span class="c1">// regex pattern to find button class</span>
+
+    <span class="nx">$</span><span class="p">(</span><span class="dl">'</span><span class="s1">.word-button</span><span class="dl">'</span><span class="p">).</span><span class="nx">click</span><span class="p">(</span><span class="kd">function</span><span class="p">(){</span>
+      <span class="kd">var</span> <span class="nx">btn_class</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span> <span class="k">this</span> <span class="p">).</span><span class="nx">attr</span><span class="p">(</span><span class="dl">"</span><span class="s2">class</span><span class="dl">"</span><span class="p">).</span><span class="nx">match</span><span class="p">(</span><span class="nx">patt</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+      <span class="nx">$</span><span class="p">(</span> <span class="k">this</span> <span class="p">).</span><span class="nx">toggleClass</span><span class="p">(</span><span class="nx">btn_class</span><span class="p">)</span>
+      <span class="nx">$</span><span class="p">(</span> <span class="k">this</span> <span class="p">).</span><span class="nx">toggleClass</span><span class="p">(</span><span class="nx">b_dict</span><span class="p">[</span><span class="nx">btn_class</span><span class="p">])</span>
+    <span class="p">})</span>
+
+    <span class="kd">var</span> <span class="nx">children</span> <span class="o">=</span> <span class="nx">clean_line</span><span class="p">.</span><span class="nx">children</span><span class="p">()</span>
+
+    <span class="kd">var</span> <span class="nx">button_colors</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">children</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">){</span>
+      <span class="nx">button_text</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span><span class="nx">children</span><span class="p">[</span><span class="nx">i</span><span class="p">]).</span><span class="nx">text</span><span class="p">()</span>
+      <span class="nx">button_color</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span><span class="nx">children</span><span class="p">[</span><span class="nx">i</span><span class="p">]).</span><span class="nx">attr</span><span class="p">(</span><span class="dl">'</span><span class="s1">class</span><span class="dl">'</span><span class="p">).</span><span class="nx">match</span><span class="p">(</span><span class="nx">patt</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+      <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">button_color</span><span class="p">)</span>
+      <span class="nx">button_colors</span><span class="p">[</span><span class="nx">button_text</span><span class="p">]</span> <span class="o">=</span> <span class="nx">button_color</span>
+    <span class="p">}</span>
+
+    <span class="kd">var</span> <span class="nx">data</span> <span class="o">=</span> <span class="p">{</span>
+      <span class="na">text_to_colors</span><span class="p">:</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">button_colors</span><span class="p">)</span>
+    <span class="p">}</span>
+
+    <span class="nx">$</span><span class="p">.</span><span class="nx">ajax</span><span class="p">({</span>
+      <span class="na">type</span><span class="p">:</span> <span class="dl">'</span><span class="s1">POST</span><span class="dl">'</span><span class="p">,</span>
+      <span class="na">url</span><span class="p">:</span> <span class="nx">$SCRIPT_ROOT</span> <span class="o">+</span> <span class="dl">"</span><span class="s2">/clean/set_color</span><span class="dl">"</span><span class="p">,</span>
+      <span class="na">data</span><span class="p">:</span> <span class="nx">data</span><span class="p">,</span>
+      <span class="na">dataType</span><span class="p">:</span> <span class="dl">'</span><span class="s1">json</span><span class="dl">'</span><span class="p">,</span>
+      <span class="na">success</span><span class="p">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">jsonData</span><span class="p">){</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">'</span><span class="s1">ajax successful!</span><span class="dl">'</span><span class="p">)</span>
+      <span class="p">}</span>
+    <span class="p">})</span></code></pre></figure>
+
+<p>However, I soon realized a problem. My <code class="language-plaintext highlighter-rouge">'/clean/set_color'</code> route expects more information than I was providing, chiefly the <code class="language-plaintext highlighter-rouge">hex_name</code> of the <code class="language-plaintext highlighter-rouge">RecipeList</code> that the <code class="language-plaintext highlighter-rouge">RawLine</code> came from, to aid in looking it up. Unfortunately, the <code class="language-plaintext highlighter-rouge">RawLine</code>s that would be made from the “Add Line” button didn’t have a <code class="language-plaintext highlighter-rouge">RecipeList</code> associated with them, because they’re independently added by the user. This resulted in an error when the server tried to find the line. I would need a new way to look up the <code class="language-plaintext highlighter-rouge">RawLine</code>.</p>
+
+<p>After some thought, I decided that the simplest and best thing to do would be to look up the <code class="language-plaintext highlighter-rouge">RawLine</code> by it’s <code class="language-plaintext highlighter-rouge">id</code> attribute. That’s what the <code class="language-plaintext highlighter-rouge">id</code> attribute is for, right? I added a few extra lines of code to the route that created the new <code class="language-plaintext highlighter-rouge">RawLine</code>:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">return</span> <span class="p">{</span><span class="s">'line_id'</span><span class="p">:</span> <span class="n">new_raw_line</span><span class="p">.</span><span class="nb">id</span><span class="p">,</span>
+           <span class="s">'parsed_line'</span><span class="p">:</span> <span class="n">json</span><span class="p">.</span><span class="n">loads</span><span class="p">(</span><span class="n">parsed_line</span><span class="p">)}</span>  <span class="c1"># have to load it to make sure it's formatted properly for client</span></code></pre></figure>
+
+<p>But this led to another problem, one that I had wondered about for a while, but until now had not encountered. When I entered in the test line <code class="language-plaintext highlighter-rouge">"1 package green jello"</code>, this is what I got out:</p>
+
+<p><img src="/assets/img/posts/recipe-line-info/mixed-order.png" alt="alt text" /></p>
+
+<p>One green jello package. Not one package green jello. The words are mixed up. And they’re mixed up (I think) because the way I’m storing this data, dictionaries and JSON objects, don’t preserve order. They just preserve key/value pairs. When I was originally designing this code, I wondered if I would get in trouble for this, because I was iterating through the list without really checking if the order had changed. Up until now, however, I had been fortunate enough that the list just hadn’t changed. But my luck had just run out. And besides, this isn’t really best practices.</p>
+
+<p>So I’m gonna have to do a bit of refactoring before I get this code working. It’s fine; I’ve been kind of needing to do a bit of that anyway, but it’s still a bit disheartening. I decided to put this blog post out now to give myself a feeling of accomplishment, even though I’m not totally done, because I’ve been writing it for a while and it’s getting long. Next time, I’ll pick a new data type for this code, and finally get the “Add Line” feature working.</p>
+:ET

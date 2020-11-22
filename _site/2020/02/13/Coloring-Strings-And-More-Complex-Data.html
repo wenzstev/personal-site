@@ -1,0 +1,200 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>JSON and Databases and AJAX -- Oh My!</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-header">
+      <h2>JSON and Databases and AJAX -- Oh My!</h2>
+      <small>13 Feb 2020</small>
+  </div>
+</header>
+
+<div class="margin">
+<p>The last few days have largely been about proof of concept; namely, showing that I can make all the independent pieces of this project work before I bring them all together into a beautiful symphony.</p>
+
+<p>First, I wanted to be able to change the color of the text based on if spaCy found it as an entity or not. I loaded in my old spaCy entity trainer. I decided to do this in the <code class="language-plaintext highlighter-rouge">__init__</code> file, since I would probably be using it numerous times throughout the app. From there, I imported it into my <code class="language-plaintext highlighter-rouge">utils.py</code> file that I currently have in my <code class="language-plaintext highlighter-rouge">main</code> Blueprint.</p>
+
+<p>Then I wrote a quick function to scan the document for entities and pair each entity with a Bootstrap color class (as a placeholder, I want custom classes for this eventually):</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># TODO: Refactor into using a dict of some kind
+</span><span class="k">def</span> <span class="nf">color_entities_in_line</span><span class="p">(</span><span class="n">line</span><span class="p">,</span>
+                           <span class="n">ingredient_color</span><span class="o">=</span><span class="s">"text-success"</span><span class="p">,</span>
+                           <span class="n">cardinal_color</span><span class="o">=</span><span class="s">"text-warning"</span><span class="p">,</span>
+                           <span class="n">quantity_color</span><span class="o">=</span><span class="s">"text-primary"</span><span class="p">,</span>
+                           <span class="n">base_color</span><span class="o">=</span><span class="s">"text-secondary"</span><span class="p">):</span>
+    <span class="n">color_tuples</span> <span class="o">=</span> <span class="p">{}</span>   <span class="c1"># dict of tuples of token and the color
+</span>    <span class="n">doc</span> <span class="o">=</span> <span class="n">nlp</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">doc</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">token</span><span class="p">.</span><span class="n">ent_iob_</span> <span class="o">==</span> <span class="s">"O"</span><span class="p">:</span>   <span class="c1"># if the token is outside an entity
+</span>            <span class="n">color_tuples</span><span class="p">[</span><span class="n">token</span><span class="p">.</span><span class="n">text</span><span class="p">]</span> <span class="o">=</span> <span class="n">base_color</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">token</span><span class="p">.</span><span class="n">ent_type_</span> <span class="o">==</span> <span class="s">"INGREDIENT"</span><span class="p">:</span>
+                <span class="n">color_tuples</span><span class="p">[</span><span class="n">token</span><span class="p">.</span><span class="n">text</span><span class="p">]</span> <span class="o">=</span> <span class="n">ingredient_color</span>
+            <span class="k">elif</span> <span class="n">token</span><span class="p">.</span><span class="n">ent_type_</span> <span class="o">==</span> <span class="s">"CARDINAL"</span><span class="p">:</span>
+                <span class="n">color_tuples</span><span class="p">[</span><span class="n">token</span><span class="p">.</span><span class="n">text</span><span class="p">]</span> <span class="o">=</span> <span class="n">cardinal_color</span>
+            <span class="k">elif</span> <span class="n">token</span><span class="p">.</span><span class="n">ent_type_</span> <span class="o">==</span> <span class="s">"QUANTITY"</span><span class="p">:</span>
+                <span class="n">color_tuples</span><span class="p">[</span><span class="n">token</span><span class="p">.</span><span class="n">text</span><span class="p">]</span> <span class="o">=</span> <span class="n">quantity_color</span>
+    <span class="k">return</span> <span class="n">json</span><span class="p">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">color_tuples</span><span class="p">)</span></code></pre></figure>
+
+<p>As you can see here, I return the list as a <code class="language-plaintext highlighter-rouge">json</code> string. Why, you may ask? Well, to be honest, that might change. But my big problem came when I tried to figure out how to store the color values in the database. Because it’s a series of key-value pairs, it didn’t seem well suited to live in my current <code class="language-plaintext highlighter-rouge">List</code> database. My solution, for now, is to convert it into a <code class="language-plaintext highlighter-rouge">json</code> string and store it in a single column:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">text_to_colors</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">String</span><span class="p">)</span></code></pre></figure>
+
+<p>…but honestly, I’m not sure. I did some googling and found <a href="https://stackoverflow.com/questions/43494824/when-can-i-save-json-or-xml-data-in-an-sql-table">this answer</a> about whether or not this is best practice. It’s possible I might need to go back and create a new database table that just stores these pairs, then links them to the relevant line, the same way that each line is linked to a relevant list. But it’s starting to get really hierarchical, and… I don’t know.</p>
+
+<p>And then there’s how I actually used the JSON data in the template. I converted each database object into a python class that I made specifically for the occassion:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># class that takes the db Line object and turns it into a python class to pass to the template
+</span><span class="k">class</span> <span class="nc">LineToPass</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">list_line</span><span class="p">):</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">full_text</span> <span class="o">=</span> <span class="n">list_line</span><span class="p">.</span><span class="n">full_text</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">text_to_colors</span> <span class="o">=</span> <span class="n">json</span><span class="p">.</span><span class="n">loads</span><span class="p">(</span><span class="n">list_line</span><span class="p">.</span><span class="n">text_to_colors</span><span class="p">)</span></code></pre></figure>
+
+<p>I then passed it into my template, like so:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">main</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">'/list/&lt;string:hex_name&gt;'</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">'GET'</span><span class="p">,</span> <span class="s">'POST'</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">list_page</span><span class="p">(</span><span class="n">hex_name</span><span class="p">):</span>
+    <span class="n">glist</span> <span class="o">=</span> <span class="n">GList</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">hex_name</span><span class="o">=</span><span class="n">hex_name</span><span class="p">).</span><span class="n">first_or_404</span><span class="p">()</span>
+    <span class="n">list_lines</span> <span class="o">=</span> <span class="n">Line</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="nb">list</span><span class="o">=</span><span class="n">glist</span><span class="p">).</span><span class="nb">all</span><span class="p">()</span>
+
+    <span class="n">list_lines</span> <span class="o">=</span> <span class="p">[</span><span class="n">LineToPass</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">list_lines</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">render_template</span><span class="p">(</span><span class="s">'glist.html'</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s">"Your List"</span><span class="p">,</span> <span class="n">glist</span><span class="o">=</span><span class="n">glist</span><span class="p">,</span> <span class="n">list_lines</span><span class="o">=</span><span class="n">list_lines</span><span class="p">)</span></code></pre></figure>
+
+<p>…but again, maybe this isn’t the best way to do it. I’m not thrilled about having to convert classes like this.</p>
+
+<p>On the other hand…</p>
+
+<p>It works.</p>
+
+<p><img src="/assets/img/posts/app-2/list-colored.png" alt="alt text" /></p>
+
+<p>You can see that the Named Entity Recognizer still isn’t perfect; it didn’t catch “flour” on the second line, for example. But it did catch “Baileys Red Velvet Liqueur,” so maybe there’s hope. And in any case, I want the user to be able to adjust the entities as well, which will be my next task.</p>
+
+<p>And that, dear friends, is when I ran headfirst into my first real problem.</p>
+
+<h2 id="the-abyss-requests-also">The Abyss Requests Also</h2>
+
+<p>My next goal seemed deceptively simple. When uploading new list items into the program, I wanted to show the user what spaCy thought the ingredient/amount was, and give them the opportunity to adjust them if necessary. I suspected, after all, that I was never going to get my entity recognizer to 100% accuracy, and it just seemed like the right thing to offer.</p>
+
+<p>I scratched my head for a little while, scanning the internet for some ideas as how to do this. I quickly came to the inescapable conclusion that I would need JavaScript.</p>
+
+<p>I have had some experience with JavaScript, but not much, and to be honest I wasn’t thrilled to reestablish that connection. I was pretty firmly in Python-mode, and taking the time to learn the basics of another language was a frustrating roadblock. But you’ve got to know JavaScript, I think, and at some point I would like to learn a proper frontend library like React, so hey, no time like the present, right?</p>
+
+<p>And at first, it didn’t seem like it would be that bad; after a quick internet refresher on the basics, I moved into jQuery, which I remembered some of from my old CS classes back in college. I had in mind a fairly simple test, to start with: I wanted the user to be able to click on the individual words in a recipe line, and change the color of the words. Then I wanted to be able to submit that change to the database, so that, if refreshed, the database would remember the changes. My program wasn’t sophisticated enough to register something as an “ingredient” to the main list yet – I don’t even have a main list. But I figured that changing the color would be a good proof of concept, to show that I could transfer data this way.</p>
+
+<p>That meant I was going to have to use some sort of AJAX functionality.</p>
+
+<p>And I have to be honest for a second here: I think this process would have been much easier for me if I’d done what I did while learning Flask, namely, take my time and step through the documentation piece by piece while making example projects. And I still intend to do that, honest! But dammit, I’m not the most patient person by nature and I just wanted to dip my toes into this to get it working.</p>
+
+<p>I’ll spare you the sordid details of my fight with jQuery, but suffice to say it’s a fisherman’s tale for the ages. Perhaps I should have captured it in the moment, but like the Old Man and the Sea, I have rowed back to shore with only the skeleton to show for my efforts. But hey, at least the skeleton works.</p>
+
+<p>Behold:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript">  <span class="nx">$</span><span class="p">(</span><span class="kd">function</span><span class="p">(){</span>
+    <span class="kd">var</span> <span class="nx">word_buttons</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span><span class="dl">'</span><span class="s1">.word-button</span><span class="dl">'</span><span class="p">)</span>
+    <span class="kd">var</span> <span class="nx">hex_name</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span><span class="dl">'</span><span class="s1">#hex-name</span><span class="dl">'</span><span class="p">).</span><span class="nx">text</span><span class="p">()</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">hex_name</span><span class="p">)</span>
+
+    <span class="nx">word_buttons</span><span class="p">.</span><span class="nx">click</span><span class="p">(</span><span class="kd">function</span><span class="p">(){</span>
+
+      <span class="nx">$</span><span class="p">(</span> <span class="k">this</span> <span class="p">).</span><span class="nx">toggleClass</span><span class="p">(</span><span class="dl">'</span><span class="s1">hidden</span><span class="dl">'</span><span class="p">)</span>
+
+      <span class="kd">var</span> <span class="nx">line</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span> <span class="k">this</span> <span class="p">).</span><span class="nx">parent</span><span class="p">()</span>
+      <span class="kd">var</span> <span class="nx">line_id</span> <span class="o">=</span> <span class="nx">line</span><span class="p">.</span><span class="nx">attr</span><span class="p">(</span><span class="dl">'</span><span class="s1">id</span><span class="dl">'</span><span class="p">)</span>
+      <span class="kd">var</span> <span class="nx">children</span> <span class="o">=</span> <span class="nx">line</span><span class="p">.</span><span class="nx">children</span><span class="p">()</span>
+
+      <span class="kd">var</span> <span class="nx">button_colors</span> <span class="o">=</span> <span class="p">{}</span>
+
+      <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">children</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">){</span>
+        <span class="nx">button_text</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span><span class="nx">children</span><span class="p">[</span><span class="nx">i</span><span class="p">]).</span><span class="nx">text</span><span class="p">()</span>
+        <span class="nx">button_color</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span><span class="nx">children</span><span class="p">[</span><span class="nx">i</span><span class="p">]).</span><span class="nx">attr</span><span class="p">(</span><span class="dl">'</span><span class="s1">class</span><span class="dl">'</span><span class="p">)</span>
+        <span class="nx">button_colors</span><span class="p">[</span><span class="nx">button_text</span><span class="p">]</span> <span class="o">=</span> <span class="nx">button_color</span>
+      <span class="p">}</span>
+
+      <span class="kd">var</span> <span class="nx">data</span> <span class="o">=</span> <span class="p">{</span><span class="dl">'</span><span class="s1">hex_name</span><span class="dl">'</span><span class="p">:</span> <span class="nx">hex_name</span><span class="p">,</span>
+                  <span class="dl">'</span><span class="s1">id</span><span class="dl">'</span><span class="p">:</span> <span class="nx">line_id</span><span class="p">,</span>
+                  <span class="dl">'</span><span class="s1">text_to_colors</span><span class="dl">'</span><span class="p">:</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">button_colors</span><span class="p">)}</span>
+
+      <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">data</span><span class="p">)</span>
+
+      <span class="nx">$</span><span class="p">.</span><span class="nx">ajax</span><span class="p">({</span>
+        <span class="na">type</span><span class="p">:</span> <span class="dl">'</span><span class="s1">POST</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">url</span><span class="p">:</span> <span class="nx">$SCRIPT_ROOT</span> <span class="o">+</span> <span class="dl">'</span><span class="s1">/list/set_color</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">data</span><span class="p">:</span> <span class="nx">data</span><span class="p">,</span>
+        <span class="na">dataType</span><span class="p">:</span> <span class="dl">'</span><span class="s1">json</span><span class="dl">'</span><span class="p">,</span>
+        <span class="na">success</span><span class="p">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">jsonData</span><span class="p">){</span>
+          <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">jsonData</span><span class="p">)</span>
+        <span class="p">}</span>
+      <span class="p">})</span>
+    <span class="p">});</span>
+  <span class="p">});</span></code></pre></figure>
+
+<p>See what I mean? It’s not so bad <em>now….</em></p>
+
+<p>The first thing you’ll notice here is that I changed my goal from changing the color to toggling whether or not a word would appear. Of course, since after it vanishes you can’t click it, this was essentially a one-way toggle, but at that point I was kind of beyond caring. You get to a point where you just want the damn thing to <em>work</em>, and you’ll clean up the carnage in your wake later.</p>
+
+<p><em>(Not shown: a dozen <code class="language-plaintext highlighter-rouge">console.log</code> commands I deleted for the sake of readability.)</em></p>
+
+<p>All this script really does is get all the buttons (I changed the <code class="language-plaintext highlighter-rouge">&lt;span&gt;</code>s to <code class="language-plaintext highlighter-rouge">&lt;button&gt;</code>s for ease of clicking) and assign a <code class="language-plaintext highlighter-rouge">.click()</code> function to them. This function determines the parent line of the button and collects all of the class attributes into a JavaScript object. It then sends it to a <code class="language-plaintext highlighter-rouge">'/list/set_color'</code> route (which I’ll be getting to in a moment).</p>
+
+<p>That’s it! That’s all it does. And you would think this was not hard. But let me tell you, when you’re a newborn babe wandering the dark forests of JavaScript, you tend to get stymied on the littlest things, including, but not limited to:</p>
+
+<ul>
+  <li>how do I define a function?</li>
+  <li>do I have to iterate through all the buttons, or will jQuery do that for me automatically?</li>
+  <li>how the $#@^ does <code class="language-plaintext highlighter-rouge">this</code> work, anyway?</li>
+  <li>do I need semicolons?</li>
+  <li>when do I need parentheses, and when am I good?</li>
+  <li>do I need to import anything?</li>
+</ul>
+
+<p>… and so on and so forth. Maybe it’s not the wisest move to admit all the little hangups I got caught on, considering this is supposed to be a place where I put my best foot forward. But I’ve got to be honest about it. And the good news is that I know how to do this now, so (<em>hopefully</em>) moving forward with simple JavaScript should not be a three-day pileup. Once I get this thing prototyped, I’ll go back and make it look prettier, but I’m not trying to get my JavaScript certification right now. I’m just trying to get the damn thing to work.</p>
+
+<p>And does it? Well, hold on there, eager beaver, we’re still not quite done!</p>
+
+<p>Check out the server side of this whole affair:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">main</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">'/list/set_color'</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">'GET'</span><span class="p">,</span> <span class="s">'POST'</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">set_color</span><span class="p">():</span>
+    <span class="n">glist</span> <span class="o">=</span> <span class="n">GList</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">hex_name</span><span class="o">=</span><span class="n">request</span><span class="p">.</span><span class="n">form</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'hex_name'</span><span class="p">,</span> <span class="s">''</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)).</span><span class="n">first_or_404</span><span class="p">()</span>
+    <span class="n">new_colors</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">form</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'text_to_colors'</span><span class="p">,</span> <span class="s">''</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+
+    <span class="n">list_line</span> <span class="o">=</span> <span class="n">Line</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="nb">list</span><span class="o">=</span><span class="n">glist</span><span class="p">,</span> <span class="n">id_in_list</span><span class="o">=</span><span class="n">request</span><span class="p">.</span><span class="n">form</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'id'</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">)).</span><span class="n">first_or_404</span><span class="p">()</span>
+    <span class="n">list_line</span><span class="p">.</span><span class="n">text_to_colors</span> <span class="o">=</span> <span class="n">new_colors</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">new_colors</span><span class="p">)</span></code></pre></figure>
+
+<p>Nothing too complicated here. It just takes the JSON information and searches out the proper list and line in the list, changing the color text to the new information that the client provided. In practice, this will never change more than one button at a time, because every click sends a new request, but the current structure of the database makes it easier for me to just update the whole line. At least, for now. Also note that the return value there doesn’t actually do anything at the moment; I just wanted to be able to print the return data so that I could see it working.</p>
+
+<p>And does it work? Well…</p>
+
+<p><img src="/assets/img/posts/app-2/list-missing.png" alt="alt text" /></p>
+
+<p>Indeed it does. This list I got after clicking a few of the words and then refreshing the page. Note the lack of anything to be “juiced” on line six, and the lack of quantity of “angel hair pasta” on line 1.</p>
+
+<p>Now, this might not look like much, and it’s true that this doesn’t directly fix my main problems, but it’s still a vital proof of concept. The user can now edit the list of ingredients, and have those edits be saved in real time to the database. That’s a crucial feature of my main workflow, and it means I’m one step closer to getting this machine off the ground.</p>
+
+</div>
+
+    </div>
+    <footer>
+      <span><a href="/index.html">Home</a></span>
+      <span><a href="/blog">Blog</a></span>
+      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+    </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,133 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>What Happens When We Can't Parse a Recipe</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-header">
+      <h2>What Happens When We Can't Parse a Recipe</h2>
+      <small>09 Mar 2020</small>
+  </div>
+</header>
+
+<div class="margin">
+<p>Now that the basic functionality of cleaning and adding new lines is working successfully, it’s time to expand the options a user has to make use of those features. The first way I want to do that is to give the user the ability to add custom recipes. Additionally, I want this ability to function as a fallback, in case the program fails to properly parse the recipe from the urls (which happens <em>a lot</em> right now, although to be fair I haven’t touched that part of the program in a long time). Seeing as this functionality can effectively kill two birds with one stone, I decided that I was going to implement it next.</p>
+
+<p>First, I created a new form in my <code class="language-plaintext highlighter-rouge">forms.py</code> file, consisting of a <code class="language-plaintext highlighter-rouge">&lt;textarea&gt;</code> tag that would enable multi-line entering of a recipe:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">class</span> <span class="nc">CustomRecipeForm</span><span class="p">(</span><span class="n">FlaskForm</span><span class="p">):</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">StringField</span><span class="p">(</span><span class="s">"Name:"</span><span class="p">)</span>
+    <span class="n">recipe_lines</span> <span class="o">=</span> <span class="n">TextAreaField</span><span class="p">(</span><span class="s">"Ingredients:"</span><span class="p">)</span>
+    <span class="n">submit</span> <span class="o">=</span> <span class="n">SubmitField</span><span class="p">(</span><span class="s">"Submit"</span><span class="p">)</span></code></pre></figure>
+
+<p>Then, I created a new <code class="language-plaintext highlighter-rouge">html</code> template for users who want to enter in a manual recipe. This template will also double as the fallback page if the program fails to successfully parse the recipe.</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html">{% extends 'layout.html' %}
+{% block content %}
+<span class="nt">&lt;form</span> <span class="na">method=</span><span class="s">"POST"</span> <span class="na">action=</span><span class="s">""</span><span class="nt">&gt;</span>
+    {{ form.hidden_tag() }}
+    <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"form-group"</span><span class="nt">&gt;</span>
+        {{ form.name.label(class="form-control-label") }}
+        {{ form.name(class="form-control") }}
+        {{ form.recipe_lines.label(class="form-control-label") }}
+        {{ form.recipe_lines(class="form-control") }}
+    <span class="nt">&lt;/div&gt;</span>
+    <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"form-group"</span><span class="nt">&gt;</span>
+        {{ form.submit }}
+    <span class="nt">&lt;/div&gt;</span>
+<span class="nt">&lt;/form&gt;</span>
+{% endblock content %}</code></pre></figure>
+
+<p>As you can see, the page is extremely simple right now. But it has all the functionality I need to get a barebones version of this working.</p>
+
+<p>From there, it was time to actually allow the user to access the page. I decided that I would first create the situation where a failed parse defaulted to this page, because that’s a situation I’ve been dealing with a lot, and at present it was a fairly big hole in my workflow.</p>
+
+<p>First, I had to decide how the program would detect a failed parse. I mulled over several different ways to do this, and ultimately decided that the best place to do so would be after the  <code class="language-plaintext highlighter-rouge">RecipeList</code> had already been created. This meant that I could still use the “/list/<hexname>/add" route for the list *and* I wouldn't need to rewrite any code for building the recipe. Essentially, the program would run through the whole process of making the recipe, and then check at the end to see if there are any actual lines in it. If there are, great! If not, then we have a problem.</hexname></p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">main</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">'/list/&lt;string:list_name&gt;/add/&lt;string:new_recipe&gt;'</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">'GET'</span><span class="p">,</span> <span class="s">'POST'</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">add_recipe</span><span class="p">(</span><span class="n">list_name</span><span class="p">,</span> <span class="n">new_recipe</span><span class="p">):</span>
+    <span class="n">rlist</span> <span class="o">=</span> <span class="n">RecipeList</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">hex_name</span><span class="o">=</span><span class="n">new_recipe</span><span class="p">).</span><span class="n">first_or_404</span><span class="p">()</span>
+    <span class="n">rlist_lines</span> <span class="o">=</span> <span class="n">RawLine</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">rlist</span><span class="o">=</span><span class="n">rlist</span><span class="p">).</span><span class="nb">all</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">rlist_lines</span><span class="p">:</span>  <span class="c1"># we failed to extract any lines from the recipe
+</span>        <span class="n">form</span> <span class="o">=</span> <span class="n">CustomRecipeForm</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">form</span><span class="p">.</span><span class="n">validate_on_submit</span><span class="p">():</span>
+            <span class="k">pass</span>  <span class="c1"># placeholder for now
+</span>
+        <span class="n">form</span><span class="p">.</span><span class="n">name</span><span class="p">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">rlist</span><span class="p">.</span><span class="n">name</span>
+        <span class="n">flash</span><span class="p">(</span><span class="s">'Error: Could not parse recipe lines. Please paste or type recipe lines below: '</span><span class="p">,</span> <span class="s">'danger'</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">render_template</span><span class="p">(</span><span class="s">'custom_add_recipe.html'</span><span class="p">,</span> <span class="n">form</span><span class="o">=</span><span class="n">form</span><span class="p">,</span> <span class="n">rlist</span><span class="o">=</span><span class="n">rlist</span><span class="p">)</span></code></pre></figure>
+
+<p>Note also here that I finally implemented a <code class="language-plaintext highlighter-rouge">flash()</code> feature in the program. Until now I hadn’t needed to, but I knew that it was going to come up eventually. It’s set up in my “layout.html” file like so:</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html"><span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"container"</span> <span class="na">role=</span><span class="s">"main"</span><span class="nt">&gt;</span>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"alert alert-{{ category }}"</span><span class="nt">&gt;</span>
+                    {{ message }}
+                <span class="nt">&lt;/div&gt;</span>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+<span class="nt">&lt;/div&gt;</span></code></pre></figure>
+
+<p>That aside, this enabled me to successfully display the “custom_add_recipe.html” template:</p>
+
+<p><img src="/assets/img/posts/custom-recipes/error-parse-recipe.png" alt="alt text" /></p>
+
+<p>Next, I needed to fill in the code in the <code class="language-plaintext highlighter-rouge">form.validate_on_submit()</code> function (the one that uses a <code class="language-plaintext highlighter-rouge">pass</code> above). This was an excellent opportunity to learn a new bit of Python syntax: the <code class="language-plaintext highlighter-rouge">filter()</code> function. For testing purposes, I was copying a recipe from Allrecipes.com, and the recipe would paste out double-spaced. Then, when I ran a <code class="language-plaintext highlighter-rouge">splitlines()</code> function, the program would parse out the blank lines as recipe lines. To complicate things further, these lines were not just empty strings; they generally had a whitespace character in them as well.</p>
+
+<p>My solution was to write a filter function that returned false if the list was empty or only whitespace, and true otherwise. From there, I repeated a snippet of code from my <code class="language-plaintext highlighter-rouge">utils.py</code> folder to parse the recipe lines through my (still only partially trained) spaCy model:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">if</span> <span class="n">form</span><span class="p">.</span><span class="n">validate_on_submit</span><span class="p">():</span>
+    <span class="n">recipe_lines</span> <span class="o">=</span> <span class="n">form</span><span class="p">.</span><span class="n">recipe_lines</span><span class="p">.</span><span class="n">data</span><span class="p">.</span><span class="n">splitlines</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">elim_blanks</span><span class="p">(</span><span class="n">line</span><span class="p">):</span>  <span class="c1"># function to remove blank lines and spaces from list
+</span>        <span class="k">if</span> <span class="ow">not</span> <span class="n">line</span> <span class="ow">or</span> <span class="n">line</span><span class="p">.</span><span class="n">isspace</span><span class="p">():</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">True</span>
+
+    <span class="n">recipe_lines</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span><span class="n">elim_blanks</span><span class="p">,</span> <span class="n">recipe_lines</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">num</span><span class="p">,</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">recipe_lines</span><span class="p">):</span>   <span class="c1"># FIXME: this code is the same as in utils.url_to_recipe
+</span>        <span class="n">recipe_colors</span> <span class="o">=</span> <span class="n">color_entities_in_line</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+        <span class="n">recipe_line</span> <span class="o">=</span> <span class="n">RawLine</span><span class="p">(</span><span class="n">full_text</span><span class="o">=</span><span class="n">line</span><span class="p">,</span> <span class="n">rlist</span><span class="o">=</span><span class="n">rlist</span><span class="p">,</span> <span class="n">id_in_list</span><span class="o">=</span><span class="n">num</span><span class="p">,</span> <span class="n">text_to_colors</span><span class="o">=</span><span class="n">recipe_colors</span><span class="p">)</span>
+        <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">recipe_line</span><span class="p">)</span>
+    <span class="n">rlist</span><span class="p">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">form</span><span class="p">.</span><span class="n">name</span><span class="p">.</span><span class="n">data</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">url_for</span><span class="p">(</span><span class="s">'main.add_recipe'</span><span class="p">,</span> <span class="n">list_name</span><span class="o">=</span><span class="n">list_name</span><span class="p">,</span> <span class="n">new_recipe</span><span class="o">=</span><span class="n">new_recipe</span><span class="p">))</span></code></pre></figure>
+
+<p>Thus I was able to go from this…</p>
+
+<p><img src="/assets/img/posts/custom-recipes/parse-before.png" alt="alt text" /></p>
+
+<p>… to this!</p>
+
+<p><img src="/assets/img/posts/custom-recipes/parse-after.png" alt="alt text" /></p>
+
+<p>And from there, the rest of my code continues to function as normal. Now, I’ll need to add an option to create a new recipe like this from the beginning, but that’s a topic for my next post.</p>
+
+</div>
+
+    </div>
+    <footer>
+      <span><a href="/index.html">Home</a></span>
+      <span><a href="/blog">Blog</a></span>
+      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+    </footer>
+    </div>
+  </body>
+</html>

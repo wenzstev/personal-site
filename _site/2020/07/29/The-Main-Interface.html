@@ -1,0 +1,172 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Creating the Main Interface of the App</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-header">
+      <h2>Creating the Main Interface of the App</h2>
+      <small>29 Jul 2020</small>
+  </div>
+</header>
+
+<div class="margin">
+<p>In order to bring together the different pieces of the app that I’ve created so far, I wanted to focus next on creating the “homepage” of the app, where users would be able to see the different recipes and lists they have created, navigate between them, and update them as desired. I also wanted to more fully integrate <code class="language-plaintext highlighter-rouge">react-router</code> into my app, and this seemed like the perfect time to get started.</p>
+
+<h3 id="the-navbar">The Navbar</h3>
+
+<p>Every good app needs a navbar, and mine is no different. I wanted to take the specifications designed by my brother and update them a bit to fit the needs of the project as it currently exists. To that end, I envisioned a top bar with a menu, a searchbar and the ability to quickly and easily navigate between the user’s Recipes, their Grocery Lists, and the Ingredients available to them.</p>
+
+<p>I began by implementing the search bar and the menu, making use of Material-UI’s icons and components.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">searchbar</span><span class="p">}</span> <span class="nx">mx</span><span class="o">=</span><span class="p">{</span><span class="mi">1</span><span class="p">}</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">InputLabel</span><span class="o">&gt;</span>
+          <span class="o">&lt;</span><span class="nx">Grid</span> <span class="nx">container</span><span class="o">&gt;</span>
+            <span class="o">&lt;</span><span class="nx">Grid</span> <span class="nx">item</span><span class="o">&gt;</span>
+              <span class="o">&lt;</span><span class="nx">NavMenu</span> <span class="nx">buttonLabel</span><span class="o">=</span><span class="p">{</span><span class="o">&lt;</span><span class="nx">DehazeIcon</span> <span class="o">/&gt;</span><span class="p">}</span><span class="sr">/</span><span class="err">&gt;
+</span>            <span class="o">&lt;</span><span class="sr">/Grid</span><span class="err">&gt;
+</span>            <span class="o">&lt;</span><span class="nx">Grid</span> <span class="nx">item</span><span class="o">&gt;</span>
+              <span class="o">&lt;</span><span class="nx">SearchIcon</span> <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">searchIcon</span><span class="p">}</span><span class="sr">/</span><span class="err">&gt;
+</span>            <span class="o">&lt;</span><span class="sr">/Grid</span><span class="err">&gt;
+</span>            <span class="o">&lt;</span><span class="nx">Grid</span> <span class="nx">item</span> <span class="nx">xs</span><span class="o">=</span><span class="p">{</span><span class="mi">8</span><span class="p">}</span> <span class="nx">md</span><span class="o">=</span><span class="p">{</span><span class="mi">10</span><span class="p">}</span><span class="o">&gt;</span>
+              <span class="o">&lt;</span><span class="nx">InputBase</span> <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">searchInput</span><span class="p">}</span> <span class="nx">placeholder</span><span class="o">=</span><span class="dl">"</span><span class="s2">Search...</span><span class="dl">"</span> <span class="o">/&gt;</span>
+            <span class="o">&lt;</span><span class="sr">/Grid</span><span class="err">&gt;
+</span>          <span class="o">&lt;</span><span class="sr">/Grid</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="sr">/InputLabel</span><span class="err">&gt;
+</span>      <span class="o">&lt;</span><span class="sr">/Box&gt;</span></code></pre></figure>
+
+<p>This created a search bar that should look pretty familiar to anyone who has spent any time around web apps:</p>
+
+<p><img src="/assets/img/posts/grocery-app/main-interface/searchbar.png" alt="alt text" /></p>
+
+<p>The <code class="language-plaintext highlighter-rouge">NavBar</code> component was created separately, and consists of a few different options, including the ability to create a new list/recipe, access to the Settings page, and the option to log out.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">NavMenu</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">classes</span> <span class="o">=</span> <span class="nx">useStyles</span><span class="p">()</span>
+  <span class="kd">const</span> <span class="p">[</span><span class="nx">anchorEl</span><span class="p">,</span> <span class="nx">setAnchorEl</span><span class="p">]</span> <span class="o">=</span> <span class="nx">useState</span><span class="p">(</span><span class="kc">null</span><span class="p">)</span>
+
+  <span class="kd">const</span> <span class="nx">handleClick</span> <span class="o">=</span> <span class="p">(</span><span class="nx">event</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="nx">setAnchorEl</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">currentTarget</span><span class="p">)</span>
+  <span class="p">}</span>
+
+  <span class="kd">const</span> <span class="nx">handleClose</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="nx">setAnchorEl</span><span class="p">(</span><span class="kc">null</span><span class="p">)</span>
+  <span class="p">}</span>
+
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">div</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">Button</span>
+        <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">root</span><span class="p">}</span>
+        <span class="nx">aria</span><span class="o">-</span><span class="nx">controls</span><span class="o">=</span><span class="dl">"</span><span class="s2">nav-menu</span><span class="dl">"</span>
+        <span class="nx">aria</span><span class="o">-</span><span class="nx">haspopup</span><span class="o">=</span><span class="dl">"</span><span class="s2">true</span><span class="dl">"</span>
+        <span class="nx">onClick</span><span class="o">=</span><span class="p">{</span><span class="nx">handleClick</span><span class="p">}</span><span class="o">&gt;</span>
+          <span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">buttonLabel</span><span class="p">}</span>
+      <span class="o">&lt;</span><span class="sr">/Button</span><span class="err">&gt;
+</span>      <span class="o">&lt;</span><span class="nx">Menu</span>
+        <span class="nx">id</span><span class="o">=</span><span class="dl">"</span><span class="s2">nav-menu</span><span class="dl">"</span>
+        <span class="nx">anchorEl</span><span class="o">=</span><span class="p">{</span><span class="nx">anchorEl</span><span class="p">}</span>
+        <span class="nx">keepMounted</span>
+        <span class="nx">open</span><span class="o">=</span><span class="p">{</span><span class="nb">Boolean</span><span class="p">(</span><span class="nx">anchorEl</span><span class="p">)}</span>
+        <span class="nx">onClose</span><span class="o">=</span><span class="p">{</span><span class="nx">handleClose</span><span class="p">}</span><span class="o">&gt;</span>
+          <span class="o">&lt;</span><span class="nx">MenuItem</span><span class="o">&gt;</span><span class="nx">New</span><span class="p">...</span><span class="o">&lt;</span><span class="sr">/MenuItem</span><span class="err">&gt;
+</span>          <span class="o">&lt;</span><span class="nx">Divider</span> <span class="nx">variant</span><span class="o">=</span><span class="dl">"</span><span class="s2">middle</span><span class="dl">"</span> <span class="o">/&gt;</span>
+          <span class="o">&lt;</span><span class="nx">MenuItem</span><span class="o">&gt;</span><span class="nx">Settings</span><span class="o">&lt;</span><span class="sr">/MenuItem</span><span class="err">&gt;
+</span>          <span class="o">&lt;</span><span class="nx">MenuItem</span><span class="o">&gt;</span><span class="nx">Log</span> <span class="nx">Out</span><span class="o">&lt;</span><span class="sr">/MenuItem</span><span class="err">&gt;
+</span>      <span class="o">&lt;</span><span class="sr">/Menu</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/div</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span></code></pre></figure>
+
+<p><img src="/assets/img/posts/grocery-app/main-interface/menu.png" alt="alt text" /></p>
+
+<p>It’s all nonfunctional right now, but not for long. I’m still just trying to get the feel of everything nailed down.</p>
+
+<h3 id="tabs-and-routing">Tabs and Routing</h3>
+
+<p>Next, I wanted to add a way for the user to quickly navigate between several different collections of equal importance. The Material-UI <a href="https://material-ui.com/components/tabs/#tabs">Tab</a> component seemed ideal to the task. This was also where I wanted to implement routing, as I wanted changing the tab to change the route that the page was on.</p>
+
+<p>My first challenge was to integrate these two libraries. The <code class="language-plaintext highlighter-rouge">Tabs</code> component required a value in order to display the current tab to the user, and that value would need to persist over time. Furthermore, the <code class="language-plaintext highlighter-rouge">Link</code> component used by <code class="language-plaintext highlighter-rouge">react-router</code> is not the same thing as the <code class="language-plaintext highlighter-rouge">Tab</code> component used by Material-UI.</p>
+
+<p>This is one of those case studies in why it’s important to always check StackEchange before cooking up some convoluted solution on your own. Initially I was worried I was going to have to implement Redux and store a value in state and it was going to be this whole thing. Luckily, I found <a href="https://stackoverflow.com/questions/41638688/material-uis-tabs-integration-with-react-router-4">this</a> post which discussed exactly what I was looking for. The solution was to use the <code class="language-plaintext highlighter-rouge">withRouter</code> method to wrap my <code class="language-plaintext highlighter-rouge">Tabs</code> component, allowing access to history methods. In doing so, I could use the current pathname of the route as my value for the <code class="language-plaintext highlighter-rouge">Tabs</code> component. Then, I was able to use the <code class="language-plaintext highlighter-rouge">component</code> prop provided by Material-UI to render the <code class="language-plaintext highlighter-rouge">Tab</code> component <em>as</em> a <code class="language-plaintext highlighter-rouge">Link</code> component, efficiently combining them:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">NavBar</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="p">[</span><span class="nx">value</span><span class="p">,</span> <span class="nx">setValue</span><span class="p">]</span> <span class="o">=</span> <span class="nx">useState</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+  <span class="kd">const</span> <span class="nx">handleChange</span> <span class="o">=</span> <span class="p">(</span><span class="nx">event</span><span class="p">,</span> <span class="nx">newValue</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">setValue</span><span class="p">(</span><span class="nx">newValue</span><span class="p">)</span>
+
+  <span class="k">return</span> <span class="p">(</span>
+      <span class="o">&lt;</span><span class="nx">Tabs</span> <span class="nx">value</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">history</span><span class="p">.</span><span class="nx">location</span><span class="p">.</span><span class="nx">pathname</span><span class="p">}</span> <span class="nx">onChange</span><span class="o">=</span><span class="p">{</span><span class="nx">handleChange</span><span class="p">}</span> <span class="nx">centered</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">Tab</span> <span class="nx">component</span><span class="o">=</span><span class="p">{</span><span class="nx">Link</span><span class="p">}</span> <span class="nx">label</span><span class="o">=</span><span class="dl">"</span><span class="s2">Recipes</span><span class="dl">"</span> <span class="nx">to</span><span class="o">=</span><span class="dl">"</span><span class="s2">/recipes</span><span class="dl">"</span> <span class="nx">value</span><span class="o">=</span><span class="dl">"</span><span class="s2">/recipes</span><span class="dl">"</span><span class="o">/&gt;</span>
+        <span class="o">&lt;</span><span class="nx">Tab</span> <span class="nx">component</span><span class="o">=</span><span class="p">{</span><span class="nx">Link</span><span class="p">}</span> <span class="nx">label</span><span class="o">=</span><span class="dl">"</span><span class="s2">Lists</span><span class="dl">"</span> <span class="nx">to</span><span class="o">=</span><span class="dl">"</span><span class="s2">/lists</span><span class="dl">"</span> <span class="nx">value</span><span class="o">=</span><span class="dl">"</span><span class="s2">/lists</span><span class="dl">"</span><span class="o">/&gt;</span>
+        <span class="o">&lt;</span><span class="nx">Tab</span> <span class="nx">component</span><span class="o">=</span><span class="p">{</span><span class="nx">Link</span><span class="p">}</span> <span class="nx">label</span><span class="o">=</span><span class="dl">"</span><span class="s2">Ingredients</span><span class="dl">"</span> <span class="nx">to</span><span class="o">=</span><span class="dl">"</span><span class="s2">/ingredients</span><span class="dl">"</span> <span class="nx">value</span><span class="o">=</span><span class="dl">"</span><span class="s2">/ingredients</span><span class="dl">"</span> <span class="o">/&gt;</span>
+      <span class="o">&lt;</span><span class="sr">/Tabs</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>The only small thing that gets me about this solution is that I have to repeat the route twice: once with the <code class="language-plaintext highlighter-rouge">Tab</code> <code class="language-plaintext highlighter-rouge">label</code> component, and once with <code class="language-plaintext highlighter-rouge">Link</code>’s <code class="language-plaintext highlighter-rouge">to</code> component. For a full DRY refactor, I would create a component and then reuse it for this, and I may go back and make that change later. It’s not a big deal, but it’s something I want to keep in mind.</p>
+
+<p>I placed my tabs underneath the search bar and added a squiggle on top to keep with the overall theme of the app:</p>
+
+<p><img src="/assets/img/posts/grocery-app/main-interface/full-navbar.png" alt="alt text" /></p>
+
+<h3 id="creating-a-general-template-page">Creating a General Template Page</h3>
+
+<p>Having new routes is all very well and good, but it doesn’t do much if there is nothing on those pages. Because they were going to be functionally the same, save for the differences in what they were displaying, I wanted to create an overall template page that I could then customize to my liking. This template would have my navbar component and the wooden background, and would serve as a signifier that the user was in the “top level” of the app.</p>
+
+<p>My base template was fairly simple:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">useStyles</span> <span class="o">=</span> <span class="nx">makeStyles</span><span class="p">({</span>
+  <span class="na">root</span><span class="p">:</span> <span class="p">{</span>
+    <span class="na">backgroundImage</span><span class="p">:</span> <span class="dl">'</span><span class="s1">url(</span><span class="dl">'</span><span class="o">+</span> <span class="nx">woodBackground</span> <span class="o">+</span> <span class="dl">'</span><span class="s1">)</span><span class="dl">'</span><span class="p">,</span>
+    <span class="na">backgroundRepeat</span><span class="p">:</span> <span class="dl">'</span><span class="s1">no-repeat</span><span class="dl">'</span><span class="p">,</span>
+    <span class="na">backgroundSize</span><span class="p">:</span> <span class="dl">'</span><span class="s1">cover</span><span class="dl">'</span><span class="p">,</span>
+    <span class="na">backgroundColor</span><span class="p">:</span> <span class="dl">"</span><span class="s2">#a8d4ff</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">backgroundBlendMode</span><span class="p">:</span> <span class="dl">"</span><span class="s2">multiply</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">height</span><span class="p">:</span> <span class="dl">"</span><span class="s2">100vh</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">width</span><span class="p">:</span> <span class="dl">"</span><span class="s2">100vw</span><span class="dl">"</span><span class="p">,</span>
+  <span class="p">},</span>
+<span class="p">})</span>
+
+<span class="kd">const</span> <span class="nx">MainTemplatePage</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">classes</span> <span class="o">=</span> <span class="nx">useStyles</span><span class="p">()</span>
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">div</span> <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">root</span><span class="p">}</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">SearchBar</span> <span class="o">/&gt;</span>
+      <span class="o">&lt;</span><span class="nx">Container</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">Grid</span> <span class="nx">container</span><span class="o">&gt;</span>
+          <span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">children</span><span class="p">}</span>
+        <span class="o">&lt;</span><span class="sr">/Grid</span><span class="err">&gt;
+</span>      <span class="o">&lt;</span><span class="sr">/Container</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/div</span><span class="err">&gt;
+</span>  <span class="p">)</span></code></pre></figure>
+
+<p>I used a <code class="language-plaintext highlighter-rouge">Grid</code> component because I’m conceiving of each of these three pages to show a grid of available resources. My goal is to create a component that uses the <code class="language-plaintext highlighter-rouge">&lt;Grid item&gt;</code> component, which should allow everything to nicely fit together. And I started working on that component (as you can see in the repo), but I decided that before I do that, I need to give users the ability to actually log in to the damn thing. But that’s for next post.</p>
+
+<h3 id="next-steps">Next Steps</h3>
+
+<ul>
+  <li>allow users to log into the app</li>
+  <li>display the user’s resources when logged in</li>
+</ul>
+
+</div>
+
+    </div>
+    <footer>
+      <span><a href="/index.html">Home</a></span>
+      <span><a href="/blog">Blog</a></span>
+      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+    </footer>
+    </div>
+  </body>
+</html>

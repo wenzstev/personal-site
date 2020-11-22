@@ -1,0 +1,306 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>More Users and a Better Login</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-header">
+      <h2>More Users and a Better Login</h2>
+      <small>06 Sep 2020</small>
+  </div>
+</header>
+
+<div class="margin">
+<p>This post is split into two main areas of fixes: governing what to do when a user attempts to access resources that don’t belong to them, and creating a more responsive login process.</p>
+
+<h3 id="user-interaction">User Interaction</h3>
+
+<p>So, at some point (and hopefully soon), I would like to add the ability to allow users to add and interact with recipes that they did not add. However, doing so invites a ton of additional complexity into my program that I don’t have time to deal with right now, and so I wanted a quick and easy way to seal off those areas to people who aren’t logged in. At the same time, I refactored out my 404 Page in order to create a generic information page for when things go wrong.</p>
+
+<p>First, I created a <code class="language-plaintext highlighter-rouge">BasicInfoPage</code>, which stored the styling that I had originally used for the 404 page.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">useStyles</span> <span class="o">=</span> <span class="nx">makeStyles</span><span class="p">({</span>
+  <span class="na">root</span><span class="p">:</span> <span class="p">{</span>
+    <span class="na">borderRadius</span><span class="p">:</span> <span class="dl">"</span><span class="s2">15px</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">position</span><span class="p">:</span> <span class="dl">"</span><span class="s2">relative</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">top</span><span class="p">:</span> <span class="dl">"</span><span class="s2">10vh</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">padding</span><span class="p">:</span> <span class="dl">"</span><span class="s2">20px</span><span class="dl">"</span>
+  <span class="p">}</span>
+<span class="p">})</span>
+
+<span class="kd">const</span> <span class="nx">BasicInfoPage</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">classes</span> <span class="o">=</span> <span class="nx">useStyles</span><span class="p">()</span>
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">MainTemplatePage</span> <span class="nx">noSearchbar</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">Paper</span> <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">root</span><span class="p">}</span><span class="o">&gt;</span>
+        <span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">children</span><span class="p">}</span>
+      <span class="o">&lt;</span><span class="sr">/Paper</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/MainTemplatePage</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span>
+
+<span class="k">export</span> <span class="k">default</span> <span class="nx">BasicInfoPage</span></code></pre></figure>
+
+<p>This became the basis for all additional informational pages.</p>
+
+<p>Next, I refactored out the “Go Back” and “Go Home” buttons from my 404 page into a new component, <code class="language-plaintext highlighter-rouge">WrongTurnNavOptions</code>.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">WrongTurnNavOptions</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">history</span> <span class="o">=</span> <span class="nx">useHistory</span><span class="p">()</span>
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;&gt;</span>
+      <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">m</span><span class="o">=</span><span class="p">{</span><span class="mi">2</span><span class="p">}</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">Divider</span> <span class="o">/&gt;</span>
+      <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span>      <span class="o">&lt;</span><span class="nx">Grid</span> <span class="nx">container</span> <span class="nx">justifyContent</span><span class="o">=</span><span class="dl">"</span><span class="s2">center</span><span class="dl">"</span> <span class="nx">alignItems</span><span class="o">=</span><span class="dl">"</span><span class="s2">center</span><span class="dl">"</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">Grid</span> <span class="nx">item</span> <span class="nx">xs</span><span class="o">=</span><span class="p">{</span><span class="mi">6</span><span class="p">}</span><span class="o">&gt;</span>
+          <span class="o">&lt;</span><span class="nx">ButtonTemplate</span>
+            <span class="nx">color</span><span class="o">=</span><span class="dl">"</span><span class="s2">primary</span><span class="dl">"</span>
+            <span class="nx">onClick</span><span class="o">=</span><span class="p">{()</span><span class="o">=&gt;</span><span class="nx">history</span><span class="p">.</span><span class="nx">goBack</span><span class="p">()}</span><span class="o">&gt;</span><span class="nx">Go</span> <span class="nx">Back</span><span class="o">&lt;</span><span class="sr">/ButtonTemplate</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="sr">/Grid</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="nx">Grid</span> <span class="nx">item</span> <span class="nx">xs</span><span class="o">=</span><span class="p">{</span><span class="mi">6</span><span class="p">}</span><span class="o">&gt;</span>
+          <span class="o">&lt;</span><span class="nx">ButtonTemplate</span> <span class="nx">color</span><span class="o">=</span><span class="dl">"</span><span class="s2">secondary</span><span class="dl">"</span>
+            <span class="nx">onClick</span><span class="o">=</span><span class="p">{()</span><span class="o">=&gt;</span><span class="nx">props</span><span class="p">.</span><span class="nx">history</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="dl">"</span><span class="s2">/</span><span class="dl">"</span><span class="p">)}</span><span class="o">&gt;</span>
+            <span class="nx">Go</span> <span class="nx">to</span> <span class="nx">Homepage</span><span class="o">&lt;</span><span class="sr">/ButtonTemplate</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="sr">/Grid</span><span class="err">&gt;
+</span>      <span class="o">&lt;</span><span class="sr">/Grid</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span>
+
+<span class="k">export</span> <span class="k">default</span> <span class="nx">withRouter</span><span class="p">(</span><span class="nx">WrongTurnNavOptions</span><span class="p">)</span></code></pre></figure>
+
+<p>I combined this with the <code class="language-plaintext highlighter-rouge">BasicInfoPage</code> to create a generic “error” page, <code class="language-plaintext highlighter-rouge">WrongTurnPage.</code></p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">WrongTurnPage</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">classes</span> <span class="o">=</span> <span class="nx">useStyles</span><span class="p">()</span>
+  <span class="kd">const</span> <span class="nx">history</span> <span class="o">=</span> <span class="nx">useHistory</span><span class="p">()</span>
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">BasicInfoPage</span><span class="o">&gt;</span>
+        <span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">children</span><span class="p">}</span>
+        <span class="o">&lt;</span><span class="nx">WrongTurnNavOptions</span> <span class="o">/&gt;</span>
+    <span class="o">&lt;</span><span class="sr">/BasicInfoPage</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>Finally, I was able to recreate the 404 page using these new components.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">NotFoundPage</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">WrongTurnPage</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">Typography</span> <span class="nx">variant</span><span class="o">=</span><span class="dl">"</span><span class="s2">h1</span><span class="dl">"</span><span class="o">&gt;</span>
+        <span class="nx">Hmmm</span><span class="p">...</span>
+      <span class="o">&lt;</span><span class="sr">/Typography</span><span class="err">&gt;
+</span>      <span class="o">&lt;</span><span class="nx">Typography</span><span class="o">&gt;</span>
+        <span class="nx">Looks</span> <span class="nx">like</span> <span class="nx">the</span> <span class="nx">page</span> <span class="nx">you</span><span class="dl">'</span><span class="s1">re trying to find doesn</span><span class="dl">'</span><span class="nx">t</span> <span class="nx">exist</span><span class="o">!</span> <span class="nx">Sorry</span> <span class="nx">about</span> <span class="nx">that</span><span class="p">.</span>
+      <span class="o">&lt;</span><span class="sr">/Typography</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/WrongTurnPage</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span>
+
+<span class="k">export</span> <span class="k">default</span> <span class="nx">NotFoundPage</span></code></pre></figure>
+
+<p>I then created a new page, <code class="language-plaintext highlighter-rouge">NotYourResource</code>, which would be displayed whenever a user tried to access a list or recipe that they had not created.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">NotYourResource</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">WrongTurnPage</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">Typography</span><span class="o">&gt;</span>
+        <span class="nx">Sorry</span><span class="p">,</span> <span class="nx">but</span> <span class="k">this</span> <span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">resource</span><span class="p">}</span> <span class="nx">doesn</span><span class="dl">'</span><span class="s1">t belong to you. In the future, we
+        hope to allow use of recipes and lists created by other users, but this
+        is not currently supported.
+      &lt;/Typography&gt;
+    &lt;/WrongTurnPage&gt;
+  )
+}
+
+export default NotYourResource</span></code></pre></figure>
+
+<p>Doing it this way created a standard look for all of my error pages, which I liked. But I wasn’t finished: I still needed the server to actually check if the accessed list or recipe belonged to the user or not. I implemented this in a similar way to how I implemented the 404 page for recipe and lists, just one step later in the process. After recieving the resource, the app checks if the <code class="language-plaintext highlighter-rouge">id</code> of the user is the same as the <code class="language-plaintext highlighter-rouge">creator_id</code> of the resource. If not, it displays the <code class="language-plaintext highlighter-rouge">NotYourResource</code> page instead of the recipe. From the <code class="language-plaintext highlighter-rouge">EditRecipePage</code> (implementation is identical for lists):</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">EditRecipePage</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="c1">// ...</span>
+  <span class="kd">const</span> <span class="p">[</span><span class="nx">hasPermission</span><span class="p">,</span> <span class="nx">setHasPermission</span><span class="p">]</span> <span class="o">=</span> <span class="nx">useState</span><span class="p">(</span><span class="kc">true</span><span class="p">)</span>
+  <span class="c1">// ...</span>
+
+  <span class="kd">const</span> <span class="nx">getRecipe</span> <span class="o">=</span> <span class="k">async</span><span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="c1">// ...</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">recipe</span><span class="p">.</span><span class="nx">data</span><span class="p">.</span><span class="nx">creator_id</span> <span class="o">==</span> <span class="nx">user</span><span class="p">.</span><span class="nx">id</span><span class="p">){</span>
+      <span class="nx">setRecipe</span><span class="p">(</span><span class="nx">recipe</span><span class="p">.</span><span class="nx">data</span><span class="p">)</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+      <span class="nx">setHasPermission</span><span class="p">(</span><span class="kc">false</span><span class="p">)</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+
+  <span class="c1">// ...</span>
+
+  <span class="k">return</span> <span class="p">(</span>
+  <span class="o">&lt;&gt;</span>
+    <span class="p">{</span><span class="nx">recipeExists</span> <span class="p">?</span>
+      <span class="nx">hasPermission</span> <span class="p">?</span>
+        <span class="p">(</span>
+        <span class="o">&lt;</span><span class="nx">MainTemplatePage</span> <span class="nx">noSearchbar</span><span class="o">&gt;</span>
+          <span class="o">&lt;</span><span class="nx">EditableTitle</span> <span class="nx">type</span><span class="o">=</span><span class="dl">"</span><span class="s2">recipe</span><span class="dl">"</span> <span class="nx">hasBackArrow</span> <span class="o">/&gt;</span>
+          <span class="o">&lt;</span><span class="nx">RecipePanel</span>
+            <span class="nx">lines</span><span class="o">=</span><span class="p">{</span><span class="nx">recipe</span><span class="p">.</span><span class="nx">recipe_lines</span><span class="p">}</span>
+            <span class="nx">removeLineFromDOM</span><span class="o">=</span><span class="p">{</span><span class="nx">removeLineFromDOM</span><span class="p">}</span>
+            <span class="nx">changeLine</span><span class="o">=</span><span class="p">{</span><span class="nx">changeRecipeLine</span><span class="p">}</span><span class="sr">/</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="sr">/MainTemplatePage</span><span class="err">&gt;
+</span>    <span class="p">)</span> <span class="p">:</span> <span class="o">&lt;</span><span class="nx">NotYourResource</span> <span class="nx">resource</span><span class="o">=</span><span class="dl">"</span><span class="s2">recipe</span><span class="dl">"</span> <span class="o">/&gt;</span>
+      <span class="p">:</span> <span class="o">&lt;</span><span class="nx">Redirect</span> <span class="nx">to</span><span class="o">=</span><span class="dl">"</span><span class="s2">/pagenotfound</span><span class="dl">"</span> <span class="o">/&gt;</span>
+  <span class="p">}</span>
+  <span class="o">&lt;</span><span class="sr">/</span><span class="err">&gt;
+</span><span class="p">)</span></code></pre></figure>
+
+<p>This prevents users from accessing resources that aren’t theirs, while also indicating that this is a design choice and hopefully will not always be the case.</p>
+
+<h3 id="more-responsive-login">More Responsive Login</h3>
+
+<p>Next, I made some changes to the login screen, updating some of my older requests to use <code class="language-plaintext highlighter-rouge">async</code> methods and be much more responsive when errors happen. Previously, if a login failed, the app didn’t inform the user of anything; it just sort of sat there blankly. It was time to fix that.</p>
+
+<p>In order to do so, I resurrected some nonfunctional code that I had left in the <code class="language-plaintext highlighter-rouge">LoginPanel</code> before: a <code class="language-plaintext highlighter-rouge">Snackbar</code> component that I had been trying to rig up to display error messages. I’m not entirely sure why I scrapped it before, but it appeared to work appropriately for my needs.</p>
+
+<p>First, I moved the component up a level, into the main <code class="language-plaintext highlighter-rouge">LoginPage</code> component. I did this so I didn’t have to remake the Snackbar for my <code class="language-plaintext highlighter-rouge">RegisterPanel</code> component as well. I created two pieces of state that would govern the snackbar: one to determine the message and one to control if it was open or not. I packaged these together in a single function, <code class="language-plaintext highlighter-rouge">displayAlert</code>, that I passed down to the child components.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">LoginPage</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="c1">// ...</span>
+  <span class="kd">const</span> <span class="p">[</span><span class="nx">errorMessage</span><span class="p">,</span> <span class="nx">setErrorMessage</span><span class="p">]</span> <span class="o">=</span> <span class="nx">useState</span><span class="p">(</span><span class="dl">""</span><span class="p">)</span>
+  <span class="kd">const</span> <span class="p">[</span><span class="nx">open</span><span class="p">,</span> <span class="nx">setOpen</span><span class="p">]</span> <span class="o">=</span> <span class="nx">useState</span><span class="p">(</span><span class="kc">false</span><span class="p">)</span>
+
+  <span class="c1">// ...</span>
+
+  <span class="kd">const</span> <span class="nx">snackBar</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">Snackbar</span>
+      <span class="nx">anchorOrigin</span><span class="o">=</span>
+      <span class="nx">open</span><span class="o">=</span><span class="p">{</span><span class="nx">open</span><span class="p">}</span>
+      <span class="nx">autoHideDuration</span><span class="o">=</span><span class="p">{</span><span class="mi">6000</span><span class="p">}</span>
+      <span class="nx">onClose</span><span class="o">=</span><span class="p">{</span><span class="nx">handleClose</span><span class="p">}</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">Alert</span> <span class="nx">severity</span><span class="o">=</span><span class="dl">"</span><span class="s2">error</span><span class="dl">"</span><span class="o">&gt;</span><span class="p">{</span><span class="nx">errorMessage</span><span class="p">}</span><span class="o">&lt;</span><span class="sr">/Alert</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/Snackbar</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+
+  <span class="kd">const</span> <span class="nx">displayAlert</span> <span class="o">=</span> <span class="p">(</span><span class="nx">message</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="nx">setErrorMessage</span><span class="p">(</span><span class="nx">message</span><span class="p">)</span>
+    <span class="nx">setOpen</span><span class="p">(</span><span class="kc">true</span><span class="p">)</span>
+  <span class="p">}</span></code></pre></figure>
+
+<p>The <code class="language-plaintext highlighter-rouge">Alert</code> component here is created from the “Alert” function in the “lab” section of Material-UI, and has some small stylings in the same vein as was recommended in the <a href="https://material-ui.com/components/snackbars/">Snackbar reference</a>.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">Alert</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="o">&lt;</span><span class="nx">MuiAlert</span> <span class="nx">elevation</span><span class="o">=</span><span class="p">{</span><span class="mi">6</span><span class="p">}</span> <span class="nx">variant</span><span class="o">=</span><span class="dl">"</span><span class="s2">filled</span><span class="dl">"</span> <span class="p">{...</span><span class="nx">props</span><span class="p">}</span> <span class="sr">/&gt;</span></code></pre></figure>
+
+<p>In the individual panels, I rewrote my AJAX requests using <code class="language-plaintext highlighter-rouge">async</code> methods and <code class="language-plaintext highlighter-rouge">axios</code>, and checked the status of the response and any other information provided by the backend to tell the user the appropriate error message. Here’s the <code class="language-plaintext highlighter-rouge">login</code> function, used by the <code class="language-plaintext highlighter-rouge">LoginPanel</code>.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">login</span> <span class="o">=</span> <span class="k">async</span><span class="p">(</span><span class="nx">values</span><span class="p">,</span> <span class="nx">actions</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="k">try</span> <span class="p">{</span>
+      <span class="kd">var</span> <span class="nx">loginResponse</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">axios</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="s2">`/users/refresh-token`</span><span class="p">,{</span>
+        <span class="na">headers</span><span class="p">:</span> <span class="p">{</span>
+          <span class="dl">'</span><span class="s1">X-Requested-With</span><span class="dl">'</span><span class="p">:</span> <span class="dl">'</span><span class="s1">XMLHttpRequest</span><span class="dl">'</span><span class="p">,</span> <span class="c1">// attempt to disable default authorization prompt, not working</span>
+          <span class="dl">'</span><span class="s1">Authorization</span><span class="dl">'</span><span class="p">:</span> <span class="dl">'</span><span class="s1">Basic </span><span class="dl">'</span> <span class="o">+</span> <span class="nx">btoa</span><span class="p">(</span><span class="nx">values</span><span class="p">.</span><span class="nx">email</span> <span class="o">+</span> <span class="dl">"</span><span class="s2">:</span><span class="dl">"</span> <span class="o">+</span> <span class="nx">values</span><span class="p">.</span><span class="nx">password</span><span class="p">)</span>
+        <span class="p">}</span>
+      <span class="p">})</span>
+    <span class="p">}</span> <span class="k">catch</span><span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">if</span> <span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">response</span><span class="p">.</span><span class="nx">status</span> <span class="o">==</span> <span class="mi">500</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">props</span><span class="p">.</span><span class="nx">displayAlert</span><span class="p">(</span><span class="dl">"</span><span class="s2">There appears to be a problem with the server. Please check back later.</span><span class="dl">"</span><span class="p">)</span>
+      <span class="p">}</span>
+      <span class="k">if</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">response</span><span class="p">.</span><span class="nx">status</span><span class="o">==</span><span class="mi">401</span><span class="p">){</span>
+        <span class="nx">props</span><span class="p">.</span><span class="nx">displayAlert</span><span class="p">(</span><span class="dl">"</span><span class="s2">Invalid Username or Password.</span><span class="dl">"</span><span class="p">)</span>
+      <span class="p">}</span>
+      <span class="k">return</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">loginResponse</span><span class="p">.</span><span class="nx">status</span> <span class="o">!=</span> <span class="mi">204</span><span class="p">){</span>
+      <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">"</span><span class="s2">error: request returned response of </span><span class="dl">"</span> <span class="o">+</span> <span class="nx">loginResponse</span><span class="p">.</span><span class="nx">status</span><span class="p">)</span>
+      <span class="k">return</span>
+    <span class="p">}</span>
+    <span class="k">try</span> <span class="p">{</span>
+      <span class="kd">var</span> <span class="nx">tokenResponse</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">axios</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="s2">`/users/token`</span><span class="p">)</span>
+    <span class="p">}</span> <span class="k">catch</span><span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">e</span><span class="p">)</span>
+      <span class="k">return</span>
+    <span class="p">}</span>
+    <span class="nx">dispatch</span><span class="p">(</span><span class="nx">setToken</span><span class="p">(</span><span class="nx">tokenResponse</span><span class="p">.</span><span class="nx">data</span><span class="p">[</span><span class="dl">'</span><span class="s1">token</span><span class="dl">'</span><span class="p">]))</span>
+    <span class="nx">dispatch</span><span class="p">(</span><span class="nx">setUser</span><span class="p">(</span><span class="nx">tokenResponse</span><span class="p">.</span><span class="nx">data</span><span class="p">[</span><span class="dl">'</span><span class="s1">user</span><span class="dl">'</span><span class="p">]))</span>
+    <span class="nx">props</span><span class="p">.</span><span class="nx">setHasToken</span><span class="p">(</span><span class="kc">true</span><span class="p">)</span>
+  <span class="p">}</span></code></pre></figure>
+
+<p>Using the 500 response is still a bit iffy, but at least I’ve got some responses.</p>
+
+<p>As an aside to this area, I also used my <code class="language-plaintext highlighter-rouge">BasicInfoPanel</code> to display information regarding validating tokens, like so:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="c1">// page the user is directed to when they use the validation email</span>
+
+<span class="kd">const</span> <span class="nx">VerifyPage</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="p">[</span><span class="nx">verified</span><span class="p">,</span> <span class="nx">setVerified</span><span class="p">]</span> <span class="o">=</span> <span class="nx">useState</span><span class="p">(</span><span class="kc">false</span><span class="p">)</span>
+  <span class="kd">const</span> <span class="p">[</span><span class="nx">error</span><span class="p">,</span> <span class="nx">setError</span><span class="p">]</span> <span class="o">=</span> <span class="nx">useState</span><span class="p">(</span><span class="kc">false</span><span class="p">)</span>
+  <span class="kd">const</span> <span class="nx">token</span> <span class="o">=</span> <span class="nx">qs</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">props</span><span class="p">.</span><span class="nx">location</span><span class="p">.</span><span class="nx">search</span><span class="p">,{</span><span class="na">ignoreQueryPrefix</span><span class="p">:</span><span class="kc">true</span><span class="p">})</span>
+
+  <span class="kd">const</span> <span class="nx">verify</span> <span class="o">=</span> <span class="k">async</span><span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="k">try</span> <span class="p">{</span>
+      <span class="kd">var</span> <span class="nx">verifyResponse</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">axios</span><span class="p">.</span><span class="nx">put</span><span class="p">(</span><span class="s2">`/users/verification`</span><span class="p">,{</span>
+        <span class="na">params</span><span class="p">:</span> <span class="p">{</span>
+          <span class="na">token</span><span class="p">:</span> <span class="nx">token</span>
+        <span class="p">}</span>
+      <span class="p">})</span>
+    <span class="p">}</span> <span class="k">catch</span> <span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">setError</span><span class="p">(</span><span class="kc">true</span><span class="p">)</span>
+      <span class="k">return</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">verifyResponse</span><span class="p">.</span><span class="nx">status</span> <span class="o">==</span> <span class="mi">200</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">setVerified</span><span class="p">(</span><span class="kc">true</span><span class="p">)</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+
+  <span class="nx">useEffect</span><span class="p">(()</span><span class="o">=&gt;</span><span class="p">{</span>
+    <span class="nx">verify</span><span class="p">()</span>
+  <span class="p">},[])</span>
+
+
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">BasicInfoPage</span><span class="o">&gt;</span>
+      <span class="p">{</span><span class="nx">verified</span> <span class="p">?</span>
+        <span class="o">&lt;</span><span class="nx">Typography</span><span class="o">&gt;</span><span class="nx">Success</span><span class="o">!</span> <span class="nx">Your</span> <span class="nx">account</span> <span class="nx">has</span> <span class="nx">been</span> <span class="nx">verified</span><span class="p">.</span> <span class="o">&lt;</span><span class="sr">/Typography</span><span class="err">&gt;
+</span>        <span class="p">:</span> <span class="nx">error</span> <span class="p">?</span> <span class="o">&lt;</span><span class="nx">Typography</span><span class="o">&gt;</span><span class="nx">Hmm</span><span class="p">,</span> <span class="nx">we</span> <span class="nx">had</span> <span class="nx">a</span> <span class="nx">problem</span> <span class="nx">verifying</span> <span class="nx">your</span> <span class="nx">account</span><span class="p">.</span><span class="o">&lt;</span><span class="sr">/Typography</span><span class="err">&gt;
+</span>        <span class="p">:</span> <span class="o">&lt;</span><span class="nx">Typography</span><span class="o">&gt;</span><span class="nx">Please</span> <span class="nx">wait</span><span class="p">...</span><span class="o">&lt;</span><span class="sr">/Typography</span><span class="err">&gt;
+</span>      <span class="p">}</span>
+    <span class="o">&lt;</span><span class="sr">/BasicInfoPage</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span>
+
+<span class="k">export</span> <span class="k">default</span> <span class="nx">VerifyPage</span></code></pre></figure>
+
+<p>And that’s it! The login page now displays basic error information (as well as form validations, already completed), and there are temporary stoppers in place to prevent users from accessing resources that aren’t theirs.</p>
+
+<h3 id="next-steps">Next Steps</h3>
+
+<ul>
+  <li>
+    <p>More information in the <code class="language-plaintext highlighter-rouge">UnauthenticatedApp</code> to explain how the program works</p>
+  </li>
+  <li>
+    <p>Some bug fixes</p>
+  </li>
+  <li>
+    <p>Documentation</p>
+  </li>
+</ul>
+
+</div>
+
+    </div>
+    <footer>
+      <span><a href="/index.html">Home</a></span>
+      <span><a href="/blog">Blog</a></span>
+      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+    </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,215 @@
+I"�^<p>So I’ve now reached a point where I’m moderately satisfied with the number of features that one can use to customize and change their lists as they need. While I would like to go back and smooth over some rough edges, it’s time to move on to a different area of work and continue my march to feature completeness.</p>
+
+<p>It’s time to enable exporting of the list. While it’s true that I’m designing this as a mobile-friendly web app, I feel that some users might want a simpler way to access their list when it actually comes time to use it. To that end, I want to have several ways to export the list. The most important of these are the ability to export to a pdf, and the ability to email the list. If possible, I would also like to give the user the ability to text the list to themselves, but I’m not as certain of how to do that.</p>
+
+<p>But let’s start with the pdf. After some googling and searching, I found <a href="https://www.youtube.com/watch?v=C8jxInLM9nM">this tutorial</a>, which makes use of <a href="https://wkhtmltopdf.org/">wkhtmltopdf</a> and <a href="https://github.com/JazzCore/python-pdfkit">pdfkit</a> to turn a rendered template into a pdf. After installing modules and adding wkhtmltopdf to my PATH, I began to code.</p>
+
+<p>First I created a new route that would render the list in a pdf:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">main</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">'/list/&lt;string:hex_name&gt;/print'</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">print_list</span><span class="p">(</span><span class="n">hex_name</span><span class="p">):</span>
+    <span class="nb">list</span> <span class="o">=</span> <span class="n">CompiledList</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">hex_name</span><span class="o">=</span><span class="n">hex_name</span><span class="p">).</span><span class="n">first_or_404</span><span class="p">()</span>
+    <span class="n">list_lines</span> <span class="o">=</span> <span class="n">CleanedLine</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="nb">list</span><span class="o">=</span><span class="nb">list</span><span class="p">).</span><span class="nb">all</span><span class="p">()</span>
+
+    <span class="n">list_lines</span> <span class="o">=</span> <span class="p">[</span><span class="n">CompiledIngredientLine</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">list_lines</span><span class="p">]</span>
+
+    <span class="n">rendered</span> <span class="o">=</span> <span class="n">render_template</span><span class="p">(</span><span class="s">'print_template.html'</span><span class="p">,</span> <span class="nb">list</span><span class="o">=</span><span class="nb">list</span><span class="p">,</span> <span class="n">lines</span><span class="o">=</span><span class="n">list_lines</span><span class="p">)</span>
+
+    <span class="n">pdf</span> <span class="o">=</span> <span class="n">pdfkit</span><span class="p">.</span><span class="n">from_string</span><span class="p">(</span><span class="n">rendered</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+
+    <span class="n">response</span> <span class="o">=</span> <span class="n">make_response</span><span class="p">(</span><span class="n">pdf</span><span class="p">)</span>
+    <span class="n">response</span><span class="p">.</span><span class="n">headers</span><span class="p">[</span><span class="s">'Content-Type'</span><span class="p">]</span> <span class="o">=</span> <span class="s">'application/pdf'</span>
+    <span class="n">response</span><span class="p">.</span><span class="n">headers</span><span class="p">[</span><span class="s">'Content-Disposition'</span><span class="p">]</span> <span class="o">=</span> <span class="s">'inline; filename=output.pdf'</span>
+
+    <span class="k">return</span> <span class="n">response</span></code></pre></figure>
+
+<p>This route renders a jinja template the same way any of the other routes do, except it then turns that template into a pdf. From there, it configures the client to expect a pdf as a response, and returns the response. Here’s the template that I first used:</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html"><span class="cp">&lt;!DOCTYPE html&gt;</span>
+<span class="nt">&lt;html</span> <span class="na">lang=</span><span class="s">"en"</span><span class="nt">&gt;</span>
+
+<span class="nt">&lt;head&gt;</span>
+    <span class="nt">&lt;meta</span> <span class="na">charset=</span><span class="s">"utf-8"</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;meta</span> <span class="na">http-equiv=</span><span class="s">"X-UA-Compatible"</span> <span class="na">content=</span><span class="s">"IE=edge"</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;meta</span> <span class="na">name=</span><span class="s">"viewport"</span> <span class="na">content=</span><span class="s">"width=device-width, initial-scale=1"</span><span class="nt">&gt;</span>
+
+
+    <span class="c">&lt;!-- Bootstrap Links --&gt;</span>
+    <span class="nt">&lt;link</span> <span class="na">rel=</span><span class="s">"stylesheet"</span> <span class="na">href=</span><span class="s">"https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css"</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;script </span><span class="na">src=</span><span class="s">"https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"</span><span class="nt">&gt;&lt;/script&gt;</span>
+    <span class="nt">&lt;script </span><span class="na">src=</span><span class="s">"https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"</span><span class="nt">&gt;&lt;/script&gt;</span>
+
+    <span class="nt">&lt;link</span> <span class="na">rel=</span><span class="s">"stylesheet"</span> <span class="na">href=</span><span class="s">"{{url_for('static', filename='main.css')}}"</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;style&gt;</span>
+        <span class="nt">li</span> <span class="p">{</span>
+            <span class="nl">margin-bottom</span><span class="p">:</span> <span class="m">10px</span><span class="p">;</span>
+            <span class="nl">font-size</span><span class="p">:</span> <span class="nb">large</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="nt">&lt;/style&gt;</span>
+<span class="nt">&lt;/head&gt;</span>
+
+<span class="nt">&lt;body&gt;</span>
+<span class="nt">&lt;h1&gt;</span>{{list.name}}<span class="nt">&lt;/h1&gt;</span>
+
+<span class="nt">&lt;ul&gt;</span>
+{% for line in lines %}
+    {% if not line.checked %}
+        <span class="nt">&lt;li&gt;</span>{{line.ingredient}}<span class="nt">&lt;/li&gt;</span>
+    {% endif %}
+{% endfor %}
+<span class="nt">&lt;/ul&gt;</span>
+<span class="nt">&lt;/body&gt;</span></code></pre></figure>
+
+<p>I didn’t use my <code class="language-plaintext highlighter-rouge">layout.html</code> template because I didn’t want the navbar, but I did include bootstrap (for now), mainly because I wanted to keep everything the same style. I gave the program a test, and the template rendered successfully:</p>
+
+<p><img src="/assets/img/posts/export-recipe/pdf-take-one.png" alt="alt text" /></p>
+
+<p>Excellent. Now, I could have been done here, but I decided that I wanted to add a little extra customization to how the pdf was generated. Plus, I needed to add a way to access the <code class="language-plaintext highlighter-rouge">/print</code> route from the main list page.</p>
+
+<p>I went into my <code class="language-plaintext highlighter-rouge">forms.py</code> folder and created a new form, <code class="language-plaintext highlighter-rouge">ExportToPDFForm</code>, that contained a few checkboxes for different aspects of the data that a person might want to include in their grocery list, such as the recipes and whether or not the program should display checked lines.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">class</span> <span class="nc">ExportToPDFForm</span><span class="p">(</span><span class="n">FlaskForm</span><span class="p">):</span>
+    <span class="n">show_checked</span> <span class="o">=</span> <span class="n">BooleanField</span><span class="p">(</span><span class="s">"Show checked off ingredients: "</span><span class="p">)</span>
+    <span class="n">show_recipes</span> <span class="o">=</span> <span class="n">BooleanField</span><span class="p">(</span><span class="s">"Show Recipes: "</span><span class="p">)</span>
+    <span class="n">show_lines</span> <span class="o">=</span> <span class="n">BooleanField</span><span class="p">(</span><span class="s">"Show recipe lines: "</span><span class="p">)</span>
+    <span class="n">submit</span> <span class="o">=</span> <span class="n">SubmitField</span><span class="p">(</span><span class="s">"Export to PDF"</span><span class="p">)</span></code></pre></figure>
+
+<p>Then, I added this new form to the list page, attaching it to a modal. I seem to be using a lot of these, but can you blame me? I like the way they look and they add additional features without cluttering up the main page too much. If it becomes overbearing I may change it, but the relentless pace of progress stops for no one.</p>
+
+<p>I attached the modal to a “Print” <code class="language-plaintext highlighter-rouge">&lt;button&gt;</code> and placed it underneath the list name:</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html"><span class="nt">&lt;div</span> <span class="na">id=</span><span class="s">"complist-name-div"</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;h1</span> <span class="na">id=</span><span class="s">"complist-name"</span><span class="nt">&gt;</span>{{ comp_list.name }}<span class="nt">&lt;/h1&gt;</span>
+    <span class="nt">&lt;button</span> <span class="na">id=</span><span class="s">"rename-list-button"</span> <span class="na">class=</span><span class="s">"btn btn-secondary"</span><span class="nt">&gt;</span>Rename<span class="nt">&lt;/button&gt;</span>
+<span class="nt">&lt;/div&gt;</span>
+<span class="nt">&lt;div</span> <span class="na">id=</span><span class="s">"list-tool-panel"</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;button</span> <span class="na">data-toggle=</span><span class="s">"modal"</span> <span class="na">data-target=</span><span class="s">"#printModal"</span> <span class="na">class=</span><span class="s">"btn btn-info"</span><span class="nt">&gt;</span>Print<span class="nt">&lt;/button&gt;</span>
+<span class="nt">&lt;/div&gt;</span>
+...
+
+<span class="c">&lt;!-- Modal Print --&gt;</span>
+<span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"modal fade"</span> <span class="na">tabindex=</span><span class="s">"-1"</span> <span class="na">id=</span><span class="s">"printModal"</span> <span class="na">role=</span><span class="s">"dialog"</span> <span class="na">aria-labelledby=</span><span class="s">"deleteModalLabel"</span> <span class="na">aria-hidden=</span><span class="s">"true"</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"modal-dialog"</span> <span class="na">role=</span><span class="s">"document"</span><span class="nt">&gt;</span>
+        <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"modal-content"</span><span class="nt">&gt;</span>
+            <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"modal-header"</span><span class="nt">&gt;</span>
+                <span class="nt">&lt;h5</span> <span class="na">class=</span><span class="s">"modal-title"</span> <span class="na">id=</span><span class="s">"printModalLabel"</span><span class="nt">&gt;</span>Print List<span class="nt">&lt;/h5&gt;</span>
+                <span class="nt">&lt;button</span> <span class="na">type=</span><span class="s">"button"</span> <span class="na">class=</span><span class="s">"close"</span> <span class="na">data-dismiss=</span><span class="s">"modal"</span> <span class="na">aria-label=</span><span class="s">"Close"</span><span class="nt">&gt;</span>
+                    <span class="nt">&lt;span</span> <span class="na">aria-hidden=</span><span class="s">"true"</span><span class="nt">&gt;</span>x<span class="nt">&lt;/span&gt;</span>
+                <span class="nt">&lt;/button&gt;</span>
+            <span class="nt">&lt;/div&gt;</span>
+            <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"modal-body"</span><span class="nt">&gt;</span>
+                <span class="nt">&lt;form</span> <span class="na">method=</span><span class="s">"POST"</span> <span class="na">target=</span><span class="s">"_ blank"</span> <span class="na">action=</span><span class="s">"{{ url_for('main.print_list', hex_name=comp_list.hex_name) }}"</span><span class="nt">&gt;</span>
+                    {{export_to_pdf_form.hidden_tag()}}
+                    <span class="nt">&lt;fieldset&gt;</span>
+                        <span class="nt">&lt;div&gt;</span>
+                        {{export_to_pdf_form.show_checked.label}}
+                        {{export_to_pdf_form.show_checked(class="form-check")}}
+                        <span class="nt">&lt;/div&gt;</span>
+                        <span class="nt">&lt;div&gt;</span>
+                        {{export_to_pdf_form.show_recipes.label}}
+                        {{export_to_pdf_form.show_recipes(class="form-check")}}
+                        <span class="nt">&lt;/div&gt;</span>
+                         <span class="nt">&lt;div&gt;</span>
+                        {{export_to_pdf_form.show_lines.label}}
+                        {{export_to_pdf_form.show_lines(class="form-check")}}
+                        <span class="nt">&lt;/div&gt;</span>
+                    <span class="nt">&lt;/fieldset&gt;</span>
+                    {{export_to_pdf_form.submit(class="btn btn-submit")}}
+                <span class="nt">&lt;/form&gt;</span>
+            <span class="nt">&lt;/div&gt;</span>
+        <span class="nt">&lt;/div&gt;</span>
+    <span class="nt">&lt;/div&gt;</span>
+<span class="nt">&lt;/div&gt;</span></code></pre></figure>
+
+<p>This created a nice button…</p>
+
+<p><img src="/assets/img/posts/export-recipe/print-button.png" alt="alt text" /></p>
+
+<p>…which, when clicked, produces a nice modal…</p>
+
+<p><img src="/assets/img/posts/export-recipe/print-modal.png" alt="alt text" /></p>
+
+<p>Now that I had the data, I just needed to do something with it. As you may have noticed in the form data above, I set the form to redirect to my <code class="language-plaintext highlighter-rouge">/print</code> route. Then I rewrote the route so that it fetched more of the necessary data, including the <code class="language-plaintext highlighter-rouge">RawLines</code> and the <code class="language-plaintext highlighter-rouge">RecipeList</code>s associated with I also made a quick rewrite to my list sorting function, moving it to <code class="language-plaintext highlighter-rouge">utils.py</code> so that I could reorder the list on the print screen.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">main</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">'/list/&lt;string:hex_name&gt;/print'</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">'POST'</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">print_list</span><span class="p">(</span><span class="n">hex_name</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">form</span><span class="p">)</span>
+    <span class="nb">list</span> <span class="o">=</span> <span class="n">CompiledList</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">hex_name</span><span class="o">=</span><span class="n">hex_name</span><span class="p">).</span><span class="n">first_or_404</span><span class="p">()</span>
+    <span class="n">list_lines</span> <span class="o">=</span> <span class="n">CleanedLine</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="nb">list</span><span class="o">=</span><span class="nb">list</span><span class="p">).</span><span class="nb">all</span><span class="p">()</span>
+
+    <span class="n">sort_list</span><span class="p">(</span><span class="n">list_lines</span><span class="p">)</span>  <span class="c1"># new function in utils.py
+</span>
+    <span class="n">list_lines</span> <span class="o">=</span> <span class="p">[</span><span class="n">CompiledIngredientLine</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">list_lines</span><span class="p">]</span>
+    <span class="n">list_recipes</span> <span class="o">=</span> <span class="n">RecipeList</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">complist</span><span class="o">=</span><span class="nb">list</span><span class="p">).</span><span class="nb">all</span><span class="p">()</span>
+
+    <span class="c1"># reverse list and remove "additional ingredients" recipe
+</span>    <span class="n">list_recipes</span><span class="p">.</span><span class="n">reverse</span><span class="p">()</span>
+    <span class="n">list_recipes</span> <span class="o">=</span> <span class="p">[</span><span class="n">recipe</span> <span class="k">for</span> <span class="n">recipe</span> <span class="ow">in</span> <span class="n">list_recipes</span> <span class="k">if</span> <span class="n">recipe</span><span class="p">.</span><span class="n">name</span> <span class="o">!=</span> <span class="s">"Additional Ingredients"</span><span class="p">]</span>
+
+    <span class="n">rendered</span> <span class="o">=</span> <span class="n">render_template</span><span class="p">(</span><span class="s">'print_template.html'</span><span class="p">,</span>
+                               <span class="nb">list</span><span class="o">=</span><span class="nb">list</span><span class="p">,</span>
+                               <span class="n">lines</span><span class="o">=</span><span class="n">list_lines</span><span class="p">,</span>
+                               <span class="n">list_recipes</span><span class="o">=</span><span class="n">list_recipes</span><span class="p">,</span>
+                               <span class="n">print_checked</span><span class="o">=</span><span class="n">request</span><span class="p">.</span><span class="n">form</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"export-pdf-show_checked"</span><span class="p">,</span> <span class="s">"n"</span><span class="p">),</span>
+                               <span class="n">print_recipes</span><span class="o">=</span><span class="n">request</span><span class="p">.</span><span class="n">form</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"export-pdf-show_recipes"</span><span class="p">,</span> <span class="s">"n"</span><span class="p">),</span>
+                               <span class="n">print_lines</span><span class="o">=</span><span class="n">request</span><span class="p">.</span><span class="n">form</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"export-pdf-show_lines"</span><span class="p">,</span> <span class="s">"n"</span><span class="p">))</span>
+
+    <span class="n">pdf</span> <span class="o">=</span> <span class="n">pdfkit</span><span class="p">.</span><span class="n">from_string</span><span class="p">(</span><span class="n">rendered</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+
+    <span class="n">response</span> <span class="o">=</span> <span class="n">make_response</span><span class="p">(</span><span class="n">pdf</span><span class="p">)</span>
+    <span class="n">response</span><span class="p">.</span><span class="n">headers</span><span class="p">[</span><span class="s">'Content-Type'</span><span class="p">]</span> <span class="o">=</span> <span class="s">'application/pdf'</span>
+    <span class="n">response</span><span class="p">.</span><span class="n">headers</span><span class="p">[</span><span class="s">'Content-Disposition'</span><span class="p">]</span> <span class="o">=</span> <span class="s">'inline; filename=output.pdf'</span>
+
+    <span class="k">return</span> <span class="n">response</span></code></pre></figure>
+
+<p>Finally, I went back into my pdf template and changed the code so that it displayed the proper information, but only if the relevant boxes had been checked:</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html"><span class="nt">&lt;h1&gt;&lt;/h1&gt;</span>
+
+<span class="nt">&lt;ul&gt;</span>
+    {% for line in lines %}
+        {% if print_checked == "n" %}
+            {% if not line.checked %}
+                <span class="nt">&lt;li&gt;</span>{{line.ingredient}}<span class="nt">&lt;/li&gt;</span>
+                {% if print_lines == "y" %}
+                    <span class="nt">&lt;ul&gt;</span>
+                        {% for raw_line in line.raw_lines %}
+                            <span class="nt">&lt;li&gt;</span>{{raw_line.full_text}} <span class="nt">&lt;span</span> <span class="na">style=</span><span class="s">"font-style: italic"</span><span class="nt">&gt;</span>{{raw_line.recipe.name}}<span class="nt">&lt;/span&gt;&lt;/li&gt;</span>
+                        {% endfor %}
+                    <span class="nt">&lt;/ul&gt;</span>
+                {% endif %}
+            {% endif %}
+        {% else %}
+            <span class="nt">&lt;li&gt;</span>{{line.ingredient}}<span class="nt">&lt;/li&gt;</span>
+            {% if print_lines == "y" %}
+                    <span class="nt">&lt;ul&gt;</span>
+                        {% for raw_line in line.raw_lines %}
+                            <span class="nt">&lt;li&gt;</span>{{raw_line.full_text}} <span class="nt">&lt;span</span> <span class="na">style=</span><span class="s">"font-style: italic"</span><span class="nt">&gt;</span>{{raw_line.recipe.name}}<span class="nt">&lt;/span&gt;&lt;/li&gt;</span>
+                        {% endfor %}
+                    <span class="nt">&lt;/ul&gt;</span>
+                {% endif %}
+        {% endif %}
+    {% endfor %}
+<span class="nt">&lt;/ul&gt;</span>
+{% if print_recipes=="y" %}
+    <span class="nt">&lt;h1&gt;</span> Recipes <span class="nt">&lt;/h1&gt;</span>
+    <span class="nt">&lt;ul&gt;</span>
+        {% for recipe in list_recipes %}
+            <span class="nt">&lt;li&gt;</span>{{recipe.name}}<span class="nt">&lt;/li&gt;</span>
+        {% endfor %}
+    <span class="nt">&lt;/ul&gt;</span>
+{% endif %}</code></pre></figure>
+
+<p>A lot of templating going on here, and I’m still not totally satisfied with how the printed list looks. But the pieces are in place, and I plan to give it another pass when I come back through for beautification.</p>
+
+<p><img src="/assets/img/posts/export-recipe/lines-in-pdf.png" alt="alt text" /></p>
+
+<p><img src="/assets/img/posts/export-recipe/recipe-in-pdf.png" alt="alt text" /></p>
+
+<h4 id="next-steps">Next Steps</h4>
+
+<ul>
+  <li>email the list to a provided address</li>
+  <li>text the list to a provided number</li>
+</ul>
+:ET

@@ -1,0 +1,194 @@
+I"�a<p>Now that authorization was out of the way, it was time to begin really linking up the frontend and backend. While there is still plenty to design in front, I wanted to add some kind of communication, both as a proof of concept that my authorization was working and because I really wanted to see this thing work. But before I could do that, I had to make one final adjustment to the authorization: Redux.</p>
+
+<h3 id="adding-redux">Adding Redux</h3>
+
+<p>In trying to implement the use of my authorization token for <code class="language-plaintext highlighter-rouge">fetch</code> requests, I quickly realized that passing state down through 10 layers of components would get old fast. So I decided to do a quick refactor of my code, and bring in Redux to handle the token and the user information.</p>
+
+<p>So far, my implementation is dead simple: there are two pieces of the store: <code class="language-plaintext highlighter-rouge">token</code>, which stores the authorization token, and <code class="language-plaintext highlighter-rouge">user</code>, which stores the username and authorization information of the user.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="k">import</span> <span class="p">{</span><span class="nx">combineReducers</span><span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">redux</span><span class="dl">'</span>
+
+<span class="kd">const</span> <span class="nx">tokenReducer</span> <span class="o">=</span> <span class="p">(</span><span class="nx">state</span><span class="o">=</span><span class="kc">null</span><span class="p">,</span> <span class="nx">action</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">switch</span> <span class="p">(</span><span class="nx">action</span><span class="p">.</span><span class="nx">type</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">case</span> <span class="dl">'</span><span class="s1">SETTOKEN</span><span class="dl">'</span><span class="p">:</span>
+      <span class="k">return</span> <span class="nx">action</span><span class="p">.</span><span class="nx">payload</span>
+    <span class="na">default</span><span class="p">:</span>
+      <span class="k">return</span> <span class="nx">state</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">const</span> <span class="nx">userReducer</span> <span class="o">=</span> <span class="p">(</span><span class="nx">state</span><span class="o">=</span><span class="kc">null</span><span class="p">,</span> <span class="nx">action</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">switch</span> <span class="p">(</span><span class="nx">action</span><span class="p">.</span><span class="nx">type</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">case</span> <span class="dl">'</span><span class="s1">SETUSER</span><span class="dl">'</span><span class="p">:</span>
+      <span class="k">return</span> <span class="nx">action</span><span class="p">.</span><span class="nx">payload</span>
+    <span class="na">default</span><span class="p">:</span>
+      <span class="k">return</span> <span class="nx">state</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">const</span> <span class="nx">rootReducer</span> <span class="o">=</span> <span class="nx">combineReducers</span><span class="p">({</span>
+  <span class="na">token</span><span class="p">:</span> <span class="nx">tokenReducer</span><span class="p">,</span>
+  <span class="na">user</span><span class="p">:</span> <span class="nx">userReducer</span>
+<span class="p">})</span>
+
+<span class="k">export</span> <span class="k">default</span> <span class="nx">rootReducer</span></code></pre></figure>
+
+<p>Likewise, I only have two actions: <code class="language-plaintext highlighter-rouge">SETTOKEN</code>, which sets the token, and <code class="language-plaintext highlighter-rouge">SETUSER</code>, which sets the user.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="k">export</span> <span class="kd">const</span> <span class="nx">setToken</span> <span class="o">=</span> <span class="p">(</span><span class="nx">token</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="p">{</span>
+    <span class="na">type</span><span class="p">:</span> <span class="dl">'</span><span class="s1">SETTOKEN</span><span class="dl">'</span><span class="p">,</span>
+    <span class="na">payload</span><span class="p">:</span> <span class="nx">token</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">export</span> <span class="kd">const</span> <span class="nx">setUser</span> <span class="o">=</span> <span class="p">(</span><span class="nx">user</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="p">{</span>
+    <span class="na">type</span><span class="p">:</span> <span class="dl">'</span><span class="s1">SETUSER</span><span class="dl">'</span><span class="p">,</span>
+    <span class="na">payload</span><span class="p">:</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">user</span><span class="p">)</span>
+  <span class="p">}</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>Like I said, dead simple. I’m using hooks to access the necessary information in my various components, and everything works quite nicely.</p>
+
+<h3 id="creating-a-generic-modal">Creating a Generic Modal</h3>
+
+<p>In order to add recipes and lists from the main page, I wanted to add a <code class="language-plaintext highlighter-rouge">Modal</code> component that would be activated when the option was selected from the menu. In order to avoid repeating myself too much, I created a single blank modal template and then added the necessary components on top of it. I placed this template in my <code class="language-plaintext highlighter-rouge">SearchBar</code> component, and stored the specific modal component as a piece of state.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="c1">// In SearchBar. js</span>
+
+<span class="c1">// new styling</span>
+<span class="p">...</span>
+<span class="nx">modal</span><span class="p">:</span> <span class="p">{</span>
+  <span class="nl">position</span><span class="p">:</span> <span class="dl">"</span><span class="s2">relative</span><span class="dl">"</span><span class="p">,</span>
+  <span class="nx">width</span><span class="p">:</span> <span class="dl">"</span><span class="s2">95vw</span><span class="dl">"</span><span class="p">,</span>
+  <span class="nx">top</span><span class="p">:</span> <span class="dl">"</span><span class="s2">30vh</span><span class="dl">"</span><span class="p">,</span>
+  <span class="nx">margin</span><span class="p">:</span> <span class="dl">"</span><span class="s2">auto</span><span class="dl">"</span><span class="p">,</span>
+  <span class="dl">"</span><span class="s2">&amp;:focus</span><span class="dl">"</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nl">outline</span><span class="p">:</span> <span class="dl">"</span><span class="s2">none</span><span class="dl">"</span>
+  <span class="p">},</span>
+<span class="p">},</span>
+<span class="nx">modalPaper</span><span class="p">:</span> <span class="p">{</span>
+  <span class="nl">borderRadius</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>
+  <span class="nx">padding</span><span class="p">:</span> <span class="dl">"</span><span class="s2">7px 14px</span><span class="dl">"</span><span class="p">,</span>
+  <span class="nx">backgroundColor</span><span class="p">:</span> <span class="nx">theme</span><span class="p">.</span><span class="nx">palette</span><span class="p">.</span><span class="nx">secondary</span><span class="p">.</span><span class="nx">main</span>
+<span class="p">}</span>
+<span class="p">...</span>
+
+<span class="c1">// new state</span>
+<span class="p">...</span>
+<span class="kd">const</span> <span class="p">[</span><span class="nx">modal</span><span class="p">,</span> <span class="nx">setModal</span><span class="p">]</span> <span class="o">=</span> <span class="nx">useState</span><span class="p">(</span><span class="kc">null</span><span class="p">)</span>
+<span class="kd">const</span> <span class="p">[</span><span class="nx">modalOpen</span><span class="p">,</span> <span class="nx">setModalOpen</span><span class="p">]</span> <span class="o">=</span> <span class="nx">useState</span><span class="p">(</span><span class="kc">false</span><span class="p">)</span>
+<span class="p">...</span>
+
+<span class="c1">// modal component</span>
+<span class="p">...</span>
+<span class="o">&lt;</span><span class="nx">Modal</span> <span class="nx">open</span><span class="o">=</span><span class="p">{</span><span class="nx">modalOpen</span><span class="p">}</span> <span class="nx">onClose</span><span class="o">=</span><span class="p">{()</span><span class="o">=&gt;</span><span class="nx">setModalOpen</span><span class="p">(</span><span class="kc">false</span><span class="p">)}</span><span class="o">&gt;</span>
+  <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">modal</span><span class="p">}</span><span class="o">&gt;</span>
+    <span class="o">&lt;</span><span class="nx">Paper</span> <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">modalPaper</span><span class="p">}</span><span class="o">&gt;</span>
+      <span class="p">{</span><span class="nx">modal</span><span class="p">}</span>
+    <span class="o">&lt;</span><span class="sr">/Paper</span><span class="err">&gt;
+</span>  <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span><span class="o">&lt;</span><span class="sr">/Modal</span><span class="err">&gt;
+</span><span class="p">...</span></code></pre></figure>
+
+<p>This method ensures that as little code as possible is repeated in the modal components themselves, and it creates a nice, basic look for the modal that is in line with the rest of the styling.</p>
+
+<h3 id="adding-new-recipes">Adding New Recipes</h3>
+
+<p>Now that I had the modal component ready, it was time to actually add some use. I started with the <code class="language-plaintext highlighter-rouge">AddRecipeModal</code> component. This component reuses some of my components from the sign-in page (and, consequently, will look better when I return to give those components a makeover). Fundamentally, all it does is take a URL and submit it to the backend for parsing. At the moment, there is no recipe page (and thus no way to edit what the parser returns), but the backend can still produce its best guess no problem.</p>
+
+<p>This component also gave me the opportunity to test my implementation of Redux and my token-based authorization for the first time, and I’m pleased to note that everything went well.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">AddRecipeModal</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">token</span> <span class="o">=</span> <span class="nx">useSelector</span><span class="p">(</span><span class="nx">store</span><span class="o">=&gt;</span><span class="nx">store</span><span class="p">.</span><span class="nx">token</span><span class="p">)</span>
+  <span class="k">return</span> <span class="p">(</span>
+        <span class="o">&lt;</span><span class="nx">Formik</span>
+          <span class="nx">initialValues</span> <span class="o">=</span> 
+          <span class="nx">onSubmit</span><span class="o">=</span><span class="p">{(</span><span class="nx">values</span><span class="p">,</span> <span class="nx">actions</span><span class="p">)</span><span class="o">=&gt;</span><span class="p">{</span>
+            <span class="kd">const</span> <span class="nx">headers</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Headers</span><span class="p">()</span>
+            <span class="nx">headers</span><span class="p">.</span><span class="nx">append</span><span class="p">(</span><span class="dl">'</span><span class="s1">Authorization</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">Basic </span><span class="dl">'</span> <span class="o">+</span> <span class="nx">btoa</span><span class="p">(</span><span class="nx">token</span> <span class="o">+</span> <span class="dl">"</span><span class="s2">:</span><span class="dl">"</span><span class="p">))</span>
+            <span class="nx">headers</span><span class="p">.</span><span class="nx">append</span><span class="p">(</span><span class="dl">'</span><span class="s1">Content-Type</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">application/json</span><span class="dl">'</span><span class="p">)</span>
+            <span class="kd">const</span> <span class="nx">body</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">({</span><span class="dl">"</span><span class="s2">create_from_url</span><span class="dl">"</span><span class="p">:</span><span class="nx">values</span><span class="p">.</span><span class="nx">url</span><span class="p">})</span>
+            <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">body</span><span class="p">)</span>
+            <span class="nx">fetch</span><span class="p">(</span><span class="dl">"</span><span class="s2">/recipes</span><span class="dl">"</span><span class="p">,{</span>
+              <span class="na">method</span><span class="p">:</span> <span class="dl">"</span><span class="s2">POST</span><span class="dl">"</span><span class="p">,</span>
+              <span class="na">headers</span><span class="p">:</span> <span class="nx">headers</span><span class="p">,</span>
+              <span class="na">body</span><span class="p">:</span> <span class="nx">body</span>
+            <span class="p">})</span>
+            <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">response</span><span class="o">=&gt;</span><span class="p">{</span>
+              <span class="k">if</span><span class="p">(</span><span class="nx">response</span><span class="p">.</span><span class="nx">status</span><span class="o">===</span><span class="mi">200</span><span class="p">){</span>
+                <span class="k">return</span> <span class="nx">response</span><span class="p">.</span><span class="nx">json</span><span class="p">()</span>
+              <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">"</span><span class="s2">Something went wrong!</span><span class="dl">"</span><span class="p">)</span>
+              <span class="p">}</span>
+            <span class="p">})</span>
+            <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">json</span><span class="o">=&gt;</span><span class="p">{</span>
+              <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">json</span><span class="p">)</span>
+            <span class="p">})</span>
+            <span class="p">.</span><span class="k">catch</span><span class="p">(</span><span class="nx">err</span><span class="o">=&gt;</span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">err</span><span class="p">))</span>
+          <span class="p">}}</span><span class="o">&gt;</span>
+          <span class="o">&lt;</span><span class="nx">Form</span><span class="o">&gt;</span>
+            <span class="o">&lt;</span><span class="nx">FormikTextField</span> <span class="nx">label</span><span class="o">=</span><span class="dl">"</span><span class="s2">URL</span><span class="dl">"</span> <span class="nx">name</span><span class="o">=</span><span class="dl">"</span><span class="s2">url</span><span class="dl">"</span><span class="o">/&gt;</span>
+            <span class="o">&lt;</span><span class="nx">ButtonTemplate</span> <span class="nx">type</span><span class="o">=</span><span class="dl">"</span><span class="s2">submit</span><span class="dl">"</span> <span class="nx">color</span><span class="o">=</span><span class="dl">"</span><span class="s2">primary</span><span class="dl">"</span><span class="o">&gt;</span><span class="nx">Get</span> <span class="nx">Recipe</span><span class="o">&lt;</span><span class="sr">/ButtonTemplate</span><span class="err">&gt;
+</span>          <span class="o">&lt;</span><span class="sr">/Form</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="sr">/Formik</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span></code></pre></figure>
+
+<p><img src="/assets/img/posts/grocery-app/add-recipe-modal.png" alt="Picture of modal" /></p>
+
+<p>The actual posting process is still a fair amount of boilerplate, and at some point I’d like to look at a library like Axios to help with that. But for now, it’s working.</p>
+
+<p><img src="/assets/img/posts/grocery-app/old-recipes.png" alt="Recipes I used from last attempt" /></p>
+
+<p>Remember these? They were two of the recipes that I used for testing during my last attempt at building this app. Here they are now, looking much better and ready to be added to any list necessary. The recipe arc comes full circle.</p>
+
+<p>As you can see, there are still some issues with the parsing, but those will be ironed out when I create the actual recipe page. I think that’s next.</p>
+
+<h3 id="adding-lists">Adding Lists</h3>
+
+<p>I also created a modal and a <code class="language-plaintext highlighter-rouge">fetch</code> request to add grocery lists, but due to the nature of how the backend is set up, all that it really does right now is create a new, blank list. So it’s more for proof of concept than anything else.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">AddListModal</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">token</span> <span class="o">=</span> <span class="nx">useSelector</span><span class="p">(</span><span class="nx">store</span><span class="o">=&gt;</span><span class="nx">store</span><span class="p">.</span><span class="nx">token</span><span class="p">)</span>
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">Formik</span>
+      <span class="nx">initialValues</span><span class="o">=</span>
+      <span class="nx">onSubmit</span><span class="o">=</span><span class="p">{(</span><span class="nx">values</span><span class="p">,</span> <span class="nx">actions</span><span class="p">)</span><span class="o">=&gt;</span><span class="p">{</span>
+        <span class="kd">const</span> <span class="nx">headers</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Headers</span><span class="p">()</span>
+        <span class="nx">headers</span><span class="p">.</span><span class="nx">append</span><span class="p">(</span><span class="dl">"</span><span class="s2">Authorization</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">Basic </span><span class="dl">"</span> <span class="o">+</span> <span class="nx">btoa</span><span class="p">(</span><span class="nx">token</span> <span class="o">+</span> <span class="dl">"</span><span class="s2">:</span><span class="dl">"</span><span class="p">))</span>
+        <span class="nx">headers</span><span class="p">.</span><span class="nx">append</span><span class="p">(</span><span class="dl">"</span><span class="s2">Content-Type</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">application/json</span><span class="dl">"</span><span class="p">)</span>
+        <span class="kd">const</span> <span class="nx">body</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">values</span><span class="p">)</span>
+        <span class="nx">fetch</span><span class="p">(</span><span class="dl">"</span><span class="s2">/lists</span><span class="dl">"</span><span class="p">,{</span>
+          <span class="na">method</span><span class="p">:</span> <span class="dl">"</span><span class="s2">POST</span><span class="dl">"</span><span class="p">,</span>
+          <span class="na">headers</span><span class="p">:</span> <span class="nx">headers</span><span class="p">,</span>
+          <span class="na">body</span><span class="p">:</span> <span class="nx">body</span>
+        <span class="p">})</span>
+        <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">response</span><span class="o">=&gt;</span><span class="p">{</span>
+          <span class="k">if</span><span class="p">(</span><span class="nx">response</span><span class="p">.</span><span class="nx">status</span><span class="o">===</span><span class="mi">201</span><span class="p">){</span>
+            <span class="k">return</span> <span class="nx">response</span><span class="p">.</span><span class="nx">json</span><span class="p">()</span>
+          <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">"</span><span class="s2">Something went wrong!</span><span class="dl">"</span><span class="p">)</span>
+          <span class="p">}</span>
+        <span class="p">})</span>
+        <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">json</span><span class="o">=&gt;</span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">json</span><span class="p">))</span>
+        <span class="p">.</span><span class="k">catch</span><span class="p">(</span><span class="nx">err</span><span class="o">=&gt;</span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">err</span><span class="p">))</span>
+      <span class="p">}}</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">Form</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">FormikTextField</span> <span class="nx">label</span><span class="o">=</span><span class="dl">"</span><span class="s2">List Name</span><span class="dl">"</span> <span class="nx">name</span><span class="o">=</span><span class="dl">"</span><span class="s2">name</span><span class="dl">"</span> <span class="o">/&gt;</span>
+        <span class="o">&lt;</span><span class="nx">ButtonTemplate</span> <span class="nx">type</span><span class="o">=</span><span class="dl">"</span><span class="s2">submit</span><span class="dl">"</span> <span class="nx">color</span><span class="o">=</span><span class="dl">"</span><span class="s2">primary</span><span class="dl">"</span><span class="o">&gt;</span><span class="nx">Create</span> <span class="nx">List</span><span class="o">&lt;</span><span class="sr">/ButtonTemplate</span><span class="err">&gt;
+</span>      <span class="o">&lt;</span><span class="sr">/Form</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/Formik</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>There are still some areas that I need to flesh out with these actions. Notably, there is poor error handling and no way for the user to know if their action was successful or not. So expect to see me return to these areas in the near future.</p>
+
+<h4 id="next-steps">Next Steps</h4>
+<ul>
+  <li>create the recipe page</li>
+  <li>add the ability to put recipes in lists</li>
+  <li>add the settings page</li>
+</ul>
+:ET

@@ -1,0 +1,215 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Creating the Recipe Page Part 1 - Modifying the Backend</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-header">
+      <h2>Creating the Recipe Page Part 1 - Modifying the Backend</h2>
+      <small>08 Aug 2020</small>
+  </div>
+</header>
+
+<div class="margin">
+<p>In my <a href="/2020/08/06/Adding-Recipes-and-Lists.html">last post</a>, I added the ability to add recipes through the frontend of the app. However, the recipes could not be modified; the ingredients that were found were purely at the discretion of the (still a bit clunky) recipe parser. It was time to change that.</p>
+
+<p>However, this proved to be a bit more difficult than I thought, and required me to make some changes to the backend database.</p>
+
+<h3 id="changing-the-backend">Changing the Backend</h3>
+
+<p>Recall that the backend keeps track of the ingredients in a recipe by storing an association table between the individual recipe lines and the ingredients. However, this table does not store the actual <em>locations</em> of the ingredients in the line. This was a problem I was <a href="/2020/05/04/Schemas-Part-1.html">aware of</a> when I first designed the database, but I figured I would fix it when it came time to implement it. Well, that bill has come due.</p>
+
+<p>I tried a few different solutions, but ultimately I decided to just store the actual location of the ingredient in the line, rather than do some kind of fancy regex matching that would probably break really fast. This felt like the more robust solution.</p>
+
+<p>Of course, it required me to add a new class to my backend database. Whereas before, a simple association table could keep track of the connections between ingredients and lines, now that additional data was needed, it was time to upgrade that table to a proper model.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># Represents an association between an ingredient and a recipe line
+</span><span class="k">class</span> <span class="nc">LineIngredientAssociations</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">__tablename__</span><span class="o">=</span><span class="s">'line_ingredient_associations'</span>
+    <span class="n">id_</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>  <span class="c1"># separate because ingredient could appear more than once in a line
+</span>    <span class="n">ingredient_id</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="s">'ingredient.id'</span><span class="p">))</span>
+    <span class="n">recipeline_id</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="s">'recipe_line.id'</span><span class="p">))</span>
+    <span class="n">relevant_tokens</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">String</span><span class="p">(),</span> <span class="n">nullable</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+    <span class="n">ingredient</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">relationship</span><span class="p">(</span><span class="s">"Ingredient"</span><span class="p">,</span> <span class="n">back_populates</span><span class="o">=</span><span class="s">'recipe_lines'</span><span class="p">)</span>
+    <span class="n">recipe_line</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">relationship</span><span class="p">(</span><span class="s">"RecipeLine"</span><span class="p">,</span> <span class="n">back_populates</span><span class="o">=</span><span class="s">'ingredients'</span><span class="p">)</span>
+
+    <span class="c1"># TODO: Create a validator to confirm that the ingredient is on the recipe line
+</span>
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">f"&lt;Association of </span><span class="si">{</span><span class="bp">self</span><span class="p">.</span><span class="n">ingredient</span><span class="si">}</span><span class="s"> with </span><span class="si">{</span><span class="bp">self</span><span class="p">.</span><span class="n">recipe_line</span><span class="si">}</span><span class="s"> at </span><span class="si">{</span><span class="bp">self</span><span class="p">.</span><span class="n">relevant_tokens</span><span class="si">}</span><span class="s">&gt;"</span></code></pre></figure>
+
+<p>The key thing to note here is the <code class="language-plaintext highlighter-rouge">relevant_tokens</code> column, which stores a string containing the start and end point of the ingredient. This is initially determined by spaCy, as we’ll see in a moment. Also note that I put a <code class="language-plaintext highlighter-rouge">TODO</code> in to create a new validator to confirm that the location in question does indeed have the ingredient in question. To be honest, I’m not actually sure if that’s a good idea, because I worry that it would disrupt a certain amount of flexibility in how I design these associations. But I’m going to keep that in there as a reminder to myself to come back to this later.</p>
+
+<p>Next, I created a new schema for the table, and nested it inside of the <code class="language-plaintext highlighter-rouge">RecipeLineSchema</code>. This way, it serves as a sort of “middle man” between the <code class="language-plaintext highlighter-rouge">RecipeLine</code> and <code class="language-plaintext highlighter-rouge">Ingredient</code> objects, and the necessary data is added as a new layer when a <code class="language-plaintext highlighter-rouge">Recipe</code> is requested.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">class</span> <span class="nc">RecipelineIngredientAssociationSchema</span><span class="p">(</span><span class="n">ma</span><span class="p">.</span><span class="n">SQLAlchemyAutoSchema</span><span class="p">):</span>
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">LineIngredientAssociations</span>
+        <span class="n">include_fk</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="n">ingredient</span> <span class="o">=</span> <span class="n">fields</span><span class="p">.</span><span class="n">Nested</span><span class="p">(</span><span class="n">IngredientSchema</span><span class="p">)</span>
+
+    <span class="o">@</span><span class="n">post_load</span>
+    <span class="k">def</span> <span class="nf">make_association</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">**</span> <span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">new_association</span> <span class="o">=</span> <span class="n">LineIngredientAssociations</span><span class="p">(</span><span class="o">**</span> <span class="n">data</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">new_association</span>
+
+    <span class="o">@</span><span class="n">post_dump</span>
+    <span class="k">def</span> <span class="nf">convert_token_string_to_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">**</span> <span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">data</span><span class="p">[</span><span class="s">"relevant_tokens"</span><span class="p">]</span> <span class="o">=</span> <span class="n">json</span><span class="p">.</span><span class="n">loads</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">"relevant_tokens"</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">data</span></code></pre></figure>
+
+<p>This is essentially exactly what I’ve done for the other models, so I’m not going to spend too much time explaining this. The only thing to really note here is the <code class="language-plaintext highlighter-rouge">@post_dump</code> call, which uses <code class="language-plaintext highlighter-rouge">json.loads()</code> to convert the string value of the start and end points to a list value. That’s because the list is stored as a string in the database, but the frontend needs it as a list (or at least, it would prefer it as such).</p>
+
+<p>Then, I modified my natural language processing function to record the start and end points of the identified token. This was easy, as spaCy already keeps track of this.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">determine_ingredients_in_line</span><span class="p">(</span><span class="n">recipe_dict</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"determining ingredients"</span><span class="p">)</span>
+
+    <span class="n">recipe_lines_with_ingredients</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">recipe_dict</span><span class="p">[</span><span class="s">"recipe_lines"</span><span class="p">]:</span>
+        <span class="n">current_recipe_line</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s">"text"</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="s">"ingredients"</span><span class="p">:</span> <span class="p">[]</span>
+        <span class="p">}</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+        <span class="n">line_nlp</span> <span class="o">=</span> <span class="n">nlp</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+
+        <span class="n">current_recipe_line</span><span class="p">[</span><span class="s">"text"</span><span class="p">]</span> <span class="o">=</span> <span class="n">json</span><span class="p">.</span><span class="n">dumps</span><span class="p">([</span><span class="n">token</span><span class="p">.</span><span class="n">text</span> <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">line_nlp</span><span class="p">])</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">current_recipe_line</span><span class="p">[</span><span class="s">"text"</span><span class="p">])</span>
+
+        <span class="k">for</span> <span class="n">ent</span> <span class="ow">in</span> <span class="n">line_nlp</span><span class="p">.</span><span class="n">ents</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">"entity:"</span><span class="p">,</span> <span class="n">ent</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">ent</span><span class="p">.</span><span class="n">label_</span> <span class="o">==</span> <span class="s">"INGREDIENT"</span><span class="p">):</span>
+                <span class="n">current_recipe_line</span><span class="p">[</span><span class="s">"ingredients"</span><span class="p">].</span><span class="n">append</span><span class="p">({</span>
+                    <span class="s">"ingredient"</span><span class="p">:</span> <span class="p">{</span><span class="s">"name"</span><span class="p">:</span> <span class="n">ent</span><span class="p">.</span><span class="n">text</span><span class="p">},</span>
+                    <span class="s">"relevant_tokens"</span><span class="p">:</span> <span class="n">json</span><span class="p">.</span><span class="n">dumps</span><span class="p">((</span><span class="n">ent</span><span class="p">.</span><span class="n">start</span><span class="p">,</span> <span class="n">ent</span><span class="p">.</span><span class="n">end</span><span class="p">))</span>
+                <span class="p">})</span>
+        <span class="n">recipe_lines_with_ingredients</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="n">current_recipe_line</span><span class="p">)</span>
+
+    <span class="n">recipe_with_ingredients</span> <span class="o">=</span> <span class="n">recipe_dict</span>
+    <span class="n">recipe_with_ingredients</span><span class="p">[</span><span class="s">"recipe_lines"</span><span class="p">]</span> <span class="o">=</span> <span class="n">recipe_lines_with_ingredients</span>
+
+    <span class="k">return</span> <span class="n">recipe_with_ingredients</span></code></pre></figure>
+
+<p>One other thing to note here is that I changed what the “text” field stores. Rather than storing the plain text of the line, it stores spaCy’s tokenized version as a string. This is because I need the frontend to know <em>exactly</em> how the words are tokenized; using some other way to split the text in the frontend (such as a <code class="language-plaintext highlighter-rouge">.split()</code> call) would result in a differently parsed line, and the extra information I’m storing would be useless.</p>
+
+<p>Similarly to my new schema, I use <code class="language-plaintext highlighter-rouge">json.loads()</code> to turn the string version of the list into a proper list when I return the <code class="language-plaintext highlighter-rouge">RecipeLine</code> to the frontend.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">post_dump</span>
+ <span class="k">def</span> <span class="nf">convert_string_to_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">**</span> <span class="n">kwargs</span><span class="p">):</span>
+     <span class="k">print</span><span class="p">(</span><span class="s">"postdump data:"</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+     <span class="n">data</span><span class="p">[</span><span class="s">"text"</span><span class="p">]</span> <span class="o">=</span> <span class="n">json</span><span class="p">.</span><span class="n">loads</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">"text"</span><span class="p">])</span>
+
+     <span class="k">return</span> <span class="n">data</span></code></pre></figure>
+
+<p>And that’s pretty much everything for the backend. This may need to be tweaked at some point, but for now I’m just happy that I wrote code that I can still understand and modify months later.</p>
+
+<h3 id="the-new-recipe-page">The New Recipe Page</h3>
+
+<p>Now, it’s time to return to the world of React and make use of this new data. First, I created a new page for viewing and editing recipes. This page first requests the recipe from the backend (using the parameters from the route and the <code class="language-plaintext highlighter-rouge">useParams()</code> hook). It then passes them down to a <code class="language-plaintext highlighter-rouge">RecipePanel</code> component.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">EditRecipePage</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="p">[</span><span class="nx">recipe</span><span class="p">,</span> <span class="nx">setRecipe</span><span class="p">]</span> <span class="o">=</span> <span class="nx">useState</span><span class="p">({})</span>
+  <span class="kd">const</span> <span class="nx">token</span> <span class="o">=</span> <span class="nx">useSelector</span><span class="p">(</span><span class="nx">store</span><span class="o">=&gt;</span><span class="nx">store</span><span class="p">.</span><span class="nx">token</span><span class="p">)</span>
+  <span class="kd">const</span> <span class="p">{</span><span class="nx">recipeId</span><span class="p">}</span> <span class="o">=</span> <span class="nx">useParams</span><span class="p">()</span>
+
+  <span class="kd">const</span> <span class="nx">getRecipeFromBackend</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="nx">fetch</span><span class="p">(</span><span class="s2">`/recipes/</span><span class="p">${</span><span class="nx">recipeId</span><span class="p">}</span><span class="s2">`</span><span class="p">)</span>
+    <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">response</span><span class="o">=&gt;</span><span class="nx">response</span><span class="p">.</span><span class="nx">json</span><span class="p">())</span>
+    <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">json</span><span class="o">=&gt;</span><span class="nx">setRecipe</span><span class="p">(</span><span class="nx">json</span><span class="p">))</span>
+  <span class="p">}</span>
+
+  <span class="nx">useEffect</span><span class="p">(()</span><span class="o">=&gt;</span><span class="p">{</span>
+    <span class="nx">getRecipeFromBackend</span><span class="p">()</span>
+  <span class="p">},</span> <span class="p">[])</span>
+
+
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">MainTemplatePage</span> <span class="nx">noSearchbar</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">TopSquiggle</span><span class="o">&gt;</span><span class="p">{</span><span class="nx">recipe</span> <span class="p">?</span> <span class="nx">recipe</span><span class="p">.</span><span class="nx">name</span> <span class="p">:</span> <span class="kc">null</span><span class="p">}</span><span class="o">&lt;</span><span class="sr">/TopSquiggle</span><span class="err">&gt;
+</span>      <span class="o">&lt;</span><span class="nx">RecipePanel</span> <span class="nx">lines</span><span class="o">=</span><span class="p">{</span><span class="nx">recipe</span><span class="p">.</span><span class="nx">recipe_lines</span><span class="p">}</span><span class="sr">/</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/MainTemplatePage</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span>
+
+<span class="k">export</span> <span class="k">default</span> <span class="nx">EditRecipePage</span></code></pre></figure>
+
+<p>The <code class="language-plaintext highlighter-rouge">RecipePanel</code> component holds a list of <code class="language-plaintext highlighter-rouge">RecipeLine</code> components, which themselves are lists of <code class="language-plaintext highlighter-rouge">IngredientButton</code> components.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">RecipePanel</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">classes</span> <span class="o">=</span> <span class="nx">useStyles</span><span class="p">()</span>
+
+  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">props</span><span class="p">.</span><span class="nx">lines</span><span class="p">)</span>
+
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">root</span><span class="p">}</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">List</span><span class="o">&gt;</span>
+        <span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">lines</span> <span class="p">?</span>
+          <span class="nx">props</span><span class="p">.</span><span class="nx">lines</span><span class="p">.</span><span class="nx">map</span><span class="p">((</span><span class="nx">line</span><span class="p">,</span> <span class="nx">index</span><span class="p">)</span><span class="o">=&gt;&lt;</span><span class="nx">RecipeLine</span> <span class="nx">key</span><span class="o">=</span><span class="p">{</span><span class="nx">index</span><span class="p">}</span> <span class="nx">line</span><span class="o">=</span><span class="p">{</span><span class="nx">line</span><span class="p">}</span> <span class="sr">/&gt;</span><span class="err">)
+</span>          <span class="p">:</span> <span class="kc">null</span><span class="p">}</span>
+      <span class="o">&lt;</span><span class="sr">/List</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span>
+
+<span class="c1">// In a different file:</span>
+
+<span class="kd">const</span> <span class="nx">RecipeLine</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">classes</span> <span class="o">=</span> <span class="nx">useStyles</span><span class="p">()</span>
+  <span class="kd">const</span> <span class="p">{</span><span class="nx">ingredients</span><span class="p">,</span> <span class="nx">text</span><span class="p">}</span> <span class="o">=</span> <span class="nx">props</span><span class="p">.</span><span class="nx">line</span>
+  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">ingredients</span><span class="p">)</span>
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">ListItem</span> <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">root</span><span class="p">}</span><span class="o">&gt;</span>
+      <span class="p">{</span><span class="nx">text</span><span class="p">.</span><span class="nx">map</span><span class="p">((</span><span class="nx">word</span><span class="p">,</span> <span class="nx">index</span><span class="p">)</span><span class="o">=&gt;</span><span class="p">{</span>
+        <span class="k">if</span><span class="p">(</span><span class="nx">ingredients</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!==</span> <span class="kc">undefined</span><span class="p">){</span>
+          <span class="k">if</span><span class="p">(</span><span class="nx">index</span> <span class="o">&gt;=</span> <span class="nx">ingredients</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">relevant_tokens</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&amp;&amp;</span> <span class="nx">index</span> <span class="o">&lt;</span> <span class="nx">ingredients</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">relevant_tokens</span><span class="p">[</span><span class="mi">1</span><span class="p">]){</span>
+            <span class="k">return</span> <span class="o">&lt;</span><span class="nx">IngredientButton</span> <span class="nx">key</span><span class="o">=</span><span class="p">{</span><span class="nx">index</span><span class="p">}</span> <span class="nx">text</span><span class="o">=</span><span class="p">{</span><span class="nx">word</span><span class="p">}</span> <span class="nx">ingredient</span><span class="o">/&gt;</span>
+          <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="p">(</span>
+          <span class="o">&lt;</span><span class="nx">IngredientButton</span> <span class="nx">key</span><span class="o">=</span><span class="p">{</span><span class="nx">index</span><span class="p">}</span> <span class="nx">text</span><span class="o">=</span><span class="p">{</span><span class="nx">word</span><span class="p">}</span><span class="sr">/</span><span class="err">&gt;
+</span>        <span class="p">)}</span>
+      <span class="p">)}</span>
+    <span class="o">&lt;</span><span class="sr">/ListItem</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>As you can see, the <code class="language-plaintext highlighter-rouge">RecipeLine</code> component is the one that is (so far) doing most of the heavy lifting. It receives both the tokenized text of the line and the <code class="language-plaintext highlighter-rouge">relevant_tokens</code> property, which tells it where each ingredient <em>is</em> in the line. Then, in the <code class="language-plaintext highlighter-rouge">.map()</code> call to the <code class="language-plaintext highlighter-rouge">text</code> variable, it checks if the index of each word falls in the range specified by <code class="language-plaintext highlighter-rouge">relevant_tokens</code>. If so, it renders the component with the “<code class="language-plaintext highlighter-rouge">ingredient</code>” tag, in an admittedly inefficient way. But I was just trying to get proof of concept for now. And get proof of concept I did.</p>
+
+<p><img src="/assets/img/posts/grocery-app/recipe-page-proof-of-concept.png" alt="Recipe panel proof of concept" /></p>
+
+<p>(For reference, the “<code class="language-plaintext highlighter-rouge">ingredient</code>” tag just makes the text of the button red).</p>
+
+<p>And there you have it! The frontend now knows both the ingredient <em>and</em> where it is. Of course, there’s still a lot to do here; this code is very janky and only works for the first ingredient in a line, and I need to add colors and the ability to change them. But I’m very pleased with this solution; it was one of the problems I was worried about when it came time to work on the frontend, and I feel much better about my progress on this project now that I have a working solution.</p>
+
+<h4 id="next-steps">Next Steps</h4>
+
+<ul>
+  <li>support multiple ingredients on a line</li>
+  <li>change ingredients in line</li>
+  <li>make everything look better</li>
+</ul>
+
+</div>
+
+    </div>
+    <footer>
+      <span><a href="/index.html">Home</a></span>
+      <span><a href="/blog">Blog</a></span>
+      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+    </footer>
+    </div>
+  </body>
+</html>

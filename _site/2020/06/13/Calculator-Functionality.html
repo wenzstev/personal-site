@@ -1,0 +1,282 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Creating the Functionality for the Calculator</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-header">
+      <h2>Creating the Functionality for the Calculator</h2>
+      <small>13 Jun 2020</small>
+  </div>
+</header>
+
+<div class="margin">
+<p>In the last blog post, I explained how I created the layout for my practice calculator app. This time around, I’m going to go through the process that I used to make it work.</p>
+
+<h3 id="adding-redux">Adding Redux</h3>
+<p>To be clear: Redux is not strictly necessary for this example, as I probably could have gotten away with passing props up and down and keeping the state in a single lifted component. But I wanted the opportunity to practice with it, and this seemed like a good way to better familiarize myself with its features.</p>
+
+<p>When working with Redux, the first thing I did was consider what would need to be held in state. Because I wanted a simple calculator that could perform the four basic functions and a few extras, I figured I could keep the state simple: I would need to store both numbers and the function that was being performed on them.</p>
+
+<p>To that end, I created two reducers: a <code class="language-plaintext highlighter-rouge">numReducer</code> which stored the first and second numbers, and a <code class="language-plaintext highlighter-rouge">funcReducer</code> which stored the current function.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">combinedNumReducer</span> <span class="o">=</span> <span class="p">(</span>
+  <span class="nx">state</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="dl">'</span><span class="s1">FIRST</span><span class="dl">'</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="dl">'</span><span class="s1">SECOND</span><span class="dl">'</span><span class="p">:</span> <span class="mi">0</span>
+  <span class="p">},</span>
+  <span class="nx">action</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="k">switch</span><span class="p">(</span><span class="nx">action</span><span class="p">.</span><span class="nx">type</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">case</span> <span class="dl">'</span><span class="s1">SETNUM</span><span class="dl">'</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span> <span class="p">...</span><span class="nx">state</span><span class="p">,</span> <span class="p">[</span><span class="nx">action</span><span class="p">.</span><span class="nx">payload</span><span class="p">.</span><span class="nx">num</span><span class="p">]:</span> <span class="nx">action</span><span class="p">.</span><span class="nx">payload</span><span class="p">.</span><span class="nx">value</span><span class="p">}</span>
+      <span class="nl">default</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nx">state</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">const</span> <span class="nx">funcReducer</span> <span class="o">=</span> <span class="p">(</span><span class="nx">state</span> <span class="o">=</span> <span class="kc">null</span><span class="p">,</span> <span class="nx">action</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">switch</span><span class="p">(</span><span class="nx">action</span><span class="p">.</span><span class="nx">type</span><span class="p">){</span>
+    <span class="k">case</span> <span class="dl">"</span><span class="s2">SETFUNC</span><span class="dl">"</span><span class="p">:</span>
+      <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">"</span><span class="s2">changing to </span><span class="dl">"</span> <span class="o">+</span> <span class="nx">action</span><span class="p">.</span><span class="nx">payload</span><span class="p">)</span>
+      <span class="k">return</span> <span class="nx">action</span><span class="p">.</span><span class="nx">payload</span>
+    <span class="na">default</span><span class="p">:</span>
+      <span class="k">return</span> <span class="nx">state</span>
+  <span class="p">}</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>I then combined them using Redux’s <code class="language-plaintext highlighter-rouge">combineReducers</code> function:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="k">import</span> <span class="p">{</span><span class="nx">combineReducers</span><span class="p">}</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">redux</span><span class="dl">"</span>
+
+<span class="kd">const</span> <span class="nx">rootReducer</span> <span class="o">=</span> <span class="nx">combineReducers</span><span class="p">({</span>
+  <span class="na">nums</span><span class="p">:</span> <span class="nx">combinedNumReducer</span><span class="p">,</span>
+  <span class="na">func</span><span class="p">:</span> <span class="nx">funcReducer</span><span class="p">,</span>
+<span class="p">})</span>
+
+<span class="k">export</span> <span class="k">default</span> <span class="nx">rootReducer</span></code></pre></figure>
+
+<p>There are additional reducers I needed to add, but I’ll cover them as they come up.</p>
+
+<h1 id="number-pad-functions">Number Pad Functions</h1>
+
+<p>Next, I needed to add the most basic element of the calculator: the number buttons. When a number button is pressed, that amount is added onto the end of the number currently displayed on the calculator. I implemented this by creating a Redux action, <code class="language-plaintext highlighter-rouge">SETNUMKEYPAD</code>, which told the reducer that a digit was going to be appended to the end of the number.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="k">export</span> <span class="kd">const</span> <span class="nx">setNumKeypad</span> <span class="o">=</span> <span class="p">(</span><span class="nx">num</span><span class="p">,</span> <span class="nx">value</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="p">{</span>
+    <span class="na">type</span><span class="p">:</span> <span class="dl">"</span><span class="s2">SETNUMKEYPAD</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">payload</span><span class="p">:</span> <span class="p">{</span>
+      <span class="na">num</span><span class="p">:</span> <span class="nx">num</span><span class="p">,</span>
+      <span class="na">value</span><span class="p">:</span> <span class="nx">value</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>Pretty much all of my actions follow this same formula. The actual logic happens in the reducer.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="k">case</span> <span class="dl">'</span><span class="s1">SETNUMKEYPAD</span><span class="dl">'</span><span class="p">:</span>
+        <span class="kd">let</span> <span class="nx">newVal</span> <span class="o">=</span> <span class="nx">state</span><span class="p">[</span><span class="nx">action</span><span class="p">.</span><span class="nx">payload</span><span class="p">.</span><span class="nx">num</span><span class="p">]</span> <span class="o">*</span> <span class="mi">10</span> <span class="o">+</span> <span class="nx">action</span><span class="p">.</span><span class="nx">payload</span><span class="p">.</span><span class="nx">value</span>
+        <span class="k">return</span> <span class="p">{</span> <span class="p">...</span><span class="nx">state</span><span class="p">,</span> <span class="p">[</span><span class="nx">action</span><span class="p">.</span><span class="nx">payload</span><span class="p">.</span><span class="nx">num</span><span class="p">]:</span> <span class="nx">newVal</span><span class="p">}</span></code></pre></figure>
+
+<p>By multiplying the existing number by 10 and adding the new digit, we create a system where the number is built from right to left, just like a calculator.</p>
+
+<p>The dispatch is then called in the <code class="language-plaintext highlighter-rouge">Buttons.js</code> file, where <code class="language-plaintext highlighter-rouge">NumButton</code> is given a <code class="language-plaintext highlighter-rouge">handleClick</code> functiont hat calls <code class="language-plaintext highlighter-rouge">setNumKeypad</code>.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="k">export</span> <span class="kd">const</span> <span class="nx">NumButton</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">dispatch</span> <span class="o">=</span> <span class="nx">useDispatch</span><span class="p">()</span>
+
+
+  <span class="kd">const</span> <span class="nx">handleClick</span> <span class="o">=</span> <span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="o">=&gt;</span><span class="p">{</span>
+      <span class="nx">dispatch</span><span class="p">(</span><span class="nx">setNumKeypad</span><span class="p">(</span><span class="nx">props</span><span class="p">.</span><span class="nx">number</span><span class="p">))</span>
+  <span class="p">}</span>
+
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">BaseButton</span>
+      <span class="nx">label</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">number</span><span class="p">}</span>
+      <span class="nx">width</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">width</span><span class="p">}</span>
+      <span class="nx">clickHandler</span><span class="o">=</span><span class="p">{</span><span class="nx">handleClick</span><span class="p">}</span>
+      <span class="nx">width</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">width</span><span class="p">}</span>
+      <span class="sr">/</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>However, we quickly run into a problem: the calculator is storing two numbers, but how do we tell it which number to edit? I solved this by adding a new piece of state to Redux: a <code class="language-plaintext highlighter-rouge">display</code> value that determined which of the two numbers the display was showing at any given time.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">displayReducer</span> <span class="o">=</span> <span class="p">(</span><span class="nx">state</span><span class="o">=</span><span class="dl">"</span><span class="s2">FIRST</span><span class="dl">"</span><span class="p">,</span> <span class="nx">action</span><span class="p">)</span> <span class="o">=&gt;</span><span class="p">{</span>
+  <span class="k">switch</span> <span class="p">(</span><span class="nx">action</span><span class="p">.</span><span class="nx">type</span><span class="p">){</span>
+    <span class="k">case</span> <span class="dl">"</span><span class="s2">SETDISPLAY</span><span class="dl">"</span><span class="p">:</span>
+      <span class="k">return</span> <span class="nx">action</span><span class="p">.</span><span class="nx">payload</span>
+    <span class="na">default</span><span class="p">:</span>
+      <span class="k">return</span> <span class="nx">state</span>
+  <span class="p">}</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>From there, I created a <code class="language-plaintext highlighter-rouge">DisplayController</code> class which served as the “smart” component to the “dumb” <code class="language-plaintext highlighter-rouge">Display</code> component. This component simply shows which of the two <code class="language-plaintext highlighter-rouge">nums</code> values <code class="language-plaintext highlighter-rouge">display</code> is calling for at that time.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">DisplayController</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span><span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">nums</span> <span class="o">=</span> <span class="nx">useSelector</span><span class="p">(</span><span class="nx">state</span> <span class="o">=&gt;</span> <span class="nx">state</span><span class="p">.</span><span class="nx">nums</span><span class="p">)</span>
+  <span class="kd">const</span> <span class="nx">display</span> <span class="o">=</span> <span class="nx">useSelector</span><span class="p">(</span><span class="nx">state</span> <span class="o">=&gt;</span> <span class="nx">state</span><span class="p">.</span><span class="nx">display</span><span class="p">)</span>
+
+  <span class="k">return</span><span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">Display</span> <span class="nx">display</span><span class="o">=</span><span class="p">{</span><span class="nx">nums</span><span class="p">[</span><span class="nx">display</span><span class="p">]}</span> <span class="sr">/</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span>
+
+<span class="k">export</span> <span class="k">default</span> <span class="nx">DisplayController</span></code></pre></figure>
+
+<p>Because <code class="language-plaintext highlighter-rouge">display</code> uses the same strings (“FIRST” and “SECOND”) as the names of the two nums in the <code class="language-plaintext highlighter-rouge">nums</code> piece of state, it’s easy to pass the value of <code class="language-plaintext highlighter-rouge">display</code> to the <code class="language-plaintext highlighter-rouge">setNumKeypad</code> function, ensuring that only the number that is currently on the screen is changed.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="c1">// In NumButton</span>
+
+<span class="kd">var</span> <span class="nx">display</span> <span class="o">=</span> <span class="nx">useSelector</span><span class="p">(</span><span class="nx">state</span> <span class="o">=&gt;</span> <span class="nx">state</span><span class="p">.</span><span class="nx">display</span><span class="p">)</span>
+
+<span class="c1">// ...</span>
+
+<span class="nx">dispatch</span><span class="p">(</span><span class="nx">setNumKeypad</span><span class="p">(</span><span class="nx">display</span><span class="p">,</span> <span class="nx">props</span><span class="p">.</span><span class="nx">number</span><span class="p">))</span></code></pre></figure>
+
+<p>Thus, pressing on the buttons allows for the number displayed to be altered, but not the other number saved in the system.</p>
+
+<h3 id="adding-the-four-functions">Adding the Four Functions</h3>
+
+<p>Now that we can set numbers, it’s time to implement the feature that makes a calculator a calculator: the ability to calculate things.</p>
+
+<p>This version has four primary functions: addition, subtraction, multiplication, and division. The current function being used is saved in the <code class="language-plaintext highlighter-rouge">func</code> piece of state, and is stored as that function’s symbol (“+”, “-“, “×”, and “÷”).</p>
+
+<p>The actual calculation process is a simple <code class="language-plaintext highlighter-rouge">switch</code> statement, evaluating the two numbers and changing the first number into the solution. This is done in order to support chaining functions (e.g., adding then subtracting) or repeating the same function multiple times.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">calculateNewValues</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">switch</span><span class="p">(</span><span class="nx">func</span><span class="p">){</span>
+    <span class="k">case</span> <span class="dl">"</span><span class="s2">+</span><span class="dl">"</span><span class="p">:</span>
+      <span class="nx">dispatch</span><span class="p">(</span><span class="nx">setNum</span><span class="p">(</span><span class="dl">"</span><span class="s2">FIRST</span><span class="dl">"</span><span class="p">,</span> <span class="nx">firstNum</span> <span class="o">+</span> <span class="nx">secondNum</span><span class="p">))</span>
+      <span class="k">break</span>
+    <span class="k">case</span> <span class="dl">"</span><span class="s2">-</span><span class="dl">"</span><span class="p">:</span>
+      <span class="nx">dispatch</span><span class="p">(</span><span class="nx">setNum</span><span class="p">(</span><span class="dl">"</span><span class="s2">FIRST</span><span class="dl">"</span><span class="p">,</span> <span class="nx">firstNum</span> <span class="o">-</span> <span class="nx">secondNum</span><span class="p">))</span>
+      <span class="k">break</span>
+    <span class="k">case</span> <span class="dl">"</span><span class="s2">×</span><span class="dl">"</span><span class="p">:</span>
+      <span class="nx">dispatch</span><span class="p">(</span><span class="nx">setNum</span><span class="p">(</span><span class="dl">"</span><span class="s2">FIRST</span><span class="dl">"</span><span class="p">,</span> <span class="nx">firstNum</span> <span class="o">*</span> <span class="nx">secondNum</span><span class="p">))</span>
+      <span class="k">break</span>
+    <span class="k">case</span> <span class="dl">"</span><span class="s2">÷</span><span class="dl">"</span><span class="p">:</span>
+      <span class="nx">dispatch</span><span class="p">(</span><span class="nx">setNum</span><span class="p">(</span><span class="dl">"</span><span class="s2">FIRST</span><span class="dl">"</span><span class="p">,</span> <span class="nx">firstNum</span> <span class="o">/</span> <span class="nx">secondNum</span><span class="p">))</span>
+      <span class="k">break</span>
+  <span class="p">}</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>The equals button then calculates those values, and also sets a new piece of state, <code class="language-plaintext highlighter-rouge">setClearOnNext</code>, to <code class="language-plaintext highlighter-rouge">true</code>. This value determines if the calculator is primed to accept a new set of values for a new calculation; without it, subsequent entries on the keypad would alter the result, rather than starting a new number.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">evaluate</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span><span class="p">{</span>
+  <span class="nx">calculateNewValues</span><span class="p">()</span>
+  <span class="nx">dispatch</span><span class="p">(</span><span class="nx">setDisplay</span><span class="p">(</span><span class="dl">"</span><span class="s2">FIRST</span><span class="dl">"</span><span class="p">))</span>
+  <span class="nx">dispatch</span><span class="p">(</span><span class="nx">setClearOnNext</span><span class="p">(</span><span class="kc">true</span><span class="p">))</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>I also added a little more logic to the act of actually pressing the function buttons. If the “clearOnNext” variable is true, then it is set to false and new values aren’t calculated (since we are preparing to perform a new operation). The second number is also preemptively cleared, although the display is not set to show it.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">setFuncValue</span> <span class="o">=</span> <span class="p">(</span><span class="nx">val</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">clearOnNext</span><span class="p">){</span>
+    <span class="nx">calculateNewValues</span><span class="p">()</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="nx">dispatch</span><span class="p">(</span><span class="nx">setClearOnNext</span><span class="p">(</span><span class="kc">false</span><span class="p">))</span>
+  <span class="p">}</span>
+  <span class="nx">dispatch</span><span class="p">(</span><span class="nx">setFunc</span><span class="p">(</span><span class="nx">val</span><span class="p">))</span>
+  <span class="nx">dispatch</span><span class="p">(</span><span class="nx">setNum</span><span class="p">(</span><span class="dl">"</span><span class="s2">SECOND</span><span class="dl">"</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+  <span class="nx">dispatch</span><span class="p">(</span><span class="nx">setDisplay</span><span class="p">(</span><span class="dl">"</span><span class="s2">FIRST</span><span class="dl">"</span><span class="p">))</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>The responsibility of actually changing the display value falls on the number buttons, since I don’t want a new value to be shown until it’s absolutely necessary. Additionally, I have the button check if the <code class="language-plaintext highlighter-rouge">clearOnNext</code> value is true; if so, they clear all values from the calculator and reset them before entering the new value.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">handleClick</span> <span class="o">=</span> <span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="o">=&gt;</span><span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">clearOnNext</span><span class="p">){</span>
+    <span class="nx">dispatch</span><span class="p">(</span><span class="nx">clearAll</span><span class="p">())</span>
+    <span class="nx">func</span> <span class="o">=</span> <span class="kc">null</span>
+  <span class="p">}</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">func</span> <span class="o">!==</span> <span class="kc">null</span><span class="p">){</span>
+    <span class="nx">dispatch</span><span class="p">(</span><span class="nx">setDisplay</span><span class="p">(</span><span class="dl">"</span><span class="s2">SECOND</span><span class="dl">"</span><span class="p">))</span>
+    <span class="nx">display</span> <span class="o">=</span> <span class="dl">"</span><span class="s2">SECOND</span><span class="dl">"</span>
+  <span class="p">}</span>
+  <span class="nx">dispatch</span><span class="p">(</span><span class="nx">setNumKeypad</span><span class="p">(</span><span class="nx">display</span><span class="p">,</span> <span class="nx">props</span><span class="p">.</span><span class="nx">number</span><span class="p">))</span>
+
+<span class="p">}</span></code></pre></figure>
+
+<h3 id="additional-functions">Additional Functions</h3>
+
+<p>With the four main functions working, it’s time to turn to the other buttons on the calculator. Most of these are fairly straightforward and did not require extensive additions.</p>
+
+<h4 id="negating-values">Negating Values</h4>
+
+<p>For the “+/-“ button, I created a new action, <code class="language-plaintext highlighter-rouge">REVERSESIGN</code> and returned the existing value multiplied by <code class="language-plaintext highlighter-rouge">-1</code>:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="k">case</span> <span class="dl">'</span><span class="s1">REVERSESIGN</span><span class="dl">'</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{...</span><span class="nx">state</span><span class="p">,</span> <span class="p">[</span><span class="nx">action</span><span class="p">.</span><span class="nx">payload</span><span class="p">.</span><span class="nx">num</span><span class="p">]:</span> <span class="p">(</span><span class="nx">state</span><span class="p">[</span><span class="nx">action</span><span class="p">.</span><span class="nx">payload</span><span class="p">.</span><span class="nx">num</span><span class="p">]</span> <span class="o">*</span> <span class="o">-</span><span class="mi">1</span><span class="p">)}</span></code></pre></figure>
+
+<h4 id="decimals">Decimals</h4>
+
+<p>Adding decimals was a bit trickier, becuase the calculator needed to understand that, once the decimal button was pressed, subsequent number buttons pressed needed to be added to the number in a different way.</p>
+
+<p>I solved this by introducing an additional element of state: <code class="language-plaintext highlighter-rouge">decimalPlace</code>, which counts the number of decimal places in the current number. If this value is zero, then the program functions normally. It is incremented when the “.” button is pressed and then on every number button press after. The value is then used to calculate the addition of a new value after the decimal, by multiplying the new digit by 10 raised to the power of the value. The <code class="language-plaintext highlighter-rouge">handleClick</code> function in <code class="language-plaintext highlighter-rouge">Buttons.js</code> was thus rewritten as follows:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">handleClick</span> <span class="o">=</span> <span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="o">=&gt;</span><span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">clearOnNext</span><span class="p">){</span>
+    <span class="nx">dispatch</span><span class="p">(</span><span class="nx">clearAll</span><span class="p">())</span>
+    <span class="nx">func</span> <span class="o">=</span> <span class="kc">null</span>
+  <span class="p">}</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">func</span> <span class="o">!==</span> <span class="kc">null</span><span class="p">){</span>
+    <span class="nx">dispatch</span><span class="p">(</span><span class="nx">setDisplay</span><span class="p">(</span><span class="dl">"</span><span class="s2">SECOND</span><span class="dl">"</span><span class="p">))</span>
+    <span class="nx">display</span> <span class="o">=</span> <span class="dl">"</span><span class="s2">SECOND</span><span class="dl">"</span>
+  <span class="p">}</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">decimalPlace</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">){</span>
+    <span class="nx">dispatch</span><span class="p">(</span><span class="nx">setNumKeypadDecimal</span><span class="p">(</span><span class="nx">display</span><span class="p">,</span> <span class="nx">props</span><span class="p">.</span><span class="nx">number</span> <span class="o">*</span> <span class="p">(.</span><span class="mi">1</span><span class="o">**</span><span class="nx">decimalPlace</span><span class="p">)))</span>
+    <span class="nx">dispatch</span><span class="p">(</span><span class="nx">incrementDecimal</span><span class="p">())</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="nx">dispatch</span><span class="p">(</span><span class="nx">setNumKeypad</span><span class="p">(</span><span class="nx">display</span><span class="p">,</span> <span class="nx">props</span><span class="p">.</span><span class="nx">number</span><span class="p">))</span>
+  <span class="p">}</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>The <code class="language-plaintext highlighter-rouge">decimalPlace</code> value is reset whenever the display changes.</p>
+
+<h4 id="clearing-everything">Clearing Everything</h4>
+
+<p>Adding functionality to the <code class="language-plaintext highlighter-rouge">AC</code> button was extremely simple, as I had already written an action that reset the calculator (for use after the “=” button was pressed). Most of my reducers have a case to listen for this action, and they reset accordingly.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="o">&lt;</span><span class="nx">FuncButton</span>
+        <span class="nx">label</span><span class="o">=</span><span class="dl">"</span><span class="s2">AC</span><span class="dl">"</span>
+        <span class="nx">func</span><span class="o">=</span><span class="p">{()</span><span class="o">=&gt;</span><span class="nx">dispatch</span><span class="p">(</span><span class="nx">clearAll</span><span class="p">())}</span>
+        <span class="nx">color</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">color</span><span class="p">}</span><span class="sr">/&gt;</span></code></pre></figure>
+
+<h4 id="percent-button">Percent Button</h4>
+<p>Finally, I added functionality to the “%” button. This button is used to calculate the percent of the first number entered; as such it has a few caveats. If pressed when still entering the first number, it returns the value to 0. If pressed after entering the second number, however, it considers the second number to be a percentage and returns the percent value of the <em>first</em> number.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">calculatePercent</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">display</span> <span class="o">===</span> <span class="dl">"</span><span class="s2">FIRST</span><span class="dl">"</span><span class="p">){</span>
+    <span class="nx">dispatch</span><span class="p">(</span><span class="nx">setNum</span><span class="p">(</span><span class="nx">display</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span> <span class="c1">// percent doesn't work on first number</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">percentNum</span> <span class="o">=</span> <span class="nx">firstNum</span> <span class="o">*</span> <span class="nx">secondNum</span> <span class="o">*</span> <span class="p">.</span><span class="mi">01</span>
+    <span class="nx">dispatch</span><span class="p">(</span><span class="nx">setNum</span><span class="p">(</span><span class="nx">display</span><span class="p">,</span> <span class="nx">percentNum</span><span class="p">))</span>
+  <span class="p">}</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>Note that this does not calculate anything else; it does not replace one of the four functions, for example. This makes it possible to perform actions such as subtracting or adding a certain percent of a number.</p>
+
+<h3 id="conclusions">Conclusions</h3>
+
+<p>This took longer than I meant it to, mostly due to a lot of things in my personal life going haywire all at once. I’m hoping not to take this long for my next blog post. I have another small React project in the works, and after that I’m fairly confident that I’m ready to tackle the frontend of my Grocery App. I’ve been talking with my brother to do some markups of how it’s going to look and I’m pretty excited, so stay tuned!</p>
+
+</div>
+
+    </div>
+    <footer>
+      <span><a href="/index.html">Home</a></span>
+      <span><a href="/blog">Blog</a></span>
+      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+    </footer>
+    </div>
+  </body>
+</html>

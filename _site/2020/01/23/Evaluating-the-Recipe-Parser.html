@@ -1,0 +1,164 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Evaluating the Performance of the Recipe Parser</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-header">
+      <h2>Evaluating the Performance of the Recipe Parser</h2>
+      <small>23 Jan 2020</small>
+  </div>
+</header>
+
+<div class="margin">
+<p>Now that we’ve got a working recipe parser, it’s time to see how well it works. I want to get a baseline idea of how my heuristic checker functions compared to a properly trained model, and I want to lay the groundwork for producing the training data I’m going to use down the road.</p>
+
+<p>But first we need some training data. Fortunately for me, the internet is full of data science nerds who prep datasets for fun, and it just so happens that I found one that suits my needs quite well. The <a href="https://eightportions.com/datasets/Recipes/">Recipe Box</a> contains over 100,000 recipes scraped from several of the more popular recipe sites on the web.</p>
+
+<p>But some cleaning still needs to be done. A quick scan of the dataset shows that there’s a lot more here than just recipe lines:</p>
+
+<p><img src="/assets/img/posts/json_recipes.png" alt="alt text" /></p>
+
+<p>We don’t need the how-twos and the names; ideally all we want is the bare lines themselves. To that end, I wrote a simple set of functions that returns a list of ingredient lines of an arbitrary length:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">get_ingredients</span><span class="p">():</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s">'recipes_raw_nosource_epi.json'</span><span class="p">)</span> <span class="k">as</span> <span class="n">recipes_raw</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="n">recipes_raw</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">data</span><span class="p">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">yield</span> <span class="n">v</span><span class="p">[</span><span class="s">'ingredients'</span><span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">generate_ingredient_dataset</span><span class="p">(</span><span class="n">length</span><span class="p">):</span>
+    <span class="n">counter</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">ingredient_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">raw_ingredients</span> <span class="o">=</span> <span class="n">get_ingredients</span><span class="p">()</span>
+
+    <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">ingredient_list</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">length</span><span class="p">:</span>
+        <span class="n">current_ingredients</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">raw_ingredients</span><span class="p">)</span>
+        <span class="n">ingredient_list</span><span class="p">.</span><span class="n">extend</span><span class="p">(</span><span class="n">current_ingredients</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ingredient_list</span><span class="p">[:</span><span class="n">length</span><span class="p">]</span>  <span class="c1"># there will probably be a few extras; clamp them
+</span>
+
+<span class="n">ingredient_dataset</span> <span class="o">=</span> <span class="n">generate_ingredient_dataset</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+
+<span class="n">pp</span> <span class="o">=</span> <span class="n">pprint</span><span class="p">.</span><span class="n">PrettyPrinter</span><span class="p">()</span>
+
+
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s">'first_dataset.py'</span><span class="p">,</span> <span class="s">'w'</span><span class="p">)</span> <span class="k">as</span> <span class="n">first_dataset</span><span class="p">:</span>
+    <span class="n">first_dataset</span><span class="p">.</span><span class="n">write</span><span class="p">(</span><span class="s">"ingredient_dataset = "</span> <span class="o">+</span> <span class="n">pp</span><span class="p">.</span><span class="n">pformat</span><span class="p">(</span><span class="n">ingredient_dataset</span><span class="p">))</span></code></pre></figure>
+
+<p>This returns a list of 100 ingredient lines, like so (after I added a name to the list):</p>
+
+<p><img src="/assets/img/posts/ingredient_dataset.png" alt="alt text" title="Nothing to see here, folks, this ain't xkcd" /></p>
+
+<p>… and so on and so forth. Kudos to PrettyPrinter for doing most of the work here.</p>
+
+<p>There were a few errors, some characters that Pycharm didn’t recognize. To be entirely honest, I’m not sure what they were supposed to be saying in an instance like this:</p>
+
+<p><img src="/assets/img/posts/unknown_character.png" alt="alt text" title="Or maybe it is. You'll just have to keep hovering to find out." /></p>
+
+<p>But we make do. I corrected them the best I could, and plan on taking them out for when I train the model properly. Without further ado, we upload our dataset to the parser, and….</p>
+
+<p>We have an error.</p>
+
+<p><img src="/assets/img/posts/error_fractions.png" alt="alt text" /></p>
+
+<p>Ah, of course. All of the shortcuts I took earlier are catching up with me. Time to add in some catches.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">try</span><span class="p">:</span>
+    <span class="bp">self</span><span class="p">.</span><span class="n">amount</span> <span class="o">=</span> <span class="n">Fraction</span><span class="p">(</span><span class="n">token</span><span class="p">.</span><span class="n">text</span><span class="p">)</span>
+<span class="k">except</span> <span class="nb">ValueError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"ValueError: {}"</span><span class="p">.</span><span class="nb">format</span><span class="p">(</span><span class="n">err</span><span class="p">))</span></code></pre></figure>
+
+<p>This fixed it, or at least prevented my program from stopping every time it caught an error. In reality, the <code class="language-plaintext highlighter-rouge">'2x1-inch'</code> isn’t a measurement at all (at least, not the way we want our program to recognize it). It’s another limitation of the method I’d designed, and by this point I was finding a lot of them.</p>
+
+<p>But, I wanted some hard (or at least firm-ish) numbers, so I pressed on.</p>
+
+<p>Next, I wrote a script to create a list of tuples pairing the original ingredient line with what the parser found:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python">    <span class="n">training_set</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">recipe_nlp</span> <span class="o">=</span> <span class="n">RecipeNLP</span><span class="p">()</span>
+
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">ingredient_dataset</span><span class="p">:</span>
+        <span class="n">parsed_line</span> <span class="o">=</span> <span class="n">recipe_nlp</span><span class="p">.</span><span class="n">parse</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+        <span class="n">training_set</span><span class="p">.</span><span class="n">append</span><span class="p">((</span><span class="n">line</span><span class="p">,</span> <span class="p">[</span><span class="n">parsed_line</span><span class="p">.</span><span class="n">amount</span><span class="p">,</span> <span class="n">parsed_line</span><span class="p">.</span><span class="n">measurement</span><span class="p">,</span> <span class="n">parsed_line</span><span class="p">.</span><span class="n">ingredient</span><span class="p">]))</span>
+
+    <span class="n">pp</span> <span class="o">=</span> <span class="n">pprint</span><span class="p">.</span><span class="n">PrettyPrinter</span><span class="p">()</span>
+    <span class="n">pp</span><span class="p">.</span><span class="n">pprint</span><span class="p">(</span><span class="n">training_set</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s">'annotated_data.py'</span><span class="p">,</span> <span class="s">'w'</span><span class="p">)</span> <span class="k">as</span> <span class="n">annotated_file</span><span class="p">:</span>
+        <span class="n">annotated_file</span><span class="p">.</span><span class="n">write</span><span class="p">(</span><span class="n">pp</span><span class="p">.</span><span class="n">pformat</span><span class="p">(</span><span class="n">training_set</span><span class="p">))</span></code></pre></figure>
+
+<p>This created a list of 100 tuples with the parser’s best guess for the ingredients and measurement. I labelled and formatted it, and here was the result:</p>
+
+<p><img src="/assets/img/posts/annotated_data.png" alt="alt text" title="plus about 90 more lines" /></p>
+
+<p>From there, all I had to do was… go through all the data and correct by hand.</p>
+
+<p>What fun.</p>
+
+<p>This took less time than I thought, and revealed some other limitations in how I’d written the code, such as the fact that there isn’t a way to properly handle ingredients without a numbered measurement:</p>
+
+<p><img src="/assets/img/posts/ground_nutmeg_limitation.png" alt="alt text" title="tis the season for not cutting corners" /></p>
+
+<p>And some of the recipe lines were difficult for even me, a card-carrying human, to entirely work through. Or at least they were needlessly complex:</p>
+
+<p><img src="/assets/img/posts/pepperidge_farm_error.png" alt="alt text" title="...insert Pepperidge Farm meme here..." /></p>
+
+<p>Aren’t humans wonderful? I’m frankly impressed it got as close as it did. This one’s also weird because, well what is the measurement? Slices? I went with slices, for now at least.</p>
+
+<p>Another problem I quickly noticed was anytime there was an amount with a mixed number (e.g., <code class="language-plaintext highlighter-rouge">'1 1/2 cups flour'</code>), the program only caught the fraction part.</p>
+
+<p>And I outsmarted myself in other ways:</p>
+
+<p><img src="/assets/img/posts/kosher_salt_error.png" alt="alt text" title="You could say I was... a bit salty about this one. I'll see myself out." /></p>
+
+<p>So much for ignoring salt. Ah, well, that’s why we revise code.</p>
+
+<p>After about a half hour or so, I’d successfully cleaned all the lines. Then, all that needed to be done was to compare the corrected set with the original attempt by the parser. This was done easily enough:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">correct</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">annotated_data</span><span class="p">)):</span>
+    <span class="n">line_is_correct</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">annotated_data</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">])):</span>
+        <span class="k">if</span> <span class="n">annotated_data</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">!=</span> <span class="n">annotated_data_corrected</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="p">]:</span>
+            <span class="n">line_is_correct</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="k">if</span> <span class="n">line_is_correct</span><span class="p">:</span>
+        <span class="n">correct</span> <span class="o">+=</span> <span class="mi">1</span>
+
+<span class="k">print</span><span class="p">(</span><span class="s">"found {} correct out of {}"</span><span class="p">.</span><span class="nb">format</span><span class="p">(</span><span class="n">correct</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">annotated_data</span><span class="p">)))</span>
+<span class="k">print</span><span class="p">(</span><span class="s">"for a total correct score of {}"</span><span class="p">.</span><span class="nb">format</span><span class="p">(</span><span class="n">correct</span><span class="o">/</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">annotated_data</span><span class="p">))))</span></code></pre></figure>
+
+<p>And after all that work, what was our score?</p>
+
+<p><img src="/assets/img/posts/final_grade.png" alt="alt text" title="I mean, it's greater than half..." /></p>
+
+<p>60% correct. That’s… about what I’d thought, and better than I’d feared. But it’s still not great, and I certainly wouldn’t be brandishing this program around yet. Something that only gets an ingredient right 60% of the time isn’t really of any use to anyone.</p>
+
+<p>Now it’s time to see how we can make this thing better.</p>
+
+<p><em>(If you’d like to read the rest of this series, here’s <a href="/2020/01/17/Recipe-Parser-Part-1.html">Part 1</a>, <a href="/2020/01/18/Recipe-Parser-Part-2.html">Part 2</a>, and <a href="/2020/01/19/Recipe-Parser-Part-3.html">Part 3</a>)</em></p>
+
+</div>
+
+    </div>
+    <footer>
+      <span><a href="/index.html">Home</a></span>
+      <span><a href="/blog">Blog</a></span>
+      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+    </footer>
+    </div>
+  </body>
+</html>

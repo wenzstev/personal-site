@@ -1,0 +1,143 @@
+I"TB<p>This is largely a continuation of my previous post, regarding putting some more information on the list page. There’s a twist at the end, though, just to keep you on your toes.</p>
+
+<p>That’s right, I’m burying the lede.</p>
+
+<p>I wanted to add the original recipe lines that every ingredient line came from. I conceived of each ingredient line as a button that would, when clicked, show a collapsible list of all recipe lines that went into it. Adding the recipe lines was fairly easy because I had already included them in my <code class="language-plaintext highlighter-rouge">CompiledIngredientLine</code> class.</p>
+
+<p>Because collapsible menus require an <code class="language-plaintext highlighter-rouge">id</code> attribute to function, I added a new variable to the <code class="language-plaintext highlighter-rouge">CompiledIngredientLine</code> class that turned the ingredient name into an id using the <code class="language-plaintext highlighter-rouge">string.replace()</code> function:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="bp">self</span><span class="p">.</span><span class="n">ingredient_id</span> <span class="o">=</span> <span class="n">cleaned_line</span><span class="p">.</span><span class="n">ingredient</span><span class="p">.</span><span class="n">replace</span><span class="p">(</span><span class="s">" "</span><span class="p">,</span> <span class="s">"-"</span><span class="p">)</span>  <span class="c1"># ingredient id for use in html</span></code></pre></figure>
+
+<p>From there, it was fairly easy to make use of Bootstrap’s <code class="language-plaintext highlighter-rouge">collapse</code> feature to implement the list:</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html"><span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"list-group list-group-root well"</span> <span class="na">id=</span><span class="s">"compiled-list"</span><span class="nt">&gt;</span>
+                {% for line in list_lines %}
+                <span class="nt">&lt;a</span> <span class="na">href=</span><span class="s">"#{{line.ingredient_id}}"</span> <span class="na">class=</span><span class="s">"list-group-item"</span> <span class="na">data-toggle=</span><span class="s">"collapse"</span><span class="nt">&gt;</span>
+                    {% for dot in line.color_dots %}
+                        <span class="nt">&lt;span</span> <span class="na">class=</span><span class="s">"dot hidden {{dot}}"</span> <span class="na">style=</span><span class="s">"background-color:{{dot}}"</span><span class="err">"</span><span class="nt">&gt;&lt;/span&gt;</span>
+                    {% endfor %}
+                    {{ line.ingredient }}
+                <span class="nt">&lt;/a&gt;</span>
+                    {% if line.raw_lines %}
+                    <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"list-group collapse"</span> <span class="na">id=</span><span class="s">"{{line.ingredient_id}}"</span><span class="nt">&gt;</span>
+                        {% for raw_line in line.raw_lines %}
+                            <span class="nt">&lt;a</span> <span class="na">href=</span><span class="s">"#"</span> <span class="na">class=</span><span class="s">"list-group-item"</span> <span class="na">data-toggle=</span><span class="s">"collapse"</span><span class="nt">&gt;</span>
+                                {{raw_line.full_text}}
+                            <span class="nt">&lt;/a&gt;</span>
+                        {% endfor %}
+                    <span class="nt">&lt;/div&gt;</span>
+                    {% endif %}
+                {% endfor %}
+            <span class="nt">&lt;/div&gt;</span></code></pre></figure>
+
+<p>I then applied some CSS styles to create a nested look:</p>
+
+<figure class="highlight"><pre><code class="language-css" data-lang="css"><span class="nc">.list-group.list-group-root</span> <span class="p">{</span>
+  <span class="nl">padding</span><span class="p">:</span> <span class="m">0</span><span class="p">;</span>
+  <span class="nl">overflow</span><span class="p">:</span> <span class="nb">hidden</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="nc">.list-group.list-group-root</span> <span class="nc">.list-group</span><span class="p">{</span>
+  <span class="nl">margin-bottom</span><span class="p">:</span> <span class="m">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="nc">.list-group.list-group-root</span> <span class="nc">.list-group-item</span> <span class="p">{</span>
+  <span class="nl">border-radius</span><span class="p">:</span> <span class="m">0</span><span class="p">;</span>
+  <span class="nl">border-width</span><span class="p">:</span> <span class="m">1px</span> <span class="m">0</span> <span class="m">0</span> <span class="m">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="nc">.list-group.list-group-root</span> <span class="o">&gt;</span> <span class="nc">.list-group-item</span><span class="nd">:first-child</span> <span class="p">{</span>
+  <span class="nl">border-top-width</span><span class="p">:</span> <span class="m">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="nc">.list-group.list-group-root</span> <span class="o">&gt;</span> <span class="nc">.list-group</span> <span class="o">&gt;</span> <span class="nc">.list-group-item</span><span class="p">{</span>
+  <span class="nl">padding-left</span><span class="p">:</span> <span class="m">30px</span><span class="p">;</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>This information was adapted from <a href="https://stackoverflow.com/questions/29063244/consistent-styling-for-nested-lists-with-bootstrap">this</a> StackOverflow question, but I plan to add some customization to make it my own.</p>
+
+<p>But it’s working!</p>
+
+<p><img src="/assets/img/posts/app-recipe-dropdown/dropdown-lines.png" alt="alt text" /></p>
+
+<p>Next, I wanted to add a little bit more information to the line. I reviewed my code from the cleaning page, and decided to add the same color coding to the <code class="language-plaintext highlighter-rouge">RawLine</code>s on the recipe page. Ideally, this would allow me to fairly easily change both areas when I finally get around to doing that (which will be soon, I think).</p>
+
+<p>First, I modified the <code class="language-plaintext highlighter-rouge">CompiledIngredientLine</code> class to return a set of <code class="language-plaintext highlighter-rouge">LineToPass</code> objects instead of the original <code class="language-plaintext highlighter-rouge">RawLine</code> object. I did this because the <code class="language-plaintext highlighter-rouge">LineToPass</code> object has the JSON color data stored as a dictionary and I want to access it. This was easy to adjust:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="bp">self</span><span class="p">.</span><span class="n">raw_lines</span> <span class="o">=</span> <span class="p">[</span><span class="n">LineToPass</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">.</span><span class="n">raw_lines</span><span class="p">]</span></code></pre></figure>
+
+<p>Then, I iterated through each token in the line and passed a span with the correct color through, the same way I did on the “clean” page:</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html"><span class="nt">&lt;a</span> <span class="na">href=</span><span class="s">"#"</span> <span class="na">class=</span><span class="s">"list-group-item"</span> <span class="na">data-toggle=</span><span class="s">"collapse"</span><span class="nt">&gt;</span>
+        "
+        {% for token, color in raw_line.text_to_colors.items() %}
+          <span class="nt">&lt;span</span> <span class="na">class=</span><span class="s">"{{color}}"</span><span class="nt">&gt;</span>{{token}}<span class="nt">&lt;/span&gt;</span>
+        {% endfor %}
+        "
+<span class="nt">&lt;/a&gt;</span></code></pre></figure>
+
+<p>Gave it a quick test and everything seems to be working:</p>
+
+<p><img src="/assets/img/posts/app-recipe-dropdown/colored-lines.png" alt="alt text" /></p>
+
+<p>Now, it was almost time for me to add in the final big feature of the app: the ability to change the ingredient in the line. But that’s still a fairly large feature and deserves its own post, so I first wanted to add a few extra notes of interactivity to the list menu. Definitely not because I’m putting off the other thing. Definitely not.</p>
+
+<p>ANYWAY I decided it was time to fix the “Add Line” button so that it actually worked. First, I created a new form in my <code class="language-plaintext highlighter-rouge">forms.py</code> module:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">class</span> <span class="nc">AddLineForm</span><span class="p">(</span><span class="n">FlaskForm</span><span class="p">):</span>
+    <span class="n">recipe_line</span> <span class="o">=</span> <span class="n">StringField</span><span class="p">(</span><span class="s">"Type an Ingredient or a recipe line"</span><span class="p">)</span>
+    <span class="n">submit</span> <span class="o">=</span> <span class="n">SubmitField</span><span class="p">(</span><span class="s">"Add Line"</span><span class="p">)</span></code></pre></figure>
+
+<p>Next, I added the routing information to my list page. I wanted the program to do the same thing it does when a full recipe is added, but just to one line. Then it just returns a redirect to the same place, where, if everything works right, the new line should appear.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">if</span> <span class="n">add_line_form</span><span class="p">.</span><span class="n">validate_on_submit</span><span class="p">():</span>
+    <span class="n">new_line</span> <span class="o">=</span> <span class="n">add_line_form</span><span class="p">.</span><span class="n">recipe_line</span><span class="p">.</span><span class="n">data</span>
+    <span class="n">new_line_colors</span> <span class="o">=</span> <span class="n">color_entities_in_line</span><span class="p">(</span><span class="n">new_line</span><span class="p">)</span>
+    <span class="n">new_raw_line</span> <span class="o">=</span> <span class="n">RawLine</span><span class="p">(</span><span class="n">id_in_list</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">full_text</span><span class="o">=</span><span class="n">new_line</span><span class="p">,</span> <span class="n">text_to_colors</span><span class="o">=</span><span class="n">new_line_colors</span><span class="p">)</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">new_raw_line</span><span class="p">)</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+
+    <span class="n">amount</span><span class="p">,</span> <span class="n">measurement</span><span class="p">,</span> <span class="n">ingredient</span> <span class="o">=</span> <span class="n">extract_ingredients</span><span class="p">(</span><span class="n">new_line_colors</span><span class="p">)</span>
+    <span class="n">new_cleaned_line</span> <span class="o">=</span> <span class="n">CleanedLine</span><span class="p">(</span><span class="n">amount</span><span class="o">=</span><span class="n">amount</span><span class="p">,</span>
+                                   <span class="n">measurement</span><span class="o">=</span><span class="n">measurement</span><span class="p">,</span>
+                                   <span class="n">ingredient</span><span class="o">=</span><span class="n">ingredient</span><span class="p">,</span>
+                                   <span class="nb">list</span><span class="o">=</span><span class="n">comp_list</span><span class="p">)</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">new_cleaned_line</span><span class="p">)</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+
+    <span class="n">new_raw_line</span><span class="p">.</span><span class="n">cleaned_line</span> <span class="o">=</span> <span class="n">new_cleaned_line</span>
+
+    <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">url_for</span><span class="p">(</span><span class="s">'main.compiled_list'</span><span class="p">,</span> <span class="n">hex_name</span><span class="o">=</span><span class="n">hex_name</span><span class="p">))</span></code></pre></figure>
+
+<p>Almost time to test. From there, I went into the list template and added in the form information on the bottom:</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html"><span class="nt">&lt;form</span> <span class="na">method=</span><span class="s">"POST"</span> <span class="na">action=</span><span class="s">""</span><span class="nt">&gt;</span>
+    {{add_line_form.hidden_tag()}}
+    <span class="nt">&lt;fieldset&gt;</span>
+        <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"form-group"</span><span class="nt">&gt;</span>
+            {{ add_line_form.recipe_line(class="form-control" )}}
+        <span class="nt">&lt;/div&gt;</span>
+    <span class="nt">&lt;/fieldset&gt;</span>
+    <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"form-group"</span><span class="nt">&gt;</span>
+        {{ add_line_form.submit(class="btn btn-primary") }}
+    <span class="nt">&lt;/div&gt;</span>
+<span class="nt">&lt;/form&gt;</span></code></pre></figure>
+
+<p>This created a nice little text line at the bottom of the recipe:</p>
+
+<p><img src="/assets/img/posts/app-recipe-dropdown/add-line-form.png" alt="alt text" /></p>
+
+<p>In the future, when I start to work on restyling this into something more unique and interesting, I’d like to hide that line unless a button is clicked. But for now, in keeping with my general philosophy of functionality, I just want it to work.</p>
+
+<p>And does it? Well…</p>
+
+<p><img src="/assets/img/posts/app-recipe-dropdown/kind-of-but-not-really.png" alt="alt text" /></p>
+
+<p>Kind of. But not really. What you’re seeing here is a number of <code class="language-plaintext highlighter-rouge">ingredient</code>-less list items, as well as a few that did work. In my debugging process, I soon realized that the problem did not actually lie with the new code I’d written, but instead with the spaCy ingredient parser model that I’d trained. In essence, it wasn’t good enough at picking up ingredients to find a them in most of the examples I put in. In particular, it seems to do a very poor job when a line consists of <em>just</em> an ingredient, without any measurement or amount to qualify it. I suspect that’s because it’s not been trained very well with just ingredients, seeing as most recipe lines have an amount and a measurement. But if a user is just typing in an ingredient they need (as would usually be the case when an additional line is added), it’s not going to work nearly as well.</p>
+
+<p>There’s another issue here as well. If you look, you’ll see that “grated parmesan cheese” is duplicated. Part of the whole point of this device is to catch and compile duplicates, which it is currently failing to do. Not a good look.</p>
+
+<p>So what’s a frustrated programmer to do? I had two choices: I could return to my spaCy model and retrain it for ingredients, or I could add in the ability to modify/improve the NER on a per-line basis. I’m going to have to do both of these eventually, but I wasn’t ready to return to spaCy just yet; the thought of hand annotating another several hundred lines of data isn’t very appealing. Plus, I have a suspicion that I can use this app to make that annotation process easier, and I’m all about making things easier.</p>
+
+<p>So it’s time to fix the recipe cleaning page. I’m a bit annoyed that I’m going to have to end this blog post with some features that don’t work all the way, but I’ve gotten to the point where the recipe cleaning functionality is too interconnected with the rest of the app to no longer be fixed, and I’ve got to go were the squeaky wheel needs the grease. Mixing metaphors here, but hopefully you get the idea.</p>
+:ET

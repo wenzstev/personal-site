@@ -1,0 +1,66 @@
+I"}(<p>It’s almost time to implement the final area of my Grocery App – the ability to create an account and save your lists there. However, before I take this step, I wanted to take a day or two to prep my code for this, and to figure out how I could refactor it into something that will better handle the additional complexity. After all, my <code class="language-plaintext highlighter-rouge">routes.py</code> file has been getting very long, and while I wouldn’t quite call my code “spaghetti” (I hope not, at least), I was beginning to feel as though it was growing a bit to big for its shell.</p>
+
+<p>It was time to split things up.</p>
+
+<p>After some thought about how best to do so, I decided to split my routes into five different blueprints:</p>
+<ul>
+  <li>the <code class="language-plaintext highlighter-rouge">main</code> blueprint, which would currently only include the homepage, but later might include an “About” page or other pages that lack a specific association with a grocery list,</li>
+  <li>a <code class="language-plaintext highlighter-rouge">checklist</code> blueprint, which would hold all the routes associated with the <code class="language-plaintext highlighter-rouge">CompiledList</code> model, such as the main list page and the routes to delete and rename a list,</li>
+  <li>a <code class="language-plaintext highlighter-rouge">line</code> blueprint, which would hold all the routs associated with a specific line, either a <code class="language-plaintext highlighter-rouge">CleanedLine</code> or a <code class="language-plaintext highlighter-rouge">RawLine</code>. At some point in the future, I might break up these two line types,</li>
+  <li>a <code class="language-plaintext highlighter-rouge">recipe</code> blueprint, which would hold all the routes associated with a specific recipe, namely the “Add Recipe” page,</li>
+  <li>a <code class="language-plaintext highlighter-rouge">users</code> blueprint, which will hold all the routes associated with the users.</li>
+</ul>
+
+<p>With this general skeleton in mind, I got to work. I’m pleased to say that most of my code separated fairly easily, which I’m hoping is a sign that I generally wrote it well. There were a few areas, however, that stayed tangled, and after some thought I had to check myself and think about why and how I was splitting it up the way I was. In particular, many of the functions in <code class="language-plaintext highlighter-rouge">utils.py</code> were being used by more than one separated route. At first, I got around this by using POST redirects, such as on my homepage:</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html"><span class="nt">&lt;form</span> <span class="na">method=</span><span class="s">"POST"</span> <span class="na">action=</span><span class="s">"{{url_for('checklist.create', method='url')}}"</span><span class="nt">&gt;</span>
+...
+<span class="nt">&lt;form</span> <span class="na">method=</span><span class="s">"POST"</span> <span class="na">action=</span><span class="s">"{{url_for('checklist.create', method='manual')}}"</span><span class="nt">&gt;</span></code></pre></figure>
+
+<p>… and then directing them to a new route, which effectively ran the same code that the <code class="language-plaintext highlighter-rouge">main.home</code> route ran on its respective calls to <code class="language-plaintext highlighter-rouge">validate_on_submit()</code>:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">checklist</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">'/list/create/&lt;string:method&gt;'</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">'POST'</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="n">method</span><span class="p">):</span>
+    <span class="n">new_list</span> <span class="o">=</span> <span class="n">create_list</span><span class="p">()</span>
+
+    <span class="c1"># figure out how the list was created
+</span>    <span class="k">print</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">form</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s">'blank'</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">url_for</span><span class="p">(</span><span class="s">'checklist.compiled_list'</span><span class="p">,</span> <span class="n">hex_name</span><span class="o">=</span><span class="n">new_list</span><span class="p">.</span><span class="n">hex_name</span><span class="p">))</span>
+
+    <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s">'url'</span><span class="p">:</span>
+        <span class="c1"># take the url input and parse for ingredient lines
+</span>        <span class="n">new_recipe</span> <span class="o">=</span> <span class="n">create_recipe_from_url</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">form</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'url-url'</span><span class="p">,</span> <span class="s">''</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">))</span>
+        <span class="n">new_recipe</span><span class="p">.</span><span class="n">complist</span> <span class="o">=</span> <span class="n">new_list</span>
+
+    <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s">'manual'</span><span class="p">:</span>
+        <span class="n">new_recipe</span> <span class="o">=</span> <span class="n">create_recipe_from_text</span><span class="p">(</span><span class="s">'Untitled Recipe'</span><span class="p">,</span> <span class="n">request</span><span class="p">.</span><span class="n">form</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'custom-recipe_lines'</span><span class="p">,</span> <span class="s">''</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">))</span>
+        <span class="n">new_recipe</span><span class="p">.</span><span class="n">complist</span> <span class="o">=</span> <span class="n">new_list</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">abort</span><span class="p">(</span><span class="mi">404</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">url_for</span><span class="p">(</span><span class="s">'recipe.clean_recipe'</span><span class="p">,</span> <span class="n">list_name</span><span class="o">=</span><span class="n">new_list</span><span class="p">.</span><span class="n">hex_name</span><span class="p">,</span> <span class="n">new_recipe</span><span class="o">=</span><span class="n">new_recipe</span><span class="p">.</span><span class="n">hex_name</span><span class="p">))</span></code></pre></figure>
+
+<p>At first, this struck me as a fairly elegant solution, since I could simply redirect the necessary logic between routes and keep everything nicely separated. However, I soon realized that doing so would lead to two problems:</p>
+<ol>
+  <li>It encouraged a lot of redirects, and</li>
+  <li>(more importantly) often the POST data that the forms provided involved more than one “area,” resulting in a situation where keeping helper functions in one package excluded them from another package. I could get around this by importing from another package, but that kind of defeated the purpose of having different packages in the first place.</li>
+</ol>
+
+<p>This, plus the fact that, when I looked online I couldn’t really see any examples of someone using Flask this way, made me paranoid that I was abandoning best practices, so I hit the brakes on this method.</p>
+
+<p>After some more thought, it seemed to me that I was following the letter of the law too closely and ignoring the spirit of the thing. In the name of perfect organization and modularity, I was overcomplicating my code. And besides, there isn’t any law that states that helper functions <em>need</em> to be associated with only a single blueprint. I decided instead to take the helper functions that needed to be accessed in more than one place and put them in the main package instead. I created a <code class="language-plaintext highlighter-rouge">constructors.py</code> module for functions associated with building <code class="language-plaintext highlighter-rouge">RecipeList</code>s and <code class="language-plaintext highlighter-rouge">CompiledList</code>s, and created an <code class="language-plaintext highlighter-rouge">nlp.py</code> module for any function that deals with spaCy model. Other helper functions that only concerned one blueprint were put into a <code class="language-plaintext highlighter-rouge">utils.py</code> folder unique to that blueprint. I ended up with this file structure:</p>
+
+<p><img src="/assets/img/posts/refactoring/new-directory.png" alt="alt text" /></p>
+
+<p>It took a little while to go through and make sure everything was linked up properly, but I’m pleased with the result. I suspect that my code still needs additional refactoring, but I plan to do another, more intensive pass after implementing the user features; this was more to clear the way for those additions. My hope is that, once this is feature complete, I can go through and smooth over some areas that are still kind of rocky.</p>
+
+<p>One final note before I close this out: halfway through refactoring this I realized how nice it would be if I’d implemented version control. I’d been meaning to get this app on github for a while, but this finally pushed me over the edge. You can see it <a href="https://github.com/wenzstev/grocerylistapp">here</a>, and I’ll be updating it as I go.</p>
+
+<h4 id="next-steps">Next Steps:</h4>
+<ul>
+  <li>add users (it’s a big one)</li>
+</ul>
+:ET

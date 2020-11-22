@@ -2,7 +2,6 @@
 layout: post
 title: Where I've Been
 author: Steve
-excerpt_seperator: <!--more-->
 ---
 
 Well, it's been a little while since I last made an update here. <!--more--> I've got some new projects in the pipeline, so expect some posts about that coming soon. First, however, I want to talk a little bit about what I've been working on.

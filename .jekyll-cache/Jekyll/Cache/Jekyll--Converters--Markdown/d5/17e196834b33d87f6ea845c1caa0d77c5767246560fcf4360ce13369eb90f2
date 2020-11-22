@@ -1,0 +1,151 @@
+I"�7<p>I love to cook, but I hate grocery shopping. There’s nothing more frustrating than coming back from a long grocery run, only to find out that you’ve forgotten a crucial ingredient for that new recipe you wanted to try. This gets worse if I’m trying to meal prep, and I’ve got two or three recipes floating around in my head:</p>
+
+<p>“Did I need one onion, or three?”</p>
+
+<p>“I know I’ve got some flour at home, but is it enough? Should I get more?”</p>
+
+<p>You get the idea.</p>
+
+<p>The low-tech solution to this is an old-fashioned pen and paper, and careful rechecking to make sure that everything was copied right. But that leaves us up to human error, and besides, who has the time to write things out anymore?</p>
+
+<p>No, far better to spend that time writing a program to do it for you. Besides, I needed a new project.</p>
+
+<h2 id="the-recipe-parser">The Recipe Parser</h2>
+
+<p>Because I’ve learned that I do much better when I externalize a problem, and because I’m trying to improve my workflow in general, I decided that I would start by mapping out the general objectives and try to build an overarching idea of how the program would run, rather than just dive in and tackle the first thing that comes to mind like I normally do.</p>
+
+<h4 id="goal">Goal</h4>
+
+<p>The recipe parser is a command-line application that takes in recipe urls, parses them into a list of ingredients, and adds those ingredients to a master grocery list, combining as necessary. The grocery list can then be exported to a .txt file for easy reference.</p>
+
+<p>The program will consist of several elements:</p>
+
+<ul>
+  <li>a <code class="language-plaintext highlighter-rouge">beautifulsoup</code> object for scraping the recipe information from the website</li>
+  <li>a <code class="language-plaintext highlighter-rouge">shelve</code> object to store the grocery list</li>
+  <li>a function or class to parse the recipe lines themselves. Originally I intended this to be a regex function, but as I soon discovered, that was a poor choice.</li>
+</ul>
+
+<p>Here you can see some of my whiteboard work, as well as a flowchart I tried to sketch out for the program. I ended up ditching a lot of this in favor of simpler command line tools, but it’s useful to show process.</p>
+
+<p><img src="/assets/img/posts/2020-1-17-whiteboard.jpg" alt="alt text" title="Please excuse my terrible handwriting" /></p>
+
+<p>At this point I felt that I was ready to enter some code.</p>
+
+<h4 id="building-the-scaffolding">Building the Scaffolding</h4>
+
+<p>I fired up Pycharm and started a new project. The intimidation of the blank page (or, in this case, blank project folder) is something that’s always gotten to me, but I focused on writing out the scaffolding as I’d planned it before:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="kn">import</span> <span class="nn">requests</span><span class="p">,</span> <span class="n">sys</span><span class="p">,</span> <span class="n">shelve</span>
+<span class="kn">from</span> <span class="nn">bs4</span> <span class="kn">import</span> <span class="n">BeautifulSoup</span>
+
+<span class="c1"># TODO: open a grocery list shelf/create a new one
+</span>
+<span class="k">def</span> <span class="nf">parse_recipe</span><span class="p">(</span><span class="n">url</span><span class="p">):</span>
+  <span class="c1"># TODO: create a beautifulsoup object to get the url
+</span>
+  <span class="c1"># TODO: scrape the ingredient lines from the url
+</span>
+  <span class="c1"># TODO: determine the amount and measurement of each ingredient
+</span>
+  <span class="c1"># TODO: add the ingredient into the grocery list
+</span>  <span class="k">pass</span>
+
+<span class="k">def</span> <span class="nf">clear_list</span><span class="p">():</span>
+  <span class="c1"># TODO: clear the grocery list
+</span>  <span class="k">pass</span>
+
+<span class="k">def</span> <span class="nf">print_list</span><span class="p">():</span>
+  <span class="c1"># TODO: create a custom print function to display the list
+</span>  <span class="k">pass</span>
+
+<span class="c1"># The main function of the program
+</span><span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sys</span><span class="p">.</span><span class="n">argv</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>  <span class="c1"># if a url is not added
+</span>  <span class="k">print</span><span class="p">(</span><span class="s">"error: need a url"</span><span class="p">)</span>
+<span class="k">elif</span> <span class="n">sys</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s">'clear'</span><span class="p">:</span>
+  <span class="n">clear_list</span><span class="p">()</span>
+<span class="k">elif</span> <span class="n">sys</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s">'print'</span><span class="p">:</span>
+  <span class="n">print_list</span><span class="p">()</span>
+<span class="k">else</span><span class="p">:</span>
+  <span class="n">parse_recipe</span><span class="p">(</span><span class="n">sys</span><span class="p">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span></code></pre></figure>
+
+<p>There. Not too bad at all. A fine little scaffold of a program, if I may say so for myself. A few of the <code class="language-plaintext highlighter-rouge">TODO</code>s might be doing a lot of work there, but I was confident that I would be able to break them up into smaller parts when the time came.</p>
+
+<h4 id="storing-the-ingredients">Storing the ingredients</h4>
+
+<p>The next step was to fill in the easier parts of the scaffolding, implementing the <code class="language-plaintext highlighter-rouge">shelve</code> object and determining the format of how the grocery list would be implemented. Considering the <code class="language-plaintext highlighter-rouge">shelve</code> module is essentially a dictionary, I decided the best way to hold the list would be a nested dictionary, stored by ingredient, like so:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">grocery_list</span> <span class="o">=</span> <span class="p">{</span><span class="s">'ingredient'</span><span class="p">:</span> <span class="p">{</span><span class="s">'measurement'</span><span class="p">:</span> <span class="s">'amount'</span><span class="p">}}</span></code></pre></figure>
+
+<p>That way, if there was more than one measurement type for ingredient, the list could store both of them under a single entry. This left a problem, however: what about ingredients that did not have a measurement associated with them, such as eggs? To get around this, I decided to use the word “whole” as a placeholder if the ingredient did not have an associated measurement. Therefore, a recipe that called for:</p>
+<ul>
+  <li>2 eggs</li>
+  <li>1 1/2 cup milk</li>
+  <li>2 tablespoons butter</li>
+</ul>
+
+<p>would be stored like this:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">grocery_list</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="s">'egg'</span><span class="p">:</span> <span class="p">{</span><span class="s">'whole'</span><span class="p">:</span> <span class="mi">2</span><span class="p">}</span>
+  <span class="s">'milk'</span><span class="p">:</span> <span class="p">{</span><span class="s">'cup'</span><span class="p">:</span> <span class="mf">1.5</span><span class="p">}</span>
+  <span class="s">'butter'</span><span class="p">:</span> <span class="p">{</span><span class="s">'tablespoon'</span><span class="p">:</span> <span class="mi">2</span><span class="p">}</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>…and so on.</p>
+
+<p>Now that I’d determined just how I was going to store the ingredients, all that was left was to implement it:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># open a grocery list shelf/create a new one
+</span><span class="n">grocery_list_shelf</span> <span class="o">=</span> <span class="n">shelve</span><span class="p">.</span><span class="nb">open</span><span class="p">(</span><span class="s">'grocery_list_data'</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="s">'grocery_list'</span> <span class="ow">in</span> <span class="n">grocery_list_shelf</span><span class="p">:</span>  <span class="c1"># if this is not the first time we've used the program
+</span>  <span class="k">print</span><span class="p">(</span><span class="s">'getting grocery list from file'</span><span class="p">)</span>
+  <span class="n">grocery_list</span> <span class="o">=</span> <span class="n">grocery_list_shelf</span><span class="p">[</span><span class="s">'grocery_list'</span><span class="p">]</span>
+<span class="k">else</span><span class="p">:</span>
+  <span class="k">print</span><span class="p">(</span><span class="s">'creating new grocery list'</span><span class="p">)</span>
+  <span class="n">grocery_list</span> <span class="o">=</span> <span class="p">{}</span>
+  <span class="n">grocery_list_shelf</span><span class="p">[</span><span class="s">'grocery_list'</span><span class="p">]</span> <span class="o">=</span> <span class="n">grocery_list</span></code></pre></figure>
+
+<p>Note that, even though the <code class="language-plaintext highlighter-rouge">shelve</code> module stores things like a dictionary, I’m storing the entire grocery list in one key, because I decided that I want the program to store the recipes that it takes the ingredients from, and maybe some other data besides.</p>
+
+<h4 id="printing-and-clearing">Printing and Clearing</h4>
+
+<p>Finally, to round out this post, we’ll take a quick look at the <code class="language-plaintext highlighter-rouge">clear_list()</code> and <code class="language-plaintext highlighter-rouge">print_list()</code> functions, both of which are easy to implement.</p>
+
+<p>For <code class="language-plaintext highlighter-rouge">clear_list()</code>, all I did was set the list to an empty dictionary:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">clear_list</span><span class="p">():</span>
+  <span class="k">if</span> <span class="s">'grocery_list'</span> <span class="ow">in</span> <span class="n">grocery_list_shelf</span><span class="p">:</span>
+    <span class="n">grocery_list_shelf</span><span class="p">[</span><span class="s">'grocery_list'</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">'cleared the grocery list'</span><span class="p">)</span></code></pre></figure>
+
+<p>For <code class="language-plaintext highlighter-rouge">print_list()</code>, all I did was iterate over the grocery list and return the data in the form <code class="language-plaintext highlighter-rouge">amount</code> <code class="language-plaintext highlighter-rouge">measurement</code> <code class="language-plaintext highlighter-rouge">ingredient</code>:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">print_list</span><span class="p">():</span>
+  <span class="n">grocery_string</span> <span class="o">=</span> <span class="s">""</span>
+  <span class="n">grocery_list</span> <span class="o">=</span> <span class="n">grocery_list_shelf</span><span class="p">[</span><span class="s">'grocery_list'</span><span class="p">]</span>
+  <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">grocery_list</span><span class="p">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="k">for</span> <span class="n">measurement</span><span class="p">,</span> <span class="n">amount</span> <span class="ow">in</span> <span class="n">v</span><span class="p">.</span><span class="n">items</span><span class="p">():</span>
+      <span class="k">if</span> <span class="n">measurement</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">amount</span> <span class="ow">is</span> <span class="ow">not</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">grocery_string</span> <span class="o">+=</span> <span class="nb">str</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span> <span class="o">+</span> <span class="s">" "</span> <span class="o">+</span> <span class="n">measurement</span> <span class="o">+</span> <span class="s">" "</span>
+    <span class="n">grocery_string</span> <span class="o">+=</span> <span class="n">k</span> <span class="o">+</span> <span class="s">"</span><span class="se">\n</span><span class="s">"</span>
+
+  <span class="k">print</span><span class="p">(</span><span class="n">grocery_string</span><span class="p">)</span></code></pre></figure>
+
+<p>Which, for our above example, prints out:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>2 whole egg
+1.5 cup milk
+2 tablespoon butter
+</code></pre></div></div>
+
+<p>This isn’t perfect (and doesn’t catch errors), but it’ll do for now.</p>
+
+<p>And that’s all for this post! Next time I’ll tackle the actual difficult stuff, and try not to admit how long it took me to realize a <code class="language-plaintext highlighter-rouge">regex</code> wasn’t going to cut it for what I needed.</p>
+
+<p>(You can check out the recipe parser <a href="https://www.github.com/wenzstev/grocery-list-maker">here</a>. Note that it’s much farther along now, but the base scaffolding can still be seen.)</p>
+
+<p><a href="/2020/01/18/Recipe-Parser-Part-2.html">Read Part 2 of building the recipe parser here</a></p>
+:ET

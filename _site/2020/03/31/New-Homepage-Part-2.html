@@ -1,0 +1,171 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Creating a New Homepage -- Part 2</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-header">
+      <h2>Creating a New Homepage -- Part 2</h2>
+      <small>31 Mar 2020</small>
+  </div>
+</header>
+
+<div class="margin">
+<p>After having established a <a href="/2020/03/30/New-Homepage.html">new user list page</a>, it was time to ensure responsive design, as well as add a new way for users to create new lists.</p>
+
+<p>It’s here that my decision to move to Bootstrap 4 has begun to pay dividends, because Bootstrap makes it very easy to create responsive design. My goal was to present the users lists as a set of cards with roughly equal size, and I wanted the number of cards on each row to change depending on the size of the screen. It was fairly easy to find an example of what I was looking for; <a href="https://stackoverflow.com/questions/36430816/bootstrap-4-card-deck-with-number-of-columns-based-on-viewport">this</a> answer provided the most succinct solution. I made use of Bootstrap’s <a href="https://getbootstrap.com/docs/4.1/components/card/#card-decks">card decks</a> to ensure equal lines, and the <code class="language-plaintext highlighter-rouge">.w-100</code> class to create breakpoints when I wanted to.</p>
+
+<p>The only issue was that, in the provided example, the cards were hard coded in at the onset, whereas my template created them dynamically based on how many recipes the user had. Therefore, I had to create my breakpoints dynamically as well. Here’s the solution I came up with, using the fact that jinja2 provides access to the iteration of the loop:</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html">{% if loop.index % 2 == 0 %}
+  <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"w-100 d-none d-sm-block d-md-none"</span><span class="nt">&gt;</span><span class="c">&lt;!-- wrap every 2 on small --&gt;</span><span class="nt">&lt;/div&gt;</span>
+{% endif %}
+{% if loop.index % 3 == 0 %}
+  <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"w-100 d-none d-md-block d-lg-none"</span><span class="nt">&gt;</span><span class="c">&lt;!-- wrap every 3 on medium --&gt;</span><span class="nt">&lt;/div&gt;</span>
+{% endif %}
+{% if loop.index % 4 == 0 %}
+  <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"w-100 d-none d-lg-block d-xl-none"</span><span class="nt">&gt;</span><span class="c">&lt;!-- wrap every 4 on large --&gt;</span><span class="nt">&lt;/div&gt;</span>
+{% endif %}
+{% if loop.index % 5 == 0 %}
+  <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"w-100 d-none d-xl-block"</span><span class="nt">&gt;</span><span class="c">&lt;!-- wrap every 5 on extra large --&gt;</span><span class="nt">&lt;/div&gt;</span>
+{% endif %}</code></pre></figure>
+
+<p>This code inserts the necessary breakpoint at intervals of 2, 3, 4, and 5, depending on the size of the screen. Whether there are 2 lists or 100, the right breakpoints will be inserted.</p>
+
+<p>As an example, let me go through the breakpoint that’s inserted every 3 divs:</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html"><span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"w-100 d-none d-md-block d-lg-none"</span><span class="nt">&gt;&lt;/div&gt;</span></code></pre></figure>
+
+<p>To go through the classes here:</p>
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">.w-100</code> ensures that the div is the entire width of the screen.</li>
+  <li><code class="language-plaintext highlighter-rouge">d-none</code> means that the div won’t be displayed (and therefore there won’t be a breakpoint) on the smallest screen size and up.</li>
+  <li><code class="language-plaintext highlighter-rouge">d-md-block</code> overrides the previous class on the medium screen size, ensuring that the div is rendered as <code class="language-plaintext highlighter-rouge">display: block</code>, which forces the breakpoint.</li>
+  <li><code class="language-plaintext highlighter-rouge">d-lg-none</code> again overrides the medium breakpoint class, ensuring that, in any screen size larger than medium, the breakpoint again won’t be displayed.</li>
+</ul>
+
+<p>The benefit of this solution is that the list resizes automatically, and looks good no matter how big the screen is. Here are a couple screenshots of the lists in various sizes, one per line…</p>
+
+<p><img src="/assets/img/posts/list-page/list-small.png" alt="alt text" /></p>
+
+<p>…two per line…</p>
+
+<p><img src="/assets/img/posts/list-page/list-medium.png" alt="alt text" /></p>
+
+<p>…and three per line:</p>
+
+<p><img src="/assets/img/posts/list-page/list-large.png" alt="alt text" /></p>
+
+<p>And so it goes, all the way up to five. I like this solution, I think it’s dynamic and it looks good in small and large screens.</p>
+
+<p>But of course, having multiple lists look pretty doesn’t matter much if there isn’t any way for a user to make another list. So now I needed to add a way for the user to do so.</p>
+
+<p>First, I created a new route, and a new template, dedicated solely to the creation of a new list. I added my trusty <code class="language-plaintext highlighter-rouge">RecipeURLForm</code> and <code class="language-plaintext highlighter-rouge">CustomRecipeForm</code>s, and returned a render of my (then-uncreated) template:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">checklist</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">'/list/create'</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">'GET'</span><span class="p">,</span> <span class="s">'POST'</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">create_list_page</span><span class="p">():</span>
+    <span class="n">grocery_lists</span> <span class="o">=</span> <span class="n">CompiledList</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">user_id</span><span class="o">=</span><span class="n">current_user</span><span class="p">.</span><span class="nb">id</span><span class="p">).</span><span class="nb">all</span><span class="p">()</span>
+    <span class="n">url_form</span> <span class="o">=</span> <span class="n">RecipeURLForm</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s">'url'</span><span class="p">)</span>
+    <span class="n">custom_form</span> <span class="o">=</span> <span class="n">CustomRecipeForm</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s">'custom'</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">render_template</span><span class="p">(</span><span class="s">'create_list.html'</span><span class="p">,</span> <span class="n">grocery_lists</span><span class="o">=</span><span class="n">grocery_lists</span><span class="p">,</span> <span class="n">url_form</span><span class="o">=</span><span class="n">url_form</span><span class="p">,</span> <span class="n">custom_form</span><span class="o">=</span><span class="n">custom_form</span><span class="p">)</span></code></pre></figure>
+
+<p>Note the absence of any <code class="language-plaintext highlighter-rouge">validate_on_submit()</code> functions. That’s because I still have the code that creates new lists in its own route, that the forms post their data to. I’m increasingly feeling like this is not the best way to go about things, and might be changing it in a future refactor. But for now, I simply added <code class="language-plaintext highlighter-rouge">url_for()</code> calls in my template, which I embellished with a few simple instructions:</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html">{% block content %}
+<span class="nt">&lt;h1</span> <span class="na">class=</span><span class="s">"mt-3"</span><span class="nt">&gt;</span>Create new list<span class="nt">&lt;/h1&gt;</span>
+<span class="nt">&lt;h6</span> <span class="na">class=</span><span class="s">"text-muted font-italic"</span><span class="nt">&gt;</span>To get started, first paste the URL of a recipe you would like to add to your grocery list...<span class="nt">&lt;/h6&gt;</span>
+<span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"card my-3"</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"card-body"</span><span class="nt">&gt;</span>
+        <span class="nt">&lt;h5&gt;</span>Create by URL<span class="nt">&lt;/h5&gt;</span>
+        <span class="nt">&lt;form</span> <span class="na">method=</span><span class="s">"POST"</span> <span class="na">action=</span><span class="s">"{{url_for('checklist.create_methods', method='url')}}"</span><span class="nt">&gt;</span>
+            <span class="nt">&lt;fieldset&gt;</span>
+                {{url_form.url(class='form-control', placeholder='Paste your URL here...')}}
+            <span class="nt">&lt;/fieldset&gt;</span>
+            {{url_form.submit(class='btn btn-primary mt-2')}}
+        <span class="nt">&lt;/form&gt;</span>
+    <span class="nt">&lt;/div&gt;</span>
+<span class="nt">&lt;/div&gt;</span>
+<span class="nt">&lt;h6</span> <span class="na">class=</span><span class="s">"text-muted font-italic"</span><span class="nt">&gt;</span>... or type or paste lines from a recipe or individual ingredients below! <span class="nt">&lt;/h6&gt;</span>
+<span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"card my-3"</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"card-body"</span><span class="nt">&gt;</span>
+        <span class="nt">&lt;h5&gt;</span>Or create by typing or pasting recipe lines below:<span class="nt">&lt;/h5&gt;</span>
+        <span class="nt">&lt;form</span> <span class="na">method=</span><span class="s">"POST"</span> <span class="na">action=</span><span class="s">"{{ url_for('checklist.create_methods', method='custom') }}"</span><span class="nt">&gt;</span>
+            <span class="nt">&lt;fieldset&gt;</span>
+                {{ custom_form.recipe_lines(class='form-control')}}
+            <span class="nt">&lt;/fieldset&gt;</span>
+            {{ custom_form.submit(class='btn btn-primary mt-2') }}
+        <span class="nt">&lt;/form&gt;</span>
+    <span class="nt">&lt;/div&gt;</span>
+<span class="nt">&lt;/div&gt;</span>
+<span class="nt">&lt;h6</span> <span class="na">class=</span><span class="s">"text-muted font-italic"</span><span class="nt">&gt;</span>You can also create a blank list, and add recipes later.<span class="nt">&lt;/h6&gt;</span>
+<span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"card recipe-card my-3"</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"card-body"</span><span class="nt">&gt;</span>
+        <span class="nt">&lt;h5&gt;&lt;a</span> <span class="na">class=</span><span class="s">"card-title stretched-link"</span> <span class="na">href=</span><span class="s">"{{ url_for('checklist.create_methods', method='blank') }}"</span><span class="nt">&gt;</span>New List<span class="nt">&lt;/a&gt;&lt;/h5&gt;</span>
+        <span class="nt">&lt;h6</span> <span class="na">class=</span><span class="s">"card-subtitle mb-2 text-muted font-italic"</span><span class="nt">&gt;</span>You can add recipes later.<span class="nt">&lt;/h6&gt;</span>
+    <span class="nt">&lt;/div&gt;</span>
+<span class="nt">&lt;/div&gt;</span>
+
+{% endblock content %}</code></pre></figure>
+
+<p>This created a simple, visually appealing creation page:</p>
+
+<p><img src="/assets/img/posts/list-page/new-list-page.png" alt="alt text" /></p>
+
+<p>All well and good, but now I needed a way for the user to actually access this page. I decided to provide two links: the first of which would be in the navbar, so that the user could access the new list creation whenever they wanted:</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html"><span class="nt">&lt;li</span> <span class="na">class=</span><span class="s">"nav-item"</span><span class="nt">&gt;&lt;a</span> <span class="na">class=</span><span class="s">"nav-link"</span> <span class="na">href=</span><span class="s">"{{ url_for('checklist.create_list_page') }}"</span><span class="nt">&gt;</span>Create New List<span class="nt">&lt;/a&gt;&lt;/li&gt;</span></code></pre></figure>
+
+<p>Additionally, I wanted a way for the user to specifically create a new list on their homepage. I decided that the most visually pleasing way to do so would be to create another card for a new list, in the same style as the already-existing list cards. That way, it would blend in, and the user would simply click it to start a new list, the same way one might do so in google docs.</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html"><span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"card recipe-card my-3"</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"card-body"</span><span class="nt">&gt;</span>
+        <span class="nt">&lt;h5&gt;&lt;a</span> <span class="na">href=</span><span class="s">"{{url_for('checklist.create_list_page')}}"</span> <span class="na">class=</span><span class="s">"stretched-link card-title"</span><span class="nt">&gt;</span>Create a New Grocery List<span class="nt">&lt;/a&gt;&lt;/h5&gt;</span>
+        <span class="nt">&lt;p</span> <span class="na">class=</span><span class="s">"card-subtitle mb-2 text-muted font-italic"</span><span class="nt">&gt;</span>Create a new grocery list via url or manually.<span class="nt">&lt;/p&gt;</span>
+    <span class="nt">&lt;/div&gt;</span>
+<span class="nt">&lt;/div&gt;</span></code></pre></figure>
+
+<p><img src="/assets/img/posts/list-page/new-list-card.png" alt="alt text" /></p>
+
+<p>Simple and easy to understand, although now that I’m looking at this, I think it would be much better for this link to be at the top of the list, rather than at the end like I have now. But that’s a pretty easy fix.</p>
+
+<p>Almost done. The last thing I wanted to add was a quick note for new users, just something to display if they had no lists at all and prompt them in the right direction:</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html">{% if user_lists|length <span class="nt">&lt;</span> <span class="err">1</span> <span class="err">%}</span>
+  <span class="err">&lt;</span><span class="na">h6</span> <span class="na">class=</span><span class="s">"text-muted font-italic text-light"</span><span class="nt">&gt;</span>You haven't made any lists yet! Click the card below to get started.<span class="nt">&lt;/h6&gt;</span>
+{% endif %}</code></pre></figure>
+
+<p>This just shows some small text to the user before the “Create New List” card is shown.</p>
+
+<p><img src="/assets/img/posts/list-page/no-lists-display.png" alt="alt text" /></p>
+
+<p>And that’s about it for today! To recap, we now have a functioning user system and a new page that shows all the user’s lists. Additionally, we can create new lists and access them from the homepage or the navbar.</p>
+
+<h4 id="next-steps">Next Steps:</h4>
+<ul>
+  <li>create a guest list that isn’t saved, but can be saved if the guest creates an account</li>
+  <li>settings page for the user to alter information</li>
+  <li>better security for passwords</li>
+</ul>
+
+</div>
+
+    </div>
+    <footer>
+      <span><a href="/index.html">Home</a></span>
+      <span><a href="/blog">Blog</a></span>
+      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+    </footer>
+    </div>
+  </body>
+</html>

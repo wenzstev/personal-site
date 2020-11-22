@@ -1,0 +1,266 @@
+I"��<h4 id="refactoring-to-list-instead-of-dictionary">Refactoring to List instead of Dictionary</h4>
+
+<p>Okay, time for Part 2 of fixing the “Add Line” feature. First, I needed to do the restructuring I mentioned in my last post, and alter the code so that lists, instead of dictionaries are sent through the ajax requests. I first did this by changing the <code class="language-plaintext highlighter-rouge">color_entities_in_line()</code> function to return a json array:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">color_entities_in_line</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">line_colors</span><span class="o">=</span><span class="n">line_colors</span><span class="p">):</span>
+    <span class="n">color_tuples</span> <span class="o">=</span> <span class="p">[]</span>   <span class="c1"># list of tuples of token and the color
+</span>    <span class="n">doc</span> <span class="o">=</span> <span class="n">nlp</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">doc</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">token</span><span class="p">.</span><span class="n">ent_iob_</span> <span class="o">==</span> <span class="s">"O"</span><span class="p">:</span>   <span class="c1"># if the token is outside an entity
+</span>            <span class="n">color_tuples</span><span class="p">.</span><span class="n">append</span><span class="p">((</span><span class="n">token</span><span class="p">.</span><span class="n">text</span><span class="p">,</span> <span class="n">line_colors</span><span class="p">[</span><span class="s">"O"</span><span class="p">]))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">color_tuples</span><span class="p">.</span><span class="n">append</span><span class="p">((</span><span class="n">token</span><span class="p">.</span><span class="n">text</span><span class="p">,</span> <span class="n">line_colors</span><span class="p">[</span><span class="n">token</span><span class="p">.</span><span class="n">ent_type_</span><span class="p">]))</span>
+    <span class="k">return</span> <span class="n">json</span><span class="p">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">color_tuples</span><span class="p">)</span></code></pre></figure>
+
+<p>Then I changed the JavaScript in the “Add Line” feature to iterate through the new nested array:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="k">in</span> <span class="nx">jsonData</span><span class="p">[</span><span class="dl">'</span><span class="s1">parsed_line</span><span class="dl">'</span><span class="p">]){</span>
+      <span class="nx">clean_line</span><span class="p">.</span><span class="nx">append</span><span class="p">(</span><span class="dl">"</span><span class="s2">&lt;button class='</span><span class="dl">"</span> <span class="o">+</span> <span class="nx">jsonData</span><span class="p">[</span><span class="dl">'</span><span class="s1">parsed_line</span><span class="dl">'</span><span class="p">][</span><span class="nx">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="dl">"</span><span class="s2"> word-button'&gt;</span><span class="dl">"</span> <span class="o">+</span> <span class="nx">jsonData</span><span class="p">[</span><span class="dl">'</span><span class="s1">parsed_line</span><span class="dl">'</span><span class="p">][</span><span class="nx">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="dl">"</span><span class="s2">&lt;/button&gt;</span><span class="dl">"</span><span class="p">)</span>
+    <span class="p">}</span></code></pre></figure>
+
+<p>This meant that the line finally showed up again, and now had a guaranteed order.</p>
+
+<p><img src="/assets/img/posts/recipe-line-fix/order-works.png" alt="alt text" /></p>
+
+<p>Wonderful.</p>
+
+<p>I also needed to alter the ajax on the client side, so that it submitted a list back instead of a dictionary. This was important because otherwise the lists that already existed would be replaced by dictionary objects as the function ran.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">children</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">){</span>
+  <span class="nx">button_text</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span><span class="nx">children</span><span class="p">[</span><span class="nx">i</span><span class="p">]).</span><span class="nx">text</span><span class="p">()</span>
+  <span class="nx">button_color</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span><span class="nx">children</span><span class="p">[</span><span class="nx">i</span><span class="p">]).</span><span class="nx">attr</span><span class="p">(</span><span class="dl">'</span><span class="s1">class</span><span class="dl">'</span><span class="p">).</span><span class="nx">match</span><span class="p">(</span><span class="nx">patt</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">button_color</span><span class="p">)</span>
+  <span class="nx">button_colors</span><span class="p">.</span><span class="nx">push</span><span class="p">([</span><span class="nx">button_text</span><span class="p">,</span> <span class="nx">button_color</span><span class="p">])</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>But not quite done. Now I needed to go back and fix the other place where this code runs: the “Clean List” page. This actually proved much easier than I thought, and was as simple as modifying the code to iterate through a list instead of a dictionary:</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html"><span class="nt">&lt;ul</span> <span class="na">class=</span><span class="s">"list-group"</span><span class="nt">&gt;</span>
+        {% for line in rlist_lines %}
+        <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"list-group-item btn-group"</span> <span class="na">id=</span><span class="s">"{{ line.id_in_list }}"</span><span class="nt">&gt;</span>
+            {% for token, color in line.text_to_colors %}
+                <span class="nt">&lt;button</span> <span class="na">class=</span><span class="s">"{{ color }} word-button"</span> <span class="nt">&gt;</span>{{ token }}<span class="nt">&lt;/button&gt;</span>
+            {% endfor %}
+        <span class="nt">&lt;/div&gt;</span>
+        {% endfor %}
+    <span class="nt">&lt;/ul&gt;</span></code></pre></figure>
+
+<p>Gotta love Python.</p>
+
+<p>This made the code that I’d already written work properly again. Now, it’s time to fix the “Add Line” feature, for real this time.</p>
+
+<h4 id="the-new-add-line-function">The New Add Line Function</h4>
+
+<p>First, I added a few extra lines of code to the “parse_line” route in my <code class="language-plaintext highlighter-rouge">main.routes</code> file:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">main</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">'/clean/parse_line'</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">'GET'</span><span class="p">,</span> <span class="s">'POST'</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">parse_line</span><span class="p">():</span>
+    <span class="n">new_line</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">form</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'line_text'</span><span class="p">,</span> <span class="s">''</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">parsed_line</span> <span class="o">=</span> <span class="n">color_entities_in_line</span><span class="p">(</span><span class="n">new_line</span><span class="p">)</span>
+
+    <span class="n">new_raw_line</span> <span class="o">=</span> <span class="n">RawLine</span><span class="p">(</span><span class="n">id_in_list</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">full_text</span><span class="o">=</span><span class="n">new_line</span><span class="p">,</span> <span class="n">text_to_colors</span><span class="o">=</span><span class="n">parsed_line</span><span class="p">)</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">new_raw_line</span><span class="p">)</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+
+    <span class="n">amount</span><span class="p">,</span> <span class="n">measurement</span><span class="p">,</span> <span class="n">ingredient</span> <span class="o">=</span> <span class="n">extract_ingredients</span><span class="p">(</span><span class="n">new_raw_line</span><span class="p">.</span><span class="n">text_to_colors</span><span class="p">)</span>
+    <span class="n">cur_list_hex</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">form</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'compiled_list'</span><span class="p">,</span> <span class="s">''</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">cur_list</span> <span class="o">=</span> <span class="n">CompiledList</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">hex_name</span><span class="o">=</span><span class="n">cur_list_hex</span><span class="p">).</span><span class="n">first_or_404</span><span class="p">()</span>
+
+    <span class="n">new_cleaned_line</span> <span class="o">=</span> <span class="n">CleanedLine</span><span class="p">(</span><span class="n">amount</span><span class="o">=</span><span class="n">amount</span><span class="p">,</span>
+                                   <span class="n">measurement</span><span class="o">=</span><span class="n">measurement</span><span class="p">,</span>
+                                   <span class="n">ingredient</span><span class="o">=</span><span class="n">ingredient</span><span class="p">,</span>
+                                   <span class="nb">list</span><span class="o">=</span><span class="n">cur_list</span><span class="p">)</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">new_cleaned_line</span><span class="p">)</span>
+    <span class="n">new_raw_line</span><span class="p">.</span><span class="n">cleaned_line</span><span class="o">=</span><span class="n">new_cleaned_line</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="p">{</span><span class="s">'line_id'</span><span class="p">:</span> <span class="n">new_raw_line</span><span class="p">.</span><span class="nb">id</span><span class="p">,</span>
+            <span class="s">'parsed_line'</span><span class="p">:</span> <span class="n">json</span><span class="p">.</span><span class="n">loads</span><span class="p">(</span><span class="n">parsed_line</span><span class="p">)}</span>  <span class="c1"># have to load it to make sure it's formatted properly for client</span></code></pre></figure>
+
+<p>This creates a new <code class="language-plaintext highlighter-rouge">CleanedLine</code> object and assigns the <code class="language-plaintext highlighter-rouge">RawLine</code> object to it. I decided to do it here in order to make the ajax work easier on the client side for the next step. Also note that I added the <code class="language-plaintext highlighter-rouge">hex_name</code> of the current list I was on to the ajax request, which enabled me to access the right list on the server side.</p>
+
+<p>It was here that I ran into a sort of conundrum: how to request the individual ingredient lines without them having a recipe to help with the lookup process? Here, I admit, I kind of went in circles for a bit. First, I modified the “/clean/set_color” route, as it is currently set to need the <code class="language-plaintext highlighter-rouge">hex_name</code> of the recipe in order to find the right line. I changed it so that it instead uses the unique <code class="language-plaintext highlighter-rouge">id</code> of the <code class="language-plaintext highlighter-rouge">RawLine</code>, which is passed through the ajax request. I then use the <code class="language-plaintext highlighter-rouge">RawLine</code> to call the <code class="language-plaintext highlighter-rouge">CleanedLine</code> associated with it (which I’d already created in the “parse_line” route):</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">main</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">'/clean/set_color'</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">'GET'</span><span class="p">,</span> <span class="s">'POST'</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">set_color</span><span class="p">():</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">form</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'line_id'</span><span class="p">))</span>
+    <span class="n">cur_line</span> <span class="o">=</span> <span class="n">RawLine</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">request</span><span class="p">.</span><span class="n">form</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'line_id'</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">)).</span><span class="n">first_or_404</span><span class="p">()</span>
+
+    <span class="k">print</span><span class="p">(</span><span class="n">cur_line</span><span class="p">)</span>
+
+    <span class="n">new_colors</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">form</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'text_to_colors'</span><span class="p">,</span> <span class="s">''</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">form</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'text_to_colors'</span><span class="p">))</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">is_json</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">'new colors'</span><span class="p">,</span> <span class="n">new_colors</span><span class="p">)</span>
+
+    <span class="n">cur_line</span><span class="p">.</span><span class="n">text_to_colors</span> <span class="o">=</span> <span class="n">new_colors</span>
+
+    <span class="n">amount</span><span class="p">,</span> <span class="n">measurement</span><span class="p">,</span> <span class="n">ingredient</span> <span class="o">=</span> <span class="n">extract_ingredients</span><span class="p">(</span><span class="n">cur_line</span><span class="p">.</span><span class="n">text_to_colors</span><span class="p">)</span>
+    <span class="n">cur_cleaned_line</span> <span class="o">=</span> <span class="n">CleanedLine</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">cur_line</span><span class="p">.</span><span class="n">cline_id</span><span class="p">).</span><span class="n">first_or_404</span><span class="p">()</span>
+    <span class="n">cur_cleaned_line</span><span class="p">.</span><span class="n">amount</span> <span class="o">=</span> <span class="n">amount</span>
+    <span class="n">cur_cleaned_line</span><span class="p">.</span><span class="n">measurement</span> <span class="o">=</span> <span class="n">measurement</span>
+    <span class="n">cur_cleaned_line</span><span class="p">.</span><span class="n">ingredient</span> <span class="o">=</span> <span class="n">ingredient</span>
+
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">new_colors</span><span class="p">)</span></code></pre></figure>
+
+<p>This works, and in general it seems to me to be a better way to look up the <code class="language-plaintext highlighter-rouge">RawLines</code>; there’s less database querying and it’s guaranteed to find the right match. There’s just one problem: changing the code like this breaks (once again) the code for the “clean line” page. I knew this going in, but had decided that it would be better to rewrite the “clean recipe” page so that it ran off of the individual <code class="language-plaintext highlighter-rouge">id</code>s as well.</p>
+
+<p>I also did it because I wanted to implement a version of my in-line recipe cleaning for the main recipe page. Instead of the “Edit” button redirecting to the whole recipe page, it seems easier and more intuitive for it to show the buttons in the line, so that they can be adjusted as necessary. Clicking “commit” would then refresh the page, with the necessary changes made.</p>
+
+<p>But first, I had to come up with a better, more generalized solution to the ajax requests for the line colors. The simplest thing to do seemed to just create an <code class="language-plaintext highlighter-rouge">id</code> attribute that matched the <code class="language-plaintext highlighter-rouge">id</code> of the <code class="language-plaintext highlighter-rouge">RawLine</code> in the database. Then a simply jQuery command would be able to fetch it and send it as part of the ajax call. But… I don’t know, I felt uncomfortable including the actual raw <code class="language-plaintext highlighter-rouge">id</code> like that, it seemed… unsafe? Admittedly, I don’t have any information for that besides a vague hunch, but I still didn’t want to do it. Besides, using a number as an HTML <code class="language-plaintext highlighter-rouge">id</code> attribute doesn’t feel like best practices.</p>
+
+<p>What I ended up doing was creating a custom <code class="language-plaintext highlighter-rouge">id</code> attribute for each  <code class="language-plaintext highlighter-rouge">RawLine</code>. This <code class="language-plaintext highlighter-rouge">id</code> was created by combining the <code class="language-plaintext highlighter-rouge">hex_name</code> of the <code class="language-plaintext highlighter-rouge">RecipeList</code> and the <code class="language-plaintext highlighter-rouge">id_in_list</code> of the <code class="language-plaintext highlighter-rouge">RawLine</code>. Sounds like a bit of a tongue twister, but here’s what it looks like in code:</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html">{% if line.raw_lines %}
+    <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"list-group collapse"</span> <span class="na">id=</span><span class="s">"{{line.ingredient_id}}"</span><span class="nt">&gt;</span>
+        {% for raw_line in line.raw_lines %}
+          <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"list-group-item list-flex"</span> <span class="na">data-toggle=</span><span class="s">"collapse"</span> <span class="na">id=</span><span class="s">"{{raw_line.recipe.hex_name}}-{{raw_line.id_in_list}}"</span><span class="nt">&gt;</span>
+            <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"recipe-info"</span><span class="nt">&gt;</span>
+              <span class="nt">&lt;span</span> <span class="na">class=</span><span class="s">"dot"</span> <span class="na">style=</span><span class="s">"background-color:{{raw_line.recipe.hex_color}}"</span><span class="nt">&gt;&lt;/span&gt;</span>
+              <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"recipe-line recipe-div"</span><span class="nt">&gt;</span>"{{raw_line.full_text}}"<span class="nt">&lt;/div&gt;</span>
+              <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"recipe-name recipe-div"</span><span class="nt">&gt;</span>{{raw_line.recipe.name}}<span class="nt">&lt;/div&gt;</span>
+            <span class="nt">&lt;/div&gt;</span>
+            <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"button-panel recipe-div"</span><span class="nt">&gt;</span>
+              <span class="nt">&lt;button</span> <span class="na">class=</span><span class="s">"edit-button"</span><span class="nt">&gt;</span>Edit<span class="nt">&lt;/button&gt;</span>
+            <span class="nt">&lt;/div&gt;</span>
+          <span class="nt">&lt;/div&gt;</span>
+        {% endfor %}
+      <span class="nt">&lt;/div&gt;</span>
+{% endif %}</code></pre></figure>
+
+<p>Then, I rewrote the code in the <code class="language-plaintext highlighter-rouge">get_colors()</code> and <code class="language-plaintext highlighter-rouge">set_colors()</code> routes to take either the <code class="language-plaintext highlighter-rouge">id</code> of the <code class="language-plaintext highlighter-rouge">RawLine</code> OR the <code class="language-plaintext highlighter-rouge">hex_name</code> and <code class="language-plaintext highlighter-rouge">id_in_list</code> attributes. This ensured the maximum flexibility of my code, and I’m hoping that having more ways to get the information I need will make it easier down the line if I need to change anything.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">main</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">'/list/get_colors'</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">'GET'</span><span class="p">,</span> <span class="s">'POST'</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">get_colors</span><span class="p">():</span>
+    <span class="c1"># check if finding by line id or recipe hex
+</span>    <span class="n">line_id</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">form</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'line_id'</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">line_id</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># if we have a line id
+</span>        <span class="n">cur_line</span> <span class="o">=</span> <span class="n">RawLine</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">line_id</span><span class="p">).</span><span class="n">first_or_404</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>  <span class="c1"># we're finding it from a recipe hex
+</span>        <span class="n">recipe_hex</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">form</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'hex_name'</span><span class="p">,</span> <span class="s">''</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+        <span class="n">recipe_line</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">form</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'recipe_line'</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
+        <span class="n">recipe</span> <span class="o">=</span> <span class="n">RecipeList</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">hex_name</span><span class="o">=</span><span class="n">recipe_hex</span><span class="p">).</span><span class="n">first_or_404</span><span class="p">()</span>
+        <span class="n">cur_line</span> <span class="o">=</span> <span class="n">RawLine</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">rlist</span><span class="o">=</span><span class="n">recipe</span><span class="p">,</span> <span class="n">id_in_list</span><span class="o">=</span><span class="n">recipe_line</span><span class="p">).</span><span class="n">first_or_404</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="p">{</span><span class="s">'line_id'</span><span class="p">:</span> <span class="n">cur_line</span><span class="p">.</span><span class="nb">id</span><span class="p">,</span>
+            <span class="s">'parsed_line'</span><span class="p">:</span> <span class="n">json</span><span class="p">.</span><span class="n">loads</span><span class="p">(</span><span class="n">cur_line</span><span class="p">.</span><span class="n">text_to_colors</span><span class="p">)}</span>
+
+
+
+<span class="o">@</span><span class="n">main</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">'/clean/set_color'</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">'GET'</span><span class="p">,</span> <span class="s">'POST'</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">set_color</span><span class="p">():</span>
+    <span class="c1"># check if we're finding by line id or by hex name
+</span>    <span class="c1"># TODO: refactor code so that this section and the identical section in get_colors are in one function
+</span>    <span class="n">line_id</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">form</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'line_id'</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">line_id</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># if we have a line id
+</span>        <span class="k">print</span><span class="p">(</span><span class="s">'going by id'</span><span class="p">)</span>
+        <span class="n">cur_line</span> <span class="o">=</span> <span class="n">RawLine</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">line_id</span><span class="p">).</span><span class="n">first_or_404</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>  <span class="c1"># we're finding it from a recipe hex
+</span>        <span class="k">print</span><span class="p">(</span><span class="s">'going by hex'</span><span class="p">)</span>
+        <span class="n">recipe_hex</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">form</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'hex_name'</span><span class="p">,</span> <span class="s">''</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+        <span class="n">recipe_line</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">form</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'recipe_line'</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">recipe_hex</span><span class="p">,</span> <span class="n">recipe_line</span><span class="p">)</span>
+        <span class="n">recipe</span> <span class="o">=</span> <span class="n">RecipeList</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">hex_name</span><span class="o">=</span><span class="n">recipe_hex</span><span class="p">).</span><span class="n">first_or_404</span><span class="p">()</span>
+        <span class="n">cur_line</span> <span class="o">=</span> <span class="n">RawLine</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">rlist</span><span class="o">=</span><span class="n">recipe</span><span class="p">,</span> <span class="n">id_in_list</span><span class="o">=</span><span class="n">recipe_line</span><span class="p">).</span><span class="n">first_or_404</span><span class="p">()</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">cur_line</span><span class="p">)</span>
+
+    <span class="n">new_colors</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">form</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'text_to_colors'</span><span class="p">,</span> <span class="s">''</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">form</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'text_to_colors'</span><span class="p">))</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">is_json</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">'new colors'</span><span class="p">,</span> <span class="n">new_colors</span><span class="p">)</span>
+
+    <span class="n">cur_line</span><span class="p">.</span><span class="n">text_to_colors</span> <span class="o">=</span> <span class="n">new_colors</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="c1">#  check if there is a cleaned line for this raw line yet
+</span>    <span class="k">if</span> <span class="n">cur_line</span><span class="p">.</span><span class="n">cline_id</span><span class="p">:</span>
+        <span class="n">amount</span><span class="p">,</span> <span class="n">measurement</span><span class="p">,</span> <span class="n">ingredient</span> <span class="o">=</span> <span class="n">extract_ingredients</span><span class="p">(</span><span class="n">cur_line</span><span class="p">.</span><span class="n">text_to_colors</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">'getting cleaned line:'</span><span class="p">,</span> <span class="n">cur_line</span><span class="p">.</span><span class="n">cline_id</span><span class="p">)</span>
+        <span class="n">cur_cleaned_line</span> <span class="o">=</span> <span class="n">CleanedLine</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">cur_line</span><span class="p">.</span><span class="n">cline_id</span><span class="p">).</span><span class="n">first_or_404</span><span class="p">()</span>
+        <span class="c1"># check if there is more than one raw line that points to this cleaned line
+</span>        <span class="c1"># TODO: modify cleaned line code to check if there is more than one raw line (and split them if necessary)
+</span>        <span class="k">print</span><span class="p">(</span><span class="n">cur_cleaned_line</span><span class="p">)</span>
+        <span class="n">cur_cleaned_line</span><span class="p">.</span><span class="n">amount</span> <span class="o">=</span> <span class="n">amount</span>
+        <span class="n">cur_cleaned_line</span><span class="p">.</span><span class="n">measurement</span> <span class="o">=</span> <span class="n">measurement</span>
+        <span class="n">cur_cleaned_line</span><span class="p">.</span><span class="n">ingredient</span> <span class="o">=</span> <span class="n">ingredient</span>
+        <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">new_colors</span><span class="p">)</span></code></pre></figure>
+
+<p>As you can see, there are still some <code class="language-plaintext highlighter-rouge">TODO</code>s that I’ve left in place here, mainly for refactoring code to improve readability. One thing that I do need to do, however, is modify the <code class="language-plaintext highlighter-rouge">set_color()</code> route in particular to split a <code class="language-plaintext highlighter-rouge">CleanedLine</code> if a change in the ingredients requires it. This is generally an isolated case, but it’s still something that is going to need to be worked on.</p>
+
+<p>Then, I rewrote a few lines of my jQuery code so that the function that enables the editable buttons in the main list works both for the “Add List” button and the “Edit” buttons on each line:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">function</span> <span class="nx">clean_line</span><span class="p">(</span><span class="nx">jsonData</span><span class="p">,</span> <span class="nx">place_to_append</span><span class="p">){</span>
+
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">place_to_append</span><span class="p">)</span>
+    <span class="nx">place_to_append</span><span class="p">.</span><span class="nx">children</span><span class="p">(</span><span class="dl">'</span><span class="s1">.recipe-info, .button-panel</span><span class="dl">'</span><span class="p">).</span><span class="nx">hide</span><span class="p">()</span>
+
+    <span class="kd">var</span> <span class="nx">compiled_list</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span><span class="dl">'</span><span class="s1">#compiled-list</span><span class="dl">'</span><span class="p">)</span>
+    <span class="nx">place_to_append</span><span class="p">.</span><span class="nx">append</span><span class="p">(</span><span class="dl">"</span><span class="s2">&lt;div id='clean-line' class='btn-group'&gt;&lt;/div&gt;</span><span class="dl">"</span><span class="p">)</span>
+
+    <span class="p">...</span></code></pre></figure>
+
+<p>There’s obviously a lot more to this function, but the important things to note are that I added a <code class="language-plaintext highlighter-rouge">place_to_append</code> variable here that tells the function where to insert the buttons, and I search and only hide the information that appears on the <code class="language-plaintext highlighter-rouge">RawLine</code> objects underneath the <code class="language-plaintext highlighter-rouge">CleanedLine</code>s. Otherwise, if I was using the code for the “Add Line” button, the entire recipe list would disappear.</p>
+
+<p>Then (yeah, we’re <em>still</em> going), I changed the “Commit” button to a simple redirect to the same page, which allows the changes to be added to the page:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="nx">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#commit-new-line</span><span class="dl">"</span><span class="p">).</span><span class="nx">append</span><span class="p">(</span><span class="dl">"</span><span class="s2">&lt;button id='commit-button' class='edit-button'&gt;Commit&lt;/button&gt;</span><span class="dl">"</span><span class="p">)</span>
+
+<span class="nx">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#commit-button</span><span class="dl">"</span><span class="p">).</span><span class="nx">on</span><span class="p">(</span><span class="dl">'</span><span class="s1">click</span><span class="dl">'</span><span class="p">,</span> <span class="kd">function</span><span class="p">(){</span>
+  <span class="nb">window</span><span class="p">.</span><span class="nx">location</span><span class="p">.</span><span class="nx">href</span><span class="o">=</span><span class="nx">$SCRIPT_ROOT</span> <span class="o">+</span> <span class="dl">'</span><span class="s1">/list/</span><span class="dl">'</span> <span class="o">+</span> <span class="nx">$LIST_HEX</span>
+<span class="p">})</span></code></pre></figure>
+
+<p>Unfortunately, the edit command didn’t work with the new lines, because they didn’t have a recipe to create the id with. So I decided to do something that I probably should have done a long time ago: create a <code class="language-plaintext highlighter-rouge">RecipeList</code> for additional ingredients, and add all user-created lines to that list. In the code for the home page that creates a new <code class="language-plaintext highlighter-rouge">CompiledList</code>:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">user_added_list</span> <span class="o">=</span> <span class="n">RecipeList</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">"Additional Ingredients"</span><span class="p">,</span>
+                                     <span class="n">hex_name</span><span class="o">=</span><span class="n">secrets</span><span class="p">.</span><span class="n">token_urlsafe</span><span class="p">(</span><span class="mi">8</span><span class="p">),</span>
+                                     <span class="n">hex_color</span><span class="o">=</span><span class="s">"#D3D3D3"</span><span class="p">,</span>
+                                     <span class="n">recipe_url</span><span class="o">=</span><span class="s">"NA"</span><span class="p">)</span>
+        <span class="n">user_added_list</span><span class="p">.</span><span class="n">complist</span> <span class="o">=</span> <span class="n">new_list</span>
+        <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">user_added_list</span><span class="p">)</span>
+        <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span></code></pre></figure>
+
+<p>Note that I picked my own <code class="language-plaintext highlighter-rouge">hex_color</code> for this, as I wanted it to be grey every time, to support a sense that this list was different.</p>
+
+<p>The code successfully created the new list:</p>
+
+<p><img src="/assets/img/posts/recipe-line-fix/additional-ingredient-recipe.png" alt="alt text" /></p>
+
+<p>Now to add the code that actually adds the new lines to this recipe.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">cur_list_hex</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">form</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'compiled_list'</span><span class="p">,</span> <span class="s">''</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">cur_list</span> <span class="o">=</span> <span class="n">CompiledList</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">hex_name</span><span class="o">=</span><span class="n">cur_list_hex</span><span class="p">).</span><span class="n">first_or_404</span><span class="p">()</span>
+
+    <span class="n">user_ingredient_recipe</span> <span class="o">=</span> <span class="n">RecipeList</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">complist</span><span class="o">=</span><span class="n">cur_list</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">"Additional Ingredients"</span><span class="p">).</span><span class="n">first_or_404</span><span class="p">()</span>
+    <span class="n">user_ingredient_lines</span> <span class="o">=</span> <span class="n">RawLine</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">rlist</span><span class="o">=</span><span class="n">user_ingredient_recipe</span><span class="p">).</span><span class="nb">all</span><span class="p">()</span>
+
+    <span class="n">new_raw_line</span> <span class="o">=</span> <span class="n">RawLine</span><span class="p">(</span><span class="n">id_in_list</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">user_ingredient_lines</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+                           <span class="n">rlist</span><span class="o">=</span><span class="n">user_ingredient_recipe</span><span class="p">,</span>
+                           <span class="n">full_text</span><span class="o">=</span><span class="n">new_line</span><span class="p">,</span>
+                           <span class="n">text_to_colors</span><span class="o">=</span><span class="n">parsed_line</span><span class="p">)</span>
+
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">new_raw_line</span><span class="p">)</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span></code></pre></figure>
+
+<p><img src="/assets/img/posts/recipe-line-fix/adding-lines-user-created.png" alt="alt text" /></p>
+
+<p>And all the pieces are in. <em>Whew</em>, that took a while. As I let my smoldering fingers gently fall from the keyboard, I closed my eyes and whispered to whatever gods of coding exist, <em>“it is finished.”</em></p>
+
+<p>Though, of course, it’s not finished, at all. But this has been something that has stymied me for the better part of two weeks, and I’m very proud to have this functionality working.</p>
+
+<p>What’s next? Well, the first thing going to do next is some serious refactoring. My <code class="language-plaintext highlighter-rouge">main</code> blueprint is getting pretty large and unwieldy, and a large part of why I decided to use blueprints from the beginning was so that I could more easily refactor later. So I’m going to split up into several blueprints.</p>
+
+<p>Then, I’m going to focus on a few small quality-of-life improvements. The CSS isn’t quite right for some of the pages, and I’d like the barebones functionality to be a little prettier before I tackle the next big part of this project.</p>
+
+<p>But these are mostly small things to give myself a breather before I move onto the next, very important steps:</p>
+<ol>
+  <li>A more fully integrated ability to get recipes from the web/add them yourself</li>
+  <li>Accounts, users, and some level of social functionality.</li>
+</ol>
+
+<p>These are the last big things that I need to do on this project. Stay tuned to watch me tear my hair out as they prove much more difficult that I think they’ll be (and I certainly don’t think they’ll be easy).</p>
+
+<p>Until next time!</p>
+:ET

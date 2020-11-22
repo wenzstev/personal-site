@@ -1,0 +1,227 @@
+I"-�<p>I’ve been working on a bit of a hodgepodge of features as I near completion of the backend. After implementing the endpoints for the users, all that was left to do for full (albeit still buggy) functionality was to implement the ability to parse recipe lines, and add spaCy back into the equation.</p>
+
+<p>The recipe parser was actually quite easy: I pretty much just used the code I’d made for the first version of this app and did some rewriting to make sure it functioned properly in it’s new setting. I also added some tweaks to catch more of the AllRecipes recipes, since before I was having some issues.</p>
+
+<p>There’s too much code to post all of it here, but to recap: I have two dictionaries that store information related to scraping. The first is for simple cases, where the recipe lines and the title are just in simple containter tags (such as <code class="language-plaintext highlighter-rouge">&lt;div&gt;</code> or <code class="language-plaintext highlighter-rouge">&lt;h1&gt;</code>). For these, I store the specifics of the required tags, and and pull them out when necessary. The dictionary keys are matched to the website name:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># dictionary that stores the specifications for scraping various websites
+</span><span class="n">ingredient_parsers</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">"www.foodnetwork.com"</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s">"title"</span><span class="p">:</span> <span class="p">(</span><span class="s">"span"</span><span class="p">,</span> <span class="s">"class"</span><span class="p">,</span> <span class="s">"o-AssetTitle__a-HeadlineText"</span><span class="p">),</span>
+        <span class="s">"lines"</span><span class="p">:</span> <span class="p">(</span><span class="s">"p"</span><span class="p">,</span> <span class="s">"class"</span><span class="p">,</span> <span class="s">"o-Ingredients__a-Ingredient"</span><span class="p">)</span>
+    <span class="p">},</span>
+    <span class="s">"www.food.com"</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s">"title"</span><span class="p">:</span> <span class="p">(</span><span class="s">"div"</span><span class="p">,</span> <span class="s">"class"</span><span class="p">,</span> <span class="s">"recipe-title"</span><span class="p">),</span>
+        <span class="s">"lines"</span><span class="p">:</span> <span class="p">(</span><span class="s">"div"</span><span class="p">,</span> <span class="s">"class"</span><span class="p">,</span> <span class="s">"recipe-ingredients__ingredient"</span><span class="p">)</span>
+    <span class="p">},</span>
+    <span class="s">"www.yummly.com"</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s">"title"</span><span class="p">:</span> <span class="p">(</span><span class="s">"h1"</span><span class="p">,</span> <span class="s">"class"</span><span class="p">,</span> <span class="s">"recipe-title"</span><span class="p">),</span>
+        <span class="s">"lines"</span><span class="p">:</span> <span class="p">(</span><span class="s">"li"</span><span class="p">,</span> <span class="s">"class"</span><span class="p">,</span> <span class="s">"IngredientLine"</span><span class="p">)</span>
+    <span class="p">},</span>
+    <span class="p">...</span>
+  <span class="p">}</span>
+
+  <span class="n">o</span> <span class="o">=</span> <span class="n">urlparse</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+
+<span class="c1"># from the main function
+</span><span class="k">print</span><span class="p">(</span><span class="s">'url is from '</span><span class="p">,</span> <span class="n">o</span><span class="p">.</span><span class="n">netloc</span><span class="p">)</span>
+
+<span class="n">parsing_information</span> <span class="o">=</span> <span class="n">ingredient_parsers</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">netloc</span><span class="p">,</span> <span class="s">""</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="n">parsing_information</span><span class="p">:</span>
+    <span class="n">component</span><span class="p">,</span> <span class="n">attribute</span><span class="p">,</span> <span class="n">name</span> <span class="o">=</span> <span class="n">parsing_information</span><span class="p">[</span><span class="s">"title"</span><span class="p">]</span></code></pre></figure>
+
+<p>Some websites require more complicated ways to access the data, either because the recipe lines don’t have an associated attribute or becuase there is more than one way the pages are laid out. For these, I have a second dictionary that stores functions on how to get the recipe from that specific website. For example, here’s the function for allrecipes.com:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">get_recipe_allrecipes</span><span class="p">(</span><span class="n">soup</span><span class="p">):</span>
+    <span class="n">ingredient_classes</span> <span class="o">=</span> <span class="n">soup</span><span class="p">.</span><span class="n">find_all</span><span class="p">(</span><span class="s">"span"</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s">"recipe-ingred_txt"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">ingredient_classes</span><span class="p">:</span> <span class="c1"># more than one way that recipes are stored
+</span>        <span class="n">ingredient_classes</span> <span class="o">=</span> <span class="n">soup</span><span class="p">.</span><span class="n">find_all</span><span class="p">(</span><span class="s">"span"</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s">"ingredients-item-name"</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">ingredient_classes</span><span class="p">)</span>
+
+    <span class="n">ingredient_lines</span> <span class="o">=</span> <span class="p">[</span><span class="n">line</span><span class="p">.</span><span class="n">get_text</span><span class="p">().</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">ingredient_classes</span><span class="p">]</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">ingredient_lines</span><span class="p">)</span>
+
+    <span class="n">recipe_title</span> <span class="o">=</span> <span class="n">soup</span><span class="p">.</span><span class="n">find</span><span class="p">(</span><span class="s">"h1"</span><span class="p">,</span> <span class="p">{</span><span class="s">"id"</span><span class="p">:</span> <span class="s">"recipe-main-content"</span><span class="p">})</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">recipe_title</span><span class="p">:</span>
+        <span class="n">recipe_title</span> <span class="o">=</span> <span class="n">soup</span><span class="p">.</span><span class="n">find</span><span class="p">(</span><span class="s">"h1"</span><span class="p">,</span> <span class="p">{</span><span class="s">"class"</span><span class="p">:</span> <span class="s">"heading-content"</span><span class="p">})</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">recipe_title</span><span class="p">:</span>
+        <span class="n">recipe_title</span> <span class="o">=</span> <span class="n">soup</span><span class="p">.</span><span class="n">title</span><span class="p">()</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">title_text</span> <span class="o">=</span> <span class="n">recipe_title</span><span class="p">.</span><span class="n">getText</span><span class="p">()</span>
+    <span class="k">except</span> <span class="nb">AttributeError</span><span class="p">:</span>
+        <span class="n">title_text</span> <span class="o">=</span> <span class="n">recipe_title</span>
+
+
+    <span class="k">print</span><span class="p">(</span><span class="n">recipe_title</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s">'title'</span><span class="p">:</span> <span class="n">title_text</span><span class="p">,</span>
+        <span class="s">'recipe_lines'</span><span class="p">:</span> <span class="n">ingredient_lines</span>
+    <span class="p">}</span></code></pre></figure>
+
+<p>Then all I have to do is return the result of the evaluated function:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">elif</span> <span class="n">o</span><span class="p">.</span><span class="n">netloc</span> <span class="ow">in</span> <span class="n">ingredient_functions</span><span class="p">:</span>
+    <span class="n">ingredient_information</span> <span class="o">=</span> <span class="n">ingredient_functions</span><span class="p">[</span><span class="n">o</span><span class="p">.</span><span class="n">netloc</span><span class="p">](</span><span class="n">soup</span><span class="p">)</span>
+    <span class="n">recipe_title</span> <span class="o">=</span> <span class="n">ingredient_information</span><span class="p">[</span><span class="s">"title"</span><span class="p">]</span>
+    <span class="n">ingredient_lines</span> <span class="o">=</span> <span class="n">ingredient_information</span><span class="p">[</span><span class="s">"recipe_lines"</span><span class="p">]</span></code></pre></figure>
+
+<p>Either way, I return a dictionary with the name of the recipe, the lines in the recipe, and the url I got it from.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">return</span> <span class="p">{</span>
+        <span class="s">"name"</span><span class="p">:</span> <span class="n">recipe_title</span><span class="p">,</span>
+        <span class="s">"url"</span><span class="p">:</span> <span class="n">url</span><span class="p">,</span>
+        <span class="s">"recipe_lines"</span><span class="p">:</span> <span class="n">ingredient_lines</span>
+    <span class="p">}</span></code></pre></figure>
+
+<p>This produces a format that works for my schema. Accordingly, I felt that the best place to insert this functionality into the main program was in the <code class="language-plaintext highlighter-rouge">pre_load</code> of the <code class="language-plaintext highlighter-rouge">RecipeSchema</code>. That way, the user could pass in a url and get the complete recipe without me having to write a bunch of special cases.</p>
+
+<p>But before that, I wanted to implement spaCy functionality. After all, loading a recipe into the program doesn’t do much when the program can’t tell what the ingredients are.</p>
+
+<p>I created a new <code class="language-plaintext highlighter-rouge">nlp</code> object in my <code class="language-plaintext highlighter-rouge">__init__.py</code> file, and wrote a simple function that takes a provided recipe dictionary and determines the ingredients in the line. It also formats the ingredients properly, so that the <code class="language-plaintext highlighter-rouge">IngredientSchema</code> can recognize them. This way, new ingredients that aren’t in the database are automatically added.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">determine_ingredients_in_line</span><span class="p">(</span><span class="n">recipe_dict</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"determining ingredients"</span><span class="p">)</span>
+
+    <span class="n">recipe_lines_with_ingredients</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">recipe_dict</span><span class="p">[</span><span class="s">"recipe_lines"</span><span class="p">]:</span>
+        <span class="n">current_recipe_line</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s">"text"</span><span class="p">:</span> <span class="n">line</span><span class="p">,</span>
+            <span class="s">"ingredients"</span><span class="p">:</span> <span class="p">[]</span>
+        <span class="p">}</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+        <span class="n">line_nlp</span> <span class="o">=</span> <span class="n">nlp</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">ent</span> <span class="ow">in</span> <span class="n">line_nlp</span><span class="p">.</span><span class="n">ents</span><span class="p">:</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">ent</span><span class="p">.</span><span class="n">label_</span> <span class="o">==</span> <span class="s">"INGREDIENT"</span><span class="p">):</span>
+                <span class="n">current_recipe_line</span><span class="p">[</span><span class="s">"ingredients"</span><span class="p">].</span><span class="n">append</span><span class="p">({</span><span class="s">"name"</span><span class="p">:</span> <span class="n">ent</span><span class="p">.</span><span class="n">text</span><span class="p">})</span>
+        <span class="n">recipe_lines_with_ingredients</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="n">current_recipe_line</span><span class="p">)</span>
+
+    <span class="n">recipe_with_ingredients</span> <span class="o">=</span> <span class="n">recipe_dict</span>
+    <span class="n">recipe_with_ingredients</span><span class="p">[</span><span class="s">"recipe_lines"</span><span class="p">]</span> <span class="o">=</span> <span class="n">recipe_lines_with_ingredients</span>
+
+    <span class="k">return</span> <span class="n">recipe_with_ingredients</span></code></pre></figure>
+
+<p>This was honestly much easier than last time, because spaCy has a built-in way to determine the size of various tokens. Previously, I had to split the tokens up just to recombine them again later. It’s just another example of how rough my first version was. So much unnecessary work.</p>
+
+<p>But anyway, I put both the scraper and the parser into the <code class="language-plaintext highlighter-rouge">pre_load</code> section of the <code class="language-plaintext highlighter-rouge">RecipeSchema</code>, and had it check for a specific tag, <code class="language-plaintext highlighter-rouge">create_from_url</code>, in order to determine if the recipe needed to be created this way. If not, it simply passed on the provided data.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">pre_load</span>
+<span class="k">def</span> <span class="nf">build_from_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">**</span> <span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">data</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"create_from_url"</span><span class="p">,</span> <span class="s">""</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">recipe_from_url</span> <span class="o">=</span> <span class="n">get_recipe_from_url</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">"create_from_url"</span><span class="p">])</span>
+            <span class="n">recipe_from_url_with_ingredients</span> <span class="o">=</span> <span class="n">determine_ingredients_in_line</span><span class="p">(</span><span class="n">recipe_from_url</span><span class="p">)</span>
+            <span class="n">recipe_from_url_with_ingredients</span><span class="p">[</span><span class="s">"creator_id"</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">"creator_id"</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">recipe_from_url_with_ingredients</span>
+        <span class="k">except</span> <span class="nb">KeyError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="s">f"Missing data: </span><span class="si">{</span><span class="nb">repr</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s">"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">data</span></code></pre></figure>
+
+<p>And with that, all of the basic functionality for my backend is done! It’s still a bit of a mess though, and so I next turned my attention to refactoring.</p>
+
+<p>I want to follow the “DRY” principle as best I can, and looking through my endpoints, I noticed that there was a lot of repeated code. Plus, the endpoint logic in my various <code class="language-plaintext highlighter-rouge">routes</code> files was complicated and hard to follow. I decided that I was going to kill two birds with one stone here, and move all of the logic for my endpoints into centralized functions that could be repeated for all resources. After all, the same basic functions work for every resource, right?</p>
+
+<p>I started with the simplest version of this I could: the humble <code class="language-plaintext highlighter-rouge">GET</code> request. It’s fairly short, as far as the endpoint functions go, but it still exposes a lot of unnecessary logic.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">recipe</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/recipes/&lt;int:id_&gt;"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"GET"</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">get_recipe_info</span><span class="p">(</span><span class="n">id_</span><span class="p">):</span>
+    <span class="n">current_recipe</span> <span class="o">=</span> <span class="n">Recipe</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">id_</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">current_recipe</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">NotFoundException</span><span class="p">(</span><span class="s">"recipe"</span><span class="p">,</span> <span class="n">id_</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">recipe_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">current_recipe</span><span class="p">))</span></code></pre></figure>
+
+<p>In order to generalize the code, I first created a new <code class="language-plaintext highlighter-rouge">utils.py</code> file for the whole application (though I might rename it to something more apt). I then wrote a function that takes in the model type and the identifier (either the <code class="language-plaintext highlighter-rouge">id_</code> or the <code class="language-plaintext highlighter-rouge">name</code> in the case of an ingredient) and either returns the resource or raises an error if it couldn’t be found.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">get_resource_or_404</span><span class="p">(</span><span class="n">resource_type</span><span class="p">,</span> <span class="n">identifier</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>     <span class="c1"># only used for ingredients
+</span>        <span class="n">resource</span> <span class="o">=</span> <span class="n">resource_type</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">identifier</span><span class="p">).</span><span class="n">first</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">resource</span> <span class="o">=</span> <span class="n">resource_type</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">resource</span><span class="p">,</span> <span class="n">identifier</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">resource</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">NotFoundException</span><span class="p">(</span><span class="n">resource_type</span><span class="p">,</span> <span class="n">identifier</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">resource</span></code></pre></figure>
+
+<p>From there, my <code class="language-plaintext highlighter-rouge">Recipe</code> “GET” endpoint became just:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">recipe</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/recipes/&lt;int:id_&gt;"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"GET"</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">get_recipe_info</span><span class="p">(</span><span class="n">id_</span><span class="p">):</span>
+    <span class="n">current_recipe</span> <span class="o">=</span> <span class="n">get_resource_or_404</span><span class="p">(</span><span class="n">Recipe</span><span class="p">,</span> <span class="n">id_</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">recipe_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">current_recipe</span><span class="p">))</span></code></pre></figure>
+
+<p>Absolutely beautiful. At this point, I was inspired. I turned my attention to a slightly more challenging problem: the “POST” request.</p>
+
+<p>For reference, here’s my <code class="language-plaintext highlighter-rouge">GroceryList</code> “POST” request before refactoring:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">grocerylist</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/lists"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"POST"</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">post_list</span><span class="p">():</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">request</span><span class="p">.</span><span class="n">json</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"grocerylist"</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"No grocery list found to add."</span><span class="p">)</span>
+    <span class="n">new_list</span> <span class="o">=</span> <span class="n">grocerylist_schema</span><span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">json</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"grocerylist"</span><span class="p">))</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">new_list</span><span class="p">)</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">grocerylist_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">new_list</span><span class="p">))</span></code></pre></figure>
+
+<p>Again, it’s not <em>terrible</em> but there’s still too much low level logic exposed for my taste. I want the endpoint files to operate almost as a table of contents to direct a reader to other areas of of the program, where the actual logic takes place.</p>
+
+<p>But a “POST” request was a bit trickier. After all, different things need to be validated for different resources. But my use of schemas makes this easy; by putting the validation logic there, instead of in the endpoint functions, I can generalize it with a simple dictionary.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">schemas_to_models</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">"ingredient"</span><span class="p">:</span> <span class="n">ingredient_schema</span><span class="p">,</span>
+    <span class="s">"recipe_line"</span><span class="p">:</span> <span class="n">recipeline_schema</span><span class="p">,</span>
+    <span class="s">"recipe"</span><span class="p">:</span> <span class="n">recipe_schema</span><span class="p">,</span>
+    <span class="s">"grocery_list"</span><span class="p">:</span> <span class="n">grocerylist_schema</span><span class="p">,</span>
+    <span class="s">"user"</span><span class="p">:</span> <span class="n">user_schema</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>From there, I split the actual POST function into two functions. The first loads and validates the new resource, and the second commits it to the database.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">load_resource_from_schema</span><span class="p">(</span><span class="n">resource_type</span><span class="p">,</span> <span class="n">request_json</span><span class="p">):</span>
+    <span class="n">new_resource_json</span> <span class="o">=</span> <span class="n">request_json</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">resource_type</span><span class="p">.</span><span class="n">__tablename__</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">new_resource_json</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">f"Data formatted incorrectly, no label of </span><span class="si">{</span><span class="n">resource_type</span><span class="p">.</span><span class="n">__tablename__</span><span class="si">}</span><span class="s"> provided."</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">new_resource</span> <span class="o">=</span> <span class="n">schemas_to_models</span><span class="p">[</span><span class="n">resource_type</span><span class="p">.</span><span class="n">__tablename__</span><span class="p">].</span><span class="n">load</span><span class="p">(</span><span class="n">new_resource_json</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">new_resource</span>
+    <span class="k">except</span> <span class="n">ValidationError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"Your data was not formatted correctly."</span><span class="p">,</span> <span class="n">payload</span><span class="o">=</span><span class="n">e</span><span class="p">.</span><span class="n">messages</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">IntegrityError</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"Your data was not formatted correctly; you are trying to insert something int the database "</span>
+                           <span class="s">"which already exists."</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">FlushError</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"Your data was not formatted correctly; are you using an id which already exists?"</span><span class="p">)</span>
+
+
+
+<span class="k">def</span> <span class="nf">post_new_resource</span><span class="p">(</span><span class="n">resource_type</span><span class="p">,</span> <span class="n">request_json</span><span class="p">):</span>
+    <span class="n">new_resource</span> <span class="o">=</span> <span class="n">load_resource_from_schema</span><span class="p">(</span><span class="n">resource_type</span><span class="p">,</span> <span class="n">request_json</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">new_resource</span><span class="p">)</span>
+        <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">new_resource</span>
+
+    <span class="k">except</span> <span class="n">IntegrityError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"You're trying to load something that is already in the database."</span><span class="p">,</span> <span class="n">payload</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+    <span class="k">except</span> <span class="nb">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"You are trying to load a resource that does not conform to database standards."</span><span class="p">,</span>
+                           <span class="n">payload</span><span class="o">=</span><span class="p">{</span><span class="s">"details"</span><span class="p">:</span> <span class="p">{</span><span class="s">"resource"</span><span class="p">:</span> <span class="n">resource_type</span><span class="p">.</span><span class="n">__tablename__</span><span class="p">,</span> <span class="s">"comments"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}})</span></code></pre></figure>
+
+<p>Thus, my new <code class="language-plaintext highlighter-rouge">GroceryList</code> post request becomes:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">grocerylist</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/lists"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"POST"</span><span class="p">])</span>
+<span class="o">@</span><span class="n">auth</span><span class="p">.</span><span class="n">login_required</span>
+<span class="k">def</span> <span class="nf">post_list</span><span class="p">():</span>
+    <span class="n">new_grocerylist</span> <span class="o">=</span> <span class="n">post_new_resource</span><span class="p">(</span><span class="n">GroceryList</span><span class="p">,</span> <span class="n">request</span><span class="p">.</span><span class="n">json</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">grocerylist_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">new_grocerylist</span><span class="p">)),</span> <span class="mi">201</span></code></pre></figure>
+
+<p>Simple and extremely readable.</p>
+
+<p>As of this writing, I am still working on generalizing the “PUT” request. There are a few details about it (namely the fact that not every attribute for the resource should be able to be changed) that are tripping me up, but I will have a writeup on solutions as soon as I finish. I was hoping to have all four in a single blog post, but time gets away from us all. Still, I’m quite pleased with my progress here. The endpoint code is much, much more readable and I feel like I have a better handle on the how and why of my program, rather than just the what.</p>
+:ET

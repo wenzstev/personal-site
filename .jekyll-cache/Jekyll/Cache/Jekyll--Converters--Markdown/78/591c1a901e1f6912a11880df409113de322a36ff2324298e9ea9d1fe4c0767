@@ -1,0 +1,60 @@
+I"A"<p>Just a quick note today. I pushed out a second patch a few hours ago, which provides some flashy new custom error pages, which is something that my test users have encountered a disheartening number of times. But that’s okay! The fact that I have test users at all is a pretty big accomplishment.</p>
+
+<p>My implementation of the custom pages is extremely simple: I created a new Blueprint called <code class="language-plaintext highlighter-rouge">errors</code>, where I store all the error handlers for the app. Each handler has an associated html template which informs the user of the problem. There’s also a link back to their homepage. For the 404 error:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">errors</span><span class="p">.</span><span class="n">app_errorhandler</span><span class="p">(</span><span class="mi">404</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">error_404</span><span class="p">(</span><span class="n">error</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">render_template</span><span class="p">(</span><span class="s">'errors/404.html'</span><span class="p">),</span> <span class="mi">404</span></code></pre></figure>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html">{% extends 'layout.html' %}
+
+And the html:
+
+{% block content %}
+<span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"card my-4"</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"card-body"</span><span class="nt">&gt;</span>
+        <span class="nt">&lt;h1&gt;</span>404: Page not found.<span class="nt">&lt;/h1&gt;</span>
+        <span class="nt">&lt;p&gt;</span>Sorry, the page you're looking for does not exist. <span class="nt">&lt;/p&gt;</span>
+        <span class="nt">&lt;p&gt;&lt;a</span> <span class="na">href=</span><span class="s">""</span><span class="nt">&gt;</span>Return to your homepage<span class="nt">&lt;/a&gt;&lt;/p&gt;</span>
+    <span class="nt">&lt;/div&gt;</span>
+<span class="nt">&lt;/div&gt;</span>
+{% endblock content %}</code></pre></figure>
+
+<p>And… that’s about it for the handlers. Like I said, very barebones and mostly just a way to cover my ass when people crash the program.</p>
+
+<p>Additionally, I created the beginnings of a “control panel” for my app, which proves some admin-style functionality. I wasn’t exactly sure how best to implement it securely, so I created a user with a random hex token and saved it as an environment variable. When a client tries to access the control panel page, it checks if the user is that hex pattern (which is my account), and returns a 403 if it isn’t.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">account</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/controlpanel"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">'GET'</span><span class="p">,</span> <span class="s">'POST'</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">control_panel</span><span class="p">():</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">current_user</span><span class="p">.</span><span class="n">is_authenticated</span><span class="p">:</span>
+        <span class="n">abort</span><span class="p">(</span><span class="mi">403</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">current_user</span><span class="p">.</span><span class="n">username</span> <span class="o">!=</span> <span class="n">os</span><span class="p">.</span><span class="n">environ</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'ADMIN_USERNAME'</span><span class="p">):</span>
+        <span class="n">abort</span><span class="p">(</span><span class="mi">403</span><span class="p">)</span>
+
+    <span class="n">all_users</span> <span class="o">=</span> <span class="n">User</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="nb">all</span><span class="p">()</span>
+
+    <span class="n">delete_form</span> <span class="o">=</span> <span class="n">DeleteTemporaryForm</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s">"delete-temporary"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">delete_form</span><span class="p">.</span><span class="n">validate_on_submit</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">user</span> <span class="ow">in</span> <span class="n">all_users</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">user</span><span class="p">.</span><span class="n">temporary</span><span class="p">:</span>
+                <span class="k">for</span> <span class="nb">list</span> <span class="ow">in</span> <span class="n">user</span><span class="p">.</span><span class="n">checklists</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">cline</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">.</span><span class="n">lines</span><span class="p">:</span>
+                        <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">delete</span><span class="p">(</span><span class="n">cline</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">recipe</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">.</span><span class="n">recipes</span><span class="p">:</span>
+                        <span class="k">for</span> <span class="n">raw_line</span> <span class="ow">in</span> <span class="n">recipe</span><span class="p">.</span><span class="n">lines</span><span class="p">:</span>
+                            <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">delete</span><span class="p">(</span><span class="n">raw_line</span><span class="p">)</span>
+                        <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">delete</span><span class="p">(</span><span class="n">recipe</span><span class="p">)</span>
+                    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">delete</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+                <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">delete</span><span class="p">(</span><span class="n">user</span><span class="p">)</span>
+        <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+        <span class="n">flash</span><span class="p">(</span><span class="s">'Temporary users deleted.'</span><span class="p">,</span> <span class="s">'success'</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">url_for</span><span class="p">(</span><span class="s">'account.control_panel'</span><span class="p">))</span>
+
+
+    <span class="k">return</span> <span class="n">render_template</span><span class="p">(</span><span class="s">"control_panel.html"</span><span class="p">,</span> <span class="n">all_users</span><span class="o">=</span><span class="n">all_users</span><span class="p">,</span> <span class="n">delete_form</span><span class="o">=</span><span class="n">delete_form</span><span class="p">)</span></code></pre></figure>
+
+<p>That said, there isn’t much you can really do with the admin page right now. I created a simple functionality to delete temporary users, and plan to add some additional features at some point in the future. Mostly, I just wanted a way to easily see who was using the app, and what profiles there were. In that regard, the page works great, and it’s super cool to see that a few people (who I’ve told about it) are indeed making accounts and guest lists.</p>
+
+<p>That’s about it for today. Still have a few more issues with the lines to clear up, and then I’m going to put this one to bed for a while. Will probably come back to spruce it up for the portfolio, but for my first project I’m very satisfied.</p>
+:ET

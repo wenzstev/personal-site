@@ -1,0 +1,147 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Finishing Touches on Writing Sprinter</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-header">
+      <h2>Finishing Touches on Writing Sprinter</h2>
+      <small>05 Jul 2020</small>
+  </div>
+</header>
+
+<div class="margin">
+<p>This post is more of a final roundup of features and touch-ups I added to the writing sprinter, as well as a few things I had to take out to make it ready for first release. I’m definitely not done with this project yet, but the first version of it is complete and there are a lot of different things I need to split my attention between right now.</p>
+
+<h3 id="api-integration">API Integration</h3>
+<p>Recall that my original goal was to scrape images and quotes from online APIs, and combine them in ways that would (hopefully) stimulate the imagination of the user.</p>
+
+<p>This actually proved to be a fairly easy task; there were several online APIs that looked promising, and it was simple to use a <code class="language-plaintext highlighter-rouge">fetch()</code> call to find the necessary materials. For example, here’s a call I wrote that makes use of the MET (Metropolitan Museum of Art) API. Because the MET API returns a list of identification numbers when searched, I had to use two different calls. The first returns a list of potential pieces and picks one at random, and the second fetches the details of the chosen piece.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="nx">useEffect</span><span class="p">(()</span><span class="o">=&gt;</span><span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">urlParams</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">URLSearchParams</span><span class="p">(</span><span class="dl">""</span><span class="p">)</span>
+  <span class="nx">urlParams</span><span class="p">.</span><span class="nx">append</span><span class="p">(</span><span class="dl">"</span><span class="s2">q</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">lillies</span><span class="dl">"</span><span class="p">)</span>
+  <span class="nx">urlParams</span><span class="p">.</span><span class="nx">append</span><span class="p">(</span><span class="dl">"</span><span class="s2">isHighlight</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">true</span><span class="dl">"</span><span class="p">)</span>
+  <span class="nx">urlParams</span><span class="p">.</span><span class="nx">append</span><span class="p">(</span><span class="dl">"</span><span class="s2">medium</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">Paintings</span><span class="dl">"</span><span class="p">)</span>
+  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">urlParams</span><span class="p">.</span><span class="nx">toString</span><span class="p">())</span>
+  <span class="nx">fetch</span><span class="p">(</span><span class="dl">"</span><span class="s2">https://collectionapi.metmuseum.org/public/collection/v1/search?</span><span class="dl">"</span> <span class="o">+</span> <span class="nx">urlParams</span><span class="p">.</span><span class="nx">toString</span><span class="p">())</span>
+    <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">res</span> <span class="o">=&gt;</span> <span class="nx">res</span><span class="p">.</span><span class="nx">json</span><span class="p">())</span>
+    <span class="p">.</span><span class="nx">then</span><span class="p">(</span>
+      <span class="p">(</span><span class="nx">result</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+        <span class="kd">const</span> <span class="nx">objectIDArray</span> <span class="o">=</span> <span class="nx">result</span><span class="p">[</span><span class="dl">"</span><span class="s2">objectIDs</span><span class="dl">"</span><span class="p">]</span>
+        <span class="nx">setImageID</span><span class="p">(</span><span class="nx">objectIDArray</span><span class="p">[</span><span class="nb">Math</span><span class="p">.</span><span class="nx">floor</span><span class="p">(</span><span class="nb">Math</span><span class="p">.</span><span class="nx">random</span><span class="p">()</span> <span class="o">*</span> <span class="nx">objectIDArray</span><span class="p">.</span><span class="nx">length</span><span class="p">)])</span>
+      <span class="p">},</span>
+      <span class="p">(</span><span class="nx">error</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+        <span class="nx">setIsLoaded</span><span class="p">(</span><span class="kc">true</span><span class="p">)</span>
+        <span class="nx">setImgJSON</span><span class="p">(</span><span class="nx">error</span><span class="p">)</span>
+      <span class="p">}</span>
+    <span class="p">)</span>
+<span class="p">},</span> <span class="p">[])</span>
+
+<span class="nx">useEffect</span><span class="p">(()</span><span class="o">=&gt;</span><span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">imageID</span> <span class="o">!==</span> <span class="kc">undefined</span><span class="p">){</span>
+    <span class="nx">fetch</span><span class="p">(</span><span class="dl">"</span><span class="s2">https://collectionapi.metmuseum.org/public/collection/v1/objects/</span><span class="dl">"</span> <span class="o">+</span> <span class="nx">imageID</span><span class="p">.</span><span class="nx">toString</span><span class="p">())</span>
+      <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">res</span> <span class="o">=&gt;</span> <span class="nx">res</span><span class="p">.</span><span class="nx">json</span><span class="p">())</span>
+      <span class="p">.</span><span class="nx">then</span><span class="p">(</span>
+        <span class="p">(</span><span class="nx">result</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+          <span class="nx">setImgJSON</span><span class="p">(</span><span class="nx">result</span><span class="p">)</span>
+          <span class="nx">setImage</span><span class="p">(</span><span class="nx">result</span><span class="p">[</span><span class="dl">"</span><span class="s2">primaryImageSmall</span><span class="dl">"</span><span class="p">])</span>
+        <span class="p">}</span>
+      <span class="p">)</span>
+  <span class="p">}</span>
+<span class="p">},</span> <span class="p">[</span><span class="nx">imageID</span><span class="p">])</span>
+
+<span class="k">return</span> <span class="p">(</span>
+  <span class="o">&lt;</span><span class="nx">Grid</span> <span class="nx">item</span><span class="o">&gt;</span>
+    <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">m</span><span class="o">=</span><span class="p">{</span><span class="mi">2</span><span class="p">}</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">img</span> <span class="nx">src</span><span class="o">=</span><span class="p">{</span><span class="nx">image</span><span class="p">}</span> <span class="nx">height</span><span class="o">=</span><span class="p">{</span><span class="mi">200</span><span class="p">}</span><span class="sr">/</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span>  <span class="o">&lt;</span><span class="sr">/Grid</span><span class="err">&gt;
+</span>
+<span class="p">)</span></code></pre></figure>
+
+<p>The second <code class="language-plaintext highlighter-rouge">useEffect</code> call is triggered when <code class="language-plaintext highlighter-rouge">imageID</code> is changed in the first <code class="language-plaintext highlighter-rouge">useEffect</code> call, ensuring that the second hook is only triggered after the first.</p>
+
+<p>Unfortunately, I soon realized that my brilliant plan to combine pictures and quotes did not in fact work out well in practice. For every combination that seemed thought-provoking or interesting, there were 10 that were just silly. Ultimately, I scrapped the pictures for now, although  would like to return to them. It seems like it could be a very interesting project to try and predict combinations that would be interesting or thought-provoking. Something for the future.</p>
+
+<h3 id="writing-quotes">Writing Quotes</h3>
+
+<p>My quotes were simpler to set up, but I had difficulty finding an online source that had what I wanted. I experimented a bit with a famous quotes API, but what I really wanted were quotes from literature, stuff that was open-ended enough to spark thought, and maybe also featured some good use of language. Ultimately, I couldn’t find anything that was quite what I was looking for, and so I ultimately just compiled some quotes myself. I stored them in a JSON file and saved the text, the author, and the book:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="k">export</span> <span class="kd">const</span> <span class="nx">quotes</span> <span class="o">=</span> <span class="p">[</span>
+  <span class="p">{</span>
+    <span class="dl">"</span><span class="s2">text</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">Maybe ever’body in the whole damn world is scared of each other.</span><span class="dl">"</span><span class="p">,</span>
+    <span class="dl">"</span><span class="s2">author</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">John Steinbeck</span><span class="dl">"</span><span class="p">,</span>
+    <span class="dl">"</span><span class="s2">book</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">Of Mice And Men</span><span class="dl">"</span>
+  <span class="p">},</span>
+  <span class="p">{</span>
+    <span class="dl">"</span><span class="s2">text</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">Life is to be lived, not controlled; and humanity is won by continuing to play in face of certain defeat.</span><span class="dl">"</span><span class="p">,</span>
+    <span class="dl">"</span><span class="s2">author</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">Ralph Ellison</span><span class="dl">"</span><span class="p">,</span>
+    <span class="dl">"</span><span class="s2">book</span><span class="dl">"</span><span class="p">:</span><span class="dl">"</span><span class="s2">Invisible Man</span><span class="dl">"</span>
+  <span class="p">},</span>
+  <span class="p">{</span>
+    <span class="dl">"</span><span class="s2">text</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">Terror made me cruel</span><span class="dl">"</span><span class="p">,</span>
+    <span class="dl">"</span><span class="s2">author</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">Emily Brontë</span><span class="dl">"</span><span class="p">,</span>
+    <span class="dl">"</span><span class="s2">book</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">Wuthering Heights</span><span class="dl">"</span>
+  <span class="p">},</span>
+  <span class="p">{</span>
+    <span class="dl">"</span><span class="s2">text</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">Some men get the world, some men get ex-hookers and a trip to Arizona. You’re in with the former, but my God I don’t envy the blood on your conscience.</span><span class="dl">"</span><span class="p">,</span>
+    <span class="dl">"</span><span class="s2">author</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">James Ellroy</span><span class="dl">"</span><span class="p">,</span>
+    <span class="dl">"</span><span class="s2">book</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">L.A. Confidential</span><span class="dl">"</span>
+  <span class="p">},</span>
+  <span class="c1">//...and so on</span></code></pre></figure>
+
+<p>I then changed around the prompt panel so that it would show the quote with scaling font size, to ensure a consistent panel. To do so, I used <a href="https://www.npmjs.com/package/react-textfit">react-textfit</a>.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">TextPrompt</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="p">(</span>
+      <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">m</span><span class="o">=</span><span class="p">{</span><span class="mi">2</span><span class="p">}</span> <span class="nx">p</span><span class="o">=</span><span class="p">{</span><span class="mi">2</span><span class="p">}</span> <span class="nx">fontStyle</span><span class="o">=</span><span class="dl">"</span><span class="s2">italic</span><span class="dl">"</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">height</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">textHeight</span><span class="p">}</span><span class="o">&gt;</span>
+          <span class="o">&lt;</span><span class="nx">Textfit</span> <span class="nx">mode</span><span class="o">=</span><span class="dl">"</span><span class="s2">multi</span><span class="dl">"</span> <span class="nx">max</span><span class="o">=</span><span class="p">{</span><span class="mi">30</span><span class="p">}</span> <span class="nx">style</span><span class="o">=&gt;</span>
+            <span class="dl">"</span><span class="s2">{props.quote.text}</span><span class="dl">"</span>
+          <span class="o">&lt;</span><span class="sr">/Textfit</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">height</span><span class="o">=</span><span class="p">{</span><span class="mi">50</span><span class="p">}</span> <span class="nx">mt</span><span class="o">=</span><span class="p">{</span><span class="mi">2</span><span class="p">}</span><span class="o">&gt;</span>
+          <span class="o">&lt;</span><span class="nx">Textfit</span> <span class="nx">mode</span><span class="o">=</span><span class="dl">"</span><span class="s2">multi</span><span class="dl">"</span> <span class="nx">max</span><span class="o">=</span><span class="p">{</span><span class="mi">20</span><span class="p">}</span> <span class="nx">style</span><span class="o">=&gt;</span>
+            <span class="o">-</span> <span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">quote</span><span class="p">.</span><span class="nx">author</span><span class="p">},</span> <span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">quote</span><span class="p">.</span><span class="nx">book</span><span class="p">}</span>
+          <span class="o">&lt;</span><span class="sr">/Textfit</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span>      <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>This gave the panel a nice look.</p>
+
+<p><img src="/assets/img/posts/writing-sprint/new-quote-panel.png" alt="alt text" /></p>
+
+<p>I also adjusted some settings to make sure that the bar would look okay without a quote.</p>
+
+<p><img src="/assets/img/posts/writing-sprint/new-timer-bar.png" alt="alt text" /></p>
+
+<h3 id="a-note-on-styling">A Note On Styling</h3>
+
+<p>Currently, my little app doesn’t have a lot of style to it; it’s still a fairly barebones. I played around with some styling and color changes, but everything I tried looked fairly amateurish. I’m chalking this up to a lack of experience on my part; I don’t know much about UX design, and that’s probably going to be one of the things I want to get better at going forward. One thing I would really like to add, however, is a selection of different themes, with interesting backgrounds for each one. I’d curate the themes, which would hopefully prevent some of the silly combinations that I was getting before, and maybe provide some of the inspiration I was going for. But for now, I’m keeping it simple.</p>
+
+<p>Either way, the first version of this app is now live at wenzelstev.github.io/writingsprinter. You can check out the code <a href="https://github.com/wenzstev/writingsprinter">here</a>. Stay tuned for when I return to this one, as I think there is still a ton of untapped potential here.</p>
+
+</div>
+
+    </div>
+    <footer>
+      <span><a href="/index.html">Home</a></span>
+      <span><a href="/blog">Blog</a></span>
+      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+    </footer>
+    </div>
+  </body>
+</html>

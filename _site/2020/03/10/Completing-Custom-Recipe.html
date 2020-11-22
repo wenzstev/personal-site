@@ -1,0 +1,189 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Completing the Custom Recipe Feature</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-header">
+      <h2>Completing the Custom Recipe Feature</h2>
+      <small>10 Mar 2020</small>
+  </div>
+</header>
+
+<div class="margin">
+<p>After having added the “custom list” functionality in the <a href="/2020/03/09/Parse-Backup.html">last post</a> as a backup for a failed url parse, it was time to add it as an actual feature that the user can access. After all, what if you wanted to use a recipe that wasn’t online, or was in a format that couldn’t be automatically parsed?</p>
+
+<h4 id="a-spot-of-refactoring">A Spot of Refactoring</h4>
+
+<p>First, this required a bit of refactoring. I touched on this <a href="/2020/03/06/Fixing-Add-Line.html">a few posts ago</a>, but the code that was involved in the creation of a new list and recipe was not packaged in a way that could be easily reused. This wasn’t a problem when there was only one way to create a recipe and a list, but now that I’m adding more than one way, we need to generalize this code.</p>
+
+<p>I did so by first splitting the code that creates a recipe and a list, and transferring that code to my <code class="language-plaintext highlighter-rouge">utils.py</code> file:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># creates a new list
+</span><span class="k">def</span> <span class="nf">create_list</span><span class="p">():</span>
+    <span class="c1"># create new list
+</span>    <span class="n">random_hex</span> <span class="o">=</span> <span class="n">secrets</span><span class="p">.</span><span class="n">token_urlsafe</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+    <span class="n">new_list</span> <span class="o">=</span> <span class="n">CompiledList</span><span class="p">(</span><span class="n">hex_name</span><span class="o">=</span><span class="n">random_hex</span><span class="p">)</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">new_list</span><span class="p">)</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+
+    <span class="c1"># create recipe for user-added lines
+</span>    <span class="n">user_added_list</span> <span class="o">=</span> <span class="n">RecipeList</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">"Additional Ingredients"</span><span class="p">,</span>
+                                 <span class="n">hex_name</span><span class="o">=</span><span class="n">secrets</span><span class="p">.</span><span class="n">token_urlsafe</span><span class="p">(</span><span class="mi">8</span><span class="p">),</span>
+                                 <span class="n">hex_color</span><span class="o">=</span><span class="s">"#D3D3D3"</span><span class="p">,</span>
+                                 <span class="n">recipe_url</span><span class="o">=</span><span class="s">"NA"</span><span class="p">)</span> <span class="c1"># FIXME: make recipe_url optional
+</span>    <span class="n">user_added_list</span><span class="p">.</span><span class="n">complist</span> <span class="o">=</span> <span class="n">new_list</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">user_added_list</span><span class="p">)</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">new_list</span>
+
+<span class="c1"># creates a new recipe
+</span><span class="k">def</span> <span class="nf">create_recipe</span><span class="p">(</span><span class="n">title</span><span class="p">):</span>
+        <span class="n">random_hex</span> <span class="o">=</span> <span class="n">secrets</span><span class="p">.</span><span class="n">token_urlsafe</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">random</span><span class="p">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">)</span>
+        <span class="n">hex_color</span> <span class="o">=</span> <span class="p">(</span><span class="s">'#%02X%02X%02X'</span> <span class="o">%</span> <span class="p">(</span><span class="n">r</span><span class="p">(),</span> <span class="n">r</span><span class="p">(),</span> <span class="n">r</span><span class="p">()))</span>
+        <span class="n">rlist</span> <span class="o">=</span> <span class="n">RecipeList</span><span class="p">(</span><span class="n">hex_name</span><span class="o">=</span><span class="n">random_hex</span><span class="p">,</span> <span class="n">hex_color</span><span class="o">=</span><span class="n">hex_color</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">title</span><span class="p">,</span> <span class="n">recipe_url</span><span class="o">=</span><span class="s">""</span><span class="p">)</span> <span class="c1"># FIXME: make recipe_url optional
+</span>        <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">rlist</span><span class="p">)</span>
+        <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">rlist</span></code></pre></figure>
+
+<p>Note that my current database model requires a <code class="language-plaintext highlighter-rouge">recipe_url</code>, and I plan on changing that, but I didn’t want to fall down the rabbit hole of database changing just yet.</p>
+
+<p>Then, I split off the code that parsed the recipe from a url into its own function:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">create_recipe_from_url</span><span class="p">(</span><span class="n">url</span><span class="p">):</span>
+    <span class="n">rlist</span> <span class="o">=</span> <span class="n">create_recipe</span><span class="p">(</span><span class="n">get_title</span><span class="p">(</span><span class="n">url</span><span class="p">))</span>
+    <span class="n">rlist</span><span class="p">.</span><span class="n">recipe_url</span> <span class="o">=</span> <span class="n">url</span>
+    <span class="n">recipe_lines</span> <span class="o">=</span> <span class="n">get_recipe_lines</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>  <span class="c1"># TODO: possibly refactor code so that get_recipe_lines is here too
+</span>    <span class="k">for</span> <span class="n">num</span><span class="p">,</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">recipe_lines</span><span class="p">):</span>
+        <span class="n">recipe_colors</span> <span class="o">=</span> <span class="n">color_entities_in_line</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+        <span class="n">recipe_line</span> <span class="o">=</span> <span class="n">RawLine</span><span class="p">(</span><span class="n">full_text</span><span class="o">=</span><span class="n">line</span><span class="p">,</span> <span class="n">rlist</span><span class="o">=</span><span class="n">rlist</span><span class="p">,</span> <span class="n">id_in_list</span><span class="o">=</span><span class="n">num</span><span class="p">,</span> <span class="n">text_to_colors</span><span class="o">=</span><span class="n">recipe_colors</span><span class="p">)</span>
+        <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">recipe_line</span><span class="p">)</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">rlist</span>   <span class="c1"># return the new recipe for use in the route</span></code></pre></figure>
+
+<p>By splitting the <code class="language-plaintext highlighter-rouge">create_recipe()</code> function and then calling it here, I could then create a <em>second</em> function to create a recipe from provided text:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">create_recipe_from_text</span><span class="p">(</span><span class="n">title</span><span class="p">,</span> <span class="n">recipe_text</span><span class="p">):</span>
+    <span class="n">recipe</span> <span class="o">=</span> <span class="n">create_recipe</span><span class="p">(</span><span class="n">title</span><span class="p">)</span>
+    <span class="n">recipe_lines</span> <span class="o">=</span> <span class="n">recipe_text</span><span class="p">.</span><span class="n">splitlines</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">elim_blanks</span><span class="p">(</span><span class="n">line</span><span class="p">):</span>  <span class="c1"># function to remove blank lines and spaces from list
+</span>        <span class="k">if</span> <span class="ow">not</span> <span class="n">line</span> <span class="ow">or</span> <span class="n">line</span><span class="p">.</span><span class="n">isspace</span><span class="p">():</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">True</span>
+
+    <span class="n">recipe_lines</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span><span class="n">elim_blanks</span><span class="p">,</span> <span class="n">recipe_lines</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">num</span><span class="p">,</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">recipe_lines</span><span class="p">):</span>  <span class="c1"># FIXME: this code is the same as in utils.url_to_recipe
+</span>        <span class="n">recipe_colors</span> <span class="o">=</span> <span class="n">color_entities_in_line</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+        <span class="n">recipe_line</span> <span class="o">=</span> <span class="n">RawLine</span><span class="p">(</span><span class="n">full_text</span><span class="o">=</span><span class="n">line</span><span class="p">,</span> <span class="n">rlist</span><span class="o">=</span><span class="n">recipe</span><span class="p">,</span> <span class="n">id_in_list</span><span class="o">=</span><span class="n">num</span><span class="p">,</span> <span class="n">text_to_colors</span><span class="o">=</span><span class="n">recipe_colors</span><span class="p">)</span>
+        <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">recipe_line</span><span class="p">)</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">recipe</span></code></pre></figure>
+
+<p>Once this was all finished, the actual code in my <code class="language-plaintext highlighter-rouge">routes.py</code> to create recipes was drastically simplified. Here’s the new backup form:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">if</span> <span class="ow">not</span> <span class="n">rlist_lines</span><span class="p">:</span>  <span class="c1"># we failed to extract any lines from the recipe
+</span>    <span class="n">form</span> <span class="o">=</span> <span class="n">CustomRecipeForm</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">form</span><span class="p">.</span><span class="n">validate_on_submit</span><span class="p">():</span>
+        <span class="n">recipe</span> <span class="o">=</span> <span class="n">create_recipe_from_text</span><span class="p">(</span><span class="s">"Untitled Recipe"</span><span class="p">,</span> <span class="n">form</span><span class="p">.</span><span class="n">recipe_lines</span><span class="p">.</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">recipe</span><span class="p">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">form</span><span class="p">.</span><span class="n">name</span><span class="p">.</span><span class="n">data</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">url_for</span><span class="p">(</span><span class="s">'main.add_recipe'</span><span class="p">,</span> <span class="n">list_name</span><span class="o">=</span><span class="n">list_name</span><span class="p">,</span> <span class="n">new_recipe</span><span class="o">=</span><span class="n">new_recipe</span><span class="p">))</span></code></pre></figure>
+
+<p>With this out of the way, it was time to add the new functionality to the app.</p>
+
+<h4 id="adding-the-custom-recipe-option">Adding the Custom Recipe Option</h4>
+
+<p>The first place I wanted to add the feature was in my <code class="language-plaintext highlighter-rouge">home</code> route. I conceived of this as a second option to start a new list: you could enter in the url, or you could type/paste a list of ingredients. First, I added the <code class="language-plaintext highlighter-rouge">CustomRecipeForm</code> to the <code class="language-plaintext highlighter-rouge">main.home</code> route, and wrote the logic for what to do when it was validated. Thanks to the refactoring I did above, this was quite easy:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">custom_form</span> <span class="o">=</span> <span class="n">CustomRecipeForm</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s">"custom"</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">custom_form</span><span class="p">.</span><span class="n">validate_on_submit</span><span class="p">():</span>
+    <span class="n">new_list</span> <span class="o">=</span> <span class="n">create_list</span><span class="p">()</span>
+    <span class="n">new_recipe</span> <span class="o">=</span> <span class="n">create_recipe_from_text</span><span class="p">(</span><span class="s">"Untitled Recipe"</span><span class="p">,</span> <span class="n">custom_form</span><span class="p">.</span><span class="n">recipe_lines</span><span class="p">.</span><span class="n">data</span><span class="p">)</span>
+    <span class="n">new_recipe</span><span class="p">.</span><span class="n">complist</span> <span class="o">=</span> <span class="n">new_list</span>
+
+    <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">url_for</span><span class="p">(</span><span class="s">'main.add_recipe'</span><span class="p">,</span> <span class="n">list_name</span><span class="o">=</span><span class="n">new_list</span><span class="p">.</span><span class="n">hex_name</span><span class="p">,</span> <span class="n">new_recipe</span><span class="o">=</span><span class="n">new_recipe</span><span class="p">.</span><span class="n">hex_name</span><span class="p">))</span></code></pre></figure>
+
+<p>Behold, the power of refactoring. With just a few lines of code I was able to create a completely new way to initialize a list. All that I needed to do was add the actual form to the template. I put it in the <code class="language-plaintext highlighter-rouge">&lt;jumbotron&gt;</code> object, below the url form I’d been using thus far:</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html"><span class="nt">&lt;p&gt;</span>Or, if you prefer, enter your recipe manually:<span class="nt">&lt;/p&gt;</span>
+<span class="nt">&lt;form</span> <span class="na">method=</span><span class="s">"POST"</span> <span class="na">action=</span><span class="s">""</span><span class="nt">&gt;</span>
+    {{ custom_form.hidden_tag() }}
+    <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"form-group"</span><span class="nt">&gt;</span>
+      {{ custom_form.recipe_lines(class="form-control") }}
+    <span class="nt">&lt;/div&gt;</span>
+    <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"form-group"</span><span class="nt">&gt;</span>
+      {{ custom_form.submit(class="btn btn-primary") }}
+    <span class="nt">&lt;/div&gt;</span>
+<span class="nt">&lt;/form&gt;</span></code></pre></figure>
+
+<p>This created a nice, simple new piece of the UI:</p>
+
+<p><img src="/assets/img/posts/custom-recipes/add-recipe-main-page.png" alt="alt text" /></p>
+
+<p>Clicking the “Find Ingredients” button would then redirect the user to the “clean list” page, where the rest of my code would take over.</p>
+
+<p>For my next piece, I wanted to also add the option to paste recipe lines on the actual list page. I again added the form to my <code class="language-plaintext highlighter-rouge">main.compiled_list</code> route, and thanks to my earlier refactoring, the code was again simple to implement:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"> <span class="n">custom_recipe_form</span> <span class="o">=</span> <span class="n">CustomRecipeForm</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s">"custom-recipe"</span><span class="p">)</span>
+ <span class="k">if</span> <span class="n">custom_recipe_form</span><span class="p">.</span><span class="n">validate_on_submit</span><span class="p">():</span>
+       <span class="n">new_recipe</span> <span class="o">=</span> <span class="n">create_recipe_from_text</span><span class="p">(</span><span class="s">"Untitled Recipe"</span><span class="p">,</span> <span class="n">custom_recipe_form</span><span class="p">.</span><span class="n">recipe_lines</span><span class="p">.</span><span class="n">data</span><span class="p">)</span>
+       <span class="n">new_recipe</span><span class="p">.</span><span class="n">complist</span> <span class="o">=</span> <span class="n">comp_list</span>
+
+       <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">url_for</span><span class="p">(</span><span class="s">'main.add_recipe'</span><span class="p">,</span> <span class="n">list_name</span><span class="o">=</span><span class="n">comp_list</span><span class="p">.</span><span class="n">hex_name</span><span class="p">,</span> <span class="n">new_recipe</span><span class="o">=</span><span class="n">new_recipe</span><span class="p">.</span><span class="n">hex_name</span><span class="p">))</span></code></pre></figure>
+
+<p>I have to be totally honest here: I’m pretty proud of how easy it was to implement these features. It shows that I’ve structured my code well and that the refactoring was a positive use of my time. I don’t want to pat myself on the back <em>too</em> much (who the hell knows if this is even that impressive, tbh), but dammit I’m proud.</p>
+
+<p>Anyway, horn-tooting aside, I still needed to add these features to the <code class="language-plaintext highlighter-rouge">list_page.html</code> template. Following my lead from the homepage, I added it to the already existing modal that was being used to paste a new url:</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html"><span class="nt">&lt;p&gt;</span>Or paste/type the Recipe Ingredients below:<span class="nt">&lt;/p&gt;</span>
+<span class="nt">&lt;form</span> <span class="na">method=</span><span class="s">"POST"</span> <span class="na">action=</span><span class="s">""</span><span class="nt">&gt;</span>
+  {{ custom_recipe_form.hidden_tag() }}
+  <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"form-group"</span><span class="nt">&gt;</span>
+      {{ custom_recipe_form.recipe_lines(class="form-control") }}
+  <span class="nt">&lt;/div&gt;</span>
+  <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"form-group"</span><span class="nt">&gt;</span>
+      {{ custom_recipe_form.submit(class="btn btn-primary") }}
+  <span class="nt">&lt;/div&gt;</span>
+<span class="nt">&lt;/form&gt;</span></code></pre></figure>
+
+<p>Checked the modal and it all works:</p>
+
+<p><img src="/assets/img/posts/custom-recipes/add-recipe-modal.png" alt="alt text" /></p>
+
+<p>I pasted in a few recipes, just to make sure everything was working, and so far so good.</p>
+
+<p>Next steps:</p>
+<ul>
+  <li>ability to export the list to print/email</li>
+  <li>increased list functionality (delete lines, temporarily cancel them out)</li>
+  <li>move lines around?</li>
+</ul>
+
+<p>… and plenty more. At this point I’m beginning to realize that I need a roadmap to figure out when I can call this thing “feature complete.” I have a <em>ton</em> of ideas, but I want to have a “v1.0” out first, with a certain bare minimum functionality, before I chase after some more of my more involved ideas. So expect a roadmap post coming in the near future.</p>
+
+</div>
+
+    </div>
+    <footer>
+      <span><a href="/index.html">Home</a></span>
+      <span><a href="/blog">Blog</a></span>
+      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+    </footer>
+    </div>
+  </body>
+</html>

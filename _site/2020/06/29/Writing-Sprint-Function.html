@@ -1,0 +1,328 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Building a Writing Sprinter Part 2</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-header">
+      <h2>Building a Writing Sprinter Part 2</h2>
+      <small>29 Jun 2020</small>
+  </div>
+</header>
+
+<div class="margin">
+<p>When last we left the writing sprinter, I had completed the basic look of the site and worked through most of the structural layout. Now, it was time to get to work making it actually function.</p>
+
+<p>I decided to implement features in the same basic order that a user would run the app. I don’t really have a reason for that other than it made sense at the time and that’s just how my brain works with these things. Accordingly, I decided to start with the settings modal, which meant the return of global variables and, in my case, Redux.</p>
+
+<h3 id="implementing-redux">Implementing Redux</h3>
+
+<p>I decided to have global state for only a few variables, namely those that had far-reaching consequences for the rest of the app. Looking through my structure, I decided that there were only four variables that qualified:</p>
+<ul>
+  <li>the sprint timer,</li>
+  <li>a variable to determine if the sprint has started,</li>
+  <li>two variables to indicate if the sprint is using a visual or verbal prompt.</li>
+</ul>
+
+<p>With these in mind, I created my reducers.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="k">import</span> <span class="p">{</span><span class="nx">combineReducers</span><span class="p">}</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">redux</span><span class="dl">"</span>
+
+<span class="kd">const</span> <span class="nx">timeReducer</span> <span class="o">=</span> <span class="p">(</span><span class="nx">state</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span> <span class="nx">action</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">switch</span><span class="p">(</span><span class="nx">action</span><span class="p">.</span><span class="nx">type</span><span class="p">){</span>
+    <span class="k">case</span> <span class="dl">"</span><span class="s2">SETTIME</span><span class="dl">"</span><span class="p">:</span>
+      <span class="k">return</span> <span class="nx">action</span><span class="p">.</span><span class="nx">payload</span>
+    <span class="k">case</span> <span class="dl">"</span><span class="s2">RESET</span><span class="dl">"</span><span class="p">:</span>
+      <span class="k">return</span> <span class="mi">10000</span>
+    <span class="na">default</span><span class="p">:</span>
+      <span class="k">return</span> <span class="nx">state</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">const</span> <span class="nx">startReducer</span> <span class="o">=</span> <span class="p">(</span><span class="nx">state</span><span class="o">=</span><span class="kc">false</span><span class="p">,</span> <span class="nx">action</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">switch</span><span class="p">(</span><span class="nx">action</span><span class="p">.</span><span class="nx">type</span><span class="p">){</span>
+    <span class="k">case</span> <span class="dl">"</span><span class="s2">STARTTIMER</span><span class="dl">"</span><span class="p">:</span>
+      <span class="k">return</span> <span class="kc">true</span>
+    <span class="k">case</span> <span class="dl">"</span><span class="s2">RESET</span><span class="dl">"</span><span class="p">:</span>
+      <span class="k">return</span> <span class="kc">false</span>
+    <span class="na">default</span><span class="p">:</span>
+      <span class="k">return</span> <span class="nx">state</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">const</span> <span class="nx">hasImagePromptReducer</span> <span class="o">=</span> <span class="p">(</span><span class="nx">state</span><span class="o">=</span><span class="kc">true</span><span class="p">,</span> <span class="nx">action</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">switch</span><span class="p">(</span><span class="nx">action</span><span class="p">.</span><span class="nx">type</span><span class="p">){</span>
+    <span class="k">case</span> <span class="dl">"</span><span class="s2">IMAGE</span><span class="dl">"</span><span class="p">:</span>
+      <span class="k">return</span> <span class="o">!</span><span class="nx">state</span>
+    <span class="na">default</span><span class="p">:</span>
+      <span class="k">return</span> <span class="nx">state</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">const</span> <span class="nx">hasTextPromptReducer</span> <span class="o">=</span> <span class="p">(</span><span class="nx">state</span><span class="o">=</span><span class="kc">true</span><span class="p">,</span> <span class="nx">action</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">switch</span><span class="p">(</span><span class="nx">action</span><span class="p">.</span><span class="nx">type</span><span class="p">){</span>
+    <span class="k">case</span> <span class="dl">"</span><span class="s2">TEXT</span><span class="dl">"</span><span class="p">:</span>
+      <span class="k">return</span> <span class="o">!</span><span class="nx">state</span>
+    <span class="na">default</span><span class="p">:</span>
+      <span class="k">return</span> <span class="nx">state</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">const</span> <span class="nx">rootReducer</span> <span class="o">=</span> <span class="nx">combineReducers</span><span class="p">({</span>
+  <span class="na">time</span><span class="p">:</span> <span class="nx">timeReducer</span><span class="p">,</span>
+  <span class="na">start</span><span class="p">:</span> <span class="nx">startReducer</span><span class="p">,</span>
+  <span class="na">hasImage</span><span class="p">:</span> <span class="nx">hasImagePromptReducer</span><span class="p">,</span>
+  <span class="na">hasText</span><span class="p">:</span> <span class="nx">hasTextPromptReducer</span><span class="p">,</span>
+<span class="p">})</span>
+
+<span class="k">export</span> <span class="k">default</span> <span class="nx">rootReducer</span></code></pre></figure>
+
+<p>My basic reducer structure here is similar to my calculator app, although here I decided to include all the reducers in a single file. I did this because Redux takes up a comparatively smaller part of my app this time around, and I didn’t want to get too cluttered with small files.</p>
+
+<p>But redux doesn’t work if it’s disconnected from the actual app, so for my next step, I hooked up the settings on the start modal to these values. This was mainly done through hooks. In my <code class="language-plaintext highlighter-rouge">TimePicker</code> component, I called the <code class="language-plaintext highlighter-rouge">useDispatch</code> and <code class="language-plaintext highlighter-rouge">useSelector</code> hooks to access my redux variables.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">TimePicker</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">dispatch</span> <span class="o">=</span> <span class="nx">useDispatch</span><span class="p">()</span>
+  <span class="kd">const</span> <span class="nx">time</span> <span class="o">=</span> <span class="nx">useSelector</span><span class="p">(</span><span class="nx">state</span><span class="o">=&gt;</span><span class="nx">state</span><span class="p">.</span><span class="nx">time</span><span class="p">)</span>
+  <span class="kd">const</span> <span class="nx">hasTextPrompt</span> <span class="o">=</span> <span class="nx">useSelector</span><span class="p">(</span><span class="nx">state</span><span class="o">=&gt;</span><span class="nx">state</span><span class="p">.</span><span class="nx">hasText</span><span class="p">)</span>
+  <span class="kd">const</span> <span class="nx">hasImagePrompt</span> <span class="o">=</span> <span class="nx">useSelector</span><span class="p">(</span><span class="nx">state</span><span class="o">=&gt;</span><span class="nx">state</span><span class="p">.</span><span class="nx">hasImage</span><span class="p">)</span></code></pre></figure>
+
+<p>Because the buttons were very simple, I used anonymous functions to call dispatches to their corresponding redux values, like so:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="o">&lt;</span><span class="nx">RadioGroup</span>
+    <span class="nx">row</span>
+    <span class="nx">value</span><span class="o">=</span><span class="p">{</span><span class="nx">time</span><span class="p">}</span>
+    <span class="nx">onChange</span><span class="o">=</span><span class="p">{(</span><span class="nx">event</span><span class="p">)</span><span class="o">=&gt;</span><span class="nx">dispatch</span><span class="p">(</span><span class="nx">setTime</span><span class="p">(</span><span class="nb">parseInt</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">target</span><span class="p">.</span><span class="nx">value</span><span class="p">)))}</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">FormControlLabel</span>
+        <span class="nx">value</span><span class="o">=</span><span class="p">{</span><span class="mi">5000</span><span class="p">}</span>
+        <span class="nx">control</span><span class="o">=</span><span class="p">{</span><span class="o">&lt;</span><span class="nx">Radio</span> <span class="o">/&gt;</span><span class="p">}</span>
+        <span class="nx">label</span><span class="o">=</span><span class="dl">"</span><span class="s2">5 minutes</span><span class="dl">"</span>
+        <span class="nx">labelPlacement</span><span class="o">=</span><span class="dl">"</span><span class="s2">bottom</span><span class="dl">"</span><span class="o">/&gt;</span>
+      <span class="c1">// other radio buttons here</span></code></pre></figure>
+
+<p>I also rigged the “Get Started!” button up to start the counter, and used the same variable to determine if the modal would be open in the main app. This ensured that the modal would be removed when the timer began.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">function</span> <span class="nx">App</span><span class="p">()</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">modalIsOpen</span> <span class="o">=</span> <span class="nx">useSelector</span><span class="p">(</span><span class="nx">state</span><span class="o">=&gt;</span><span class="nx">state</span><span class="p">.</span><span class="nx">start</span><span class="p">)</span>
+
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">div</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">SprintPad</span> <span class="o">/&gt;</span>
+      <span class="o">&lt;</span><span class="nx">SettingsModal</span> <span class="nx">open</span><span class="o">=</span><span class="p">{</span><span class="o">!</span><span class="nx">modalIsOpen</span><span class="p">}</span><span class="sr">/</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/div</span><span class="err">&gt;
+</span>
+  <span class="p">);</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>Now that the modal could control the time and settings of the sprint, it was time to begin implementing the app’s main function.</p>
+
+<h3 id="the-timer">The Timer</h3>
+
+<p>I included the logic of the countdown timer in the <code class="language-plaintext highlighter-rouge">TimerBar</code> component, again hooking into my Redux context to get the actual time. Additionally, I included three more pieces of state in the component itself:</p>
+
+<ul>
+  <li>the <code class="language-plaintext highlighter-rouge">DateTime</code> stamp of when the timer started,</li>
+  <li>the initial value of the timer (as the redux value would be counting down),</li>
+  <li>and the actual counter, initialized as a <code class="language-plaintext highlighter-rouge">setInterval</code> function. I saved this in state so that I could use the <code class="language-plaintext highlighter-rouge">clearInterval</code> function to clean up the timer when it was finished counting down.</li>
+</ul>
+
+<p>Taken together, the state and the redux look like this:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">dispatch</span> <span class="o">=</span> <span class="nx">useDispatch</span><span class="p">()</span>
+<span class="kd">const</span> <span class="nx">time</span> <span class="o">=</span> <span class="nx">useSelector</span><span class="p">(</span><span class="nx">state</span><span class="o">=&gt;</span><span class="nx">state</span><span class="p">.</span><span class="nx">time</span><span class="p">)</span>
+<span class="kd">const</span> <span class="nx">start</span> <span class="o">=</span> <span class="nx">useSelector</span><span class="p">(</span><span class="nx">state</span><span class="o">=&gt;</span><span class="nx">state</span><span class="p">.</span><span class="nx">start</span><span class="p">)</span>
+<span class="kd">const</span> <span class="p">[</span><span class="nx">startStamp</span><span class="p">,</span> <span class="nx">setStartStamp</span><span class="p">]</span> <span class="o">=</span> <span class="nx">useState</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="kd">const</span> <span class="p">[</span><span class="nx">counter</span><span class="p">,</span> <span class="nx">setCounter</span><span class="p">]</span> <span class="o">=</span> <span class="nx">useState</span><span class="p">()</span>
+<span class="kd">const</span> <span class="p">[</span><span class="nx">initialTimerAmount</span><span class="p">,</span> <span class="nx">setInitialTimerAmount</span><span class="p">]</span> <span class="o">=</span> <span class="nx">useState</span><span class="p">()</span></code></pre></figure>
+
+<p>In order to actually implement the countdown timer, I used the <code class="language-plaintext highlighter-rouge">useEffect</code> hook. This tripped me up for a little while because I didn’t fully understand javascript closures and the fact that changing state with the <code class="language-plaintext highlighter-rouge">useState</code> hook doesn’t actually change it until the next render. I spent a lot of time scratching my head and trying to figure out why my state wasn’t changing.</p>
+
+<p>Ultimately, my solution involved three different uses of <code class="language-plaintext highlighter-rouge">useEffect</code>, each one watching for a different change of variable.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="nx">useEffect</span><span class="p">(()</span><span class="o">=&gt;</span><span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">start</span><span class="p">){</span>
+    <span class="nx">setStartStamp</span><span class="p">(()</span><span class="o">=&gt;</span><span class="k">new</span> <span class="nb">Date</span><span class="p">().</span><span class="nx">getTime</span><span class="p">())</span>
+    <span class="nx">setInitialTimerAmount</span><span class="p">(</span><span class="nx">time</span><span class="p">)</span>
+  <span class="p">}</span>
+<span class="p">},</span> <span class="p">[</span><span class="nx">start</span><span class="p">])</span>
+
+<span class="nx">useEffect</span><span class="p">(()</span><span class="o">=&gt;</span><span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">startStamp</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">){</span>
+    <span class="nx">setCounter</span><span class="p">(</span><span class="nx">setInterval</span><span class="p">(()</span><span class="o">=&gt;</span><span class="p">{</span>
+      <span class="kd">const</span> <span class="nx">current</span> <span class="o">=</span> <span class="k">new</span> <span class="nb">Date</span><span class="p">().</span><span class="nx">getTime</span><span class="p">()</span>
+      <span class="nx">dispatch</span><span class="p">(</span><span class="nx">setTime</span><span class="p">(</span><span class="nx">time</span><span class="o">-</span><span class="p">(</span><span class="nx">current</span><span class="o">-</span><span class="nx">startStamp</span><span class="p">)))</span>
+    <span class="p">},</span> <span class="mi">1000</span><span class="p">))</span>
+  <span class="p">}</span>
+<span class="p">},</span> <span class="p">[</span><span class="nx">startStamp</span><span class="p">])</span>
+
+<span class="nx">useEffect</span><span class="p">(()</span><span class="o">=&gt;</span><span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">time</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">clearInterval</span><span class="p">(</span><span class="nx">counter</span><span class="p">)</span>
+  <span class="p">}</span>
+<span class="p">},</span> <span class="p">[</span><span class="nx">time</span><span class="p">])</span></code></pre></figure>
+
+<p>The first call to <code class="language-plaintext highlighter-rouge">useEffect</code> watches the <code class="language-plaintext highlighter-rouge">start</code> variable, which is part of redux. When start changes (which it only does once, at the beginning of the sprint), <code class="language-plaintext highlighter-rouge">useEffect</code> sets the <code class="language-plaintext highlighter-rouge">startStamp</code> variable to the time when it was activated.</p>
+
+<p>The second <code class="language-plaintext highlighter-rouge">useEffect</code> call watches the <code class="language-plaintext highlighter-rouge">startStamp</code> variable change, meaning it is triggered after the first call. This call actually sets up the interval timer, which ticks every second and provides a <code class="language-plaintext highlighter-rouge">dispatch</code> call to change the timer by the time between the two calls. I used <code class="language-plaintext highlighter-rouge">Date</code> objects to ensure that the timer was as accurate as possible.</p>
+
+<p>The third <code class="language-plaintext highlighter-rouge">useEffect</code> call watches the <code class="language-plaintext highlighter-rouge">time</code> variable, but does nothing until the timer has counted down to zero. Then, it calls <code class="language-plaintext highlighter-rouge">clearInterval</code> on the interval, cleaning it up and ensuring that the timer does not continue to count down after 0. Taken together, these three variables take care of all the timer needs for the app.</p>
+
+<h3 id="writing-in-the-sprint">Writing in the Sprint</h3>
+
+<p>With the timer complete, it was time to actually enable the user to write their sprint. Because I wanted to have a single place that knew about the present paragraph being written and the past paragraphs that were written, I created a new component, <code class="language-plaintext highlighter-rouge">WritingController</code>, that held all of the information regarding the writing process. This controller uses two key pieces of state: <code class="language-plaintext highlighter-rouge">completedParagraphs</code> for what has been written so far, and <code class="language-plaintext highlighter-rouge">currentParagraph</code> for the paragraph the user is currently writing. <code class="language-plaintext highlighter-rouge">currentParagraph</code> also serves as the value for the controlled <code class="language-plaintext highlighter-rouge">TextArea</code> in the <code class="language-plaintext highlighter-rouge">WritingPanel</code> component.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="p">[</span><span class="nx">completedParagraphs</span><span class="p">,</span> <span class="nx">setCompletedParagraphs</span><span class="p">]</span> <span class="o">=</span> <span class="nx">useState</span><span class="p">([])</span>
+<span class="kd">const</span> <span class="p">[</span><span class="nx">currentParagraph</span><span class="p">,</span> <span class="nx">setCurrentParagraph</span><span class="p">]</span> <span class="o">=</span> <span class="nx">useState</span><span class="p">(</span><span class="dl">""</span><span class="p">)</span>
+
+<span class="p">...</span>
+
+<span class="o">&lt;</span><span class="nx">WritingPanel</span>
+      <span class="nx">currentParagraph</span><span class="o">=</span><span class="p">{</span><span class="nx">currentParagraph</span><span class="p">}</span>
+      <span class="nx">handleChange</span><span class="o">=</span><span class="p">{(</span><span class="nx">e</span><span class="p">)</span><span class="o">=&gt;</span><span class="nx">setCurrentParagraph</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">target</span><span class="p">.</span><span class="nx">value</span><span class="p">)}</span>
+      <span class="nx">handleKeyPress</span> <span class="o">=</span> <span class="p">{</span><span class="nx">handleKeyPress</span><span class="p">}</span>
+      <span class="sr">/</span><span class="err">&gt;
+</span>
+<span class="c1">// in the WritingPanel component</span>
+<span class="o">&lt;</span><span class="nx">TextField</span>
+  <span class="nx">fullWidth</span>
+  <span class="nx">multiline</span>
+  <span class="nx">placeholder</span><span class="o">=</span><span class="dl">"</span><span class="s2">Get inspired!</span><span class="dl">"</span>
+  <span class="nx">value</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">currentParagraph</span><span class="p">}</span>
+  <span class="nx">onChange</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">handleChange</span><span class="p">}</span>
+  <span class="nx">onKeyPress</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">handleKeyPress</span><span class="p">}</span>
+<span class="sr">/&gt;</span></code></pre></figure>
+
+<p>I then wrote an <code class="language-plaintext highlighter-rouge">onKeyPress</code> function that would check if the user pressed “Enter” (to indicate a new paragraph). If so, then the contents of <code class="language-plaintext highlighter-rouge">currentParagraph</code> would be transferred to the next element in the array of <code class="language-plaintext highlighter-rouge">completedParagraphs</code>, and <code class="language-plaintext highlighter-rouge">currentParagraph</code> would be reset.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">handleKeyPress</span> <span class="o">=</span> <span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">key</span> <span class="o">==</span> <span class="dl">"</span><span class="s2">Enter</span><span class="dl">"</span><span class="p">){</span>
+    <span class="nx">setCompletedParagraphs</span><span class="p">(</span><span class="nx">state</span><span class="o">=&gt;</span><span class="p">[...</span><span class="nx">state</span><span class="p">,</span> <span class="nx">currentParagraph</span><span class="p">])</span>
+    <span class="nx">setCurrentParagraph</span><span class="p">(</span><span class="dl">""</span><span class="p">)</span>
+  <span class="p">}</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>In the <code class="language-plaintext highlighter-rouge">CompletedSection</code> component, I wrote a function that maps the paragraphs into <code class="language-plaintext highlighter-rouge">CompletedParagraph</code> components, and renders them on the page.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">CompletedSection</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">completedParagraphs</span> <span class="o">=</span> <span class="nx">props</span><span class="p">.</span><span class="nx">paragraphs</span><span class="p">.</span><span class="nx">map</span><span class="p">((</span><span class="nx">x</span><span class="p">,</span> <span class="nx">i</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="o">&lt;</span><span class="nx">CompletedParagraph</span> <span class="nx">text</span><span class="o">=</span><span class="p">{</span><span class="nx">x</span><span class="p">}</span> <span class="nx">key</span><span class="o">=</span><span class="p">{</span><span class="nx">i</span><span class="p">}</span> <span class="sr">/&gt;</span><span class="err">)
+</span>
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">px</span><span class="o">=</span><span class="p">{</span><span class="mi">3</span><span class="p">}</span><span class="o">&gt;</span>
+      <span class="p">{</span><span class="nx">completedParagraphs</span><span class="p">}</span>
+    <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>Thus, when the user presses enter, the paragraph they were working on is transferred to the completed section, and they can begin a new paragraph.</p>
+
+<h3 id="the-timesup-component">The TimesUp Component</h3>
+
+<p>The whole point of a writing sprint is to prevent the writer from writing after the time is up, and so I needed to lock down the app when the timer expired. To do so, I created a new component, called <code class="language-plaintext highlighter-rouge">TimesUpPanel</code>, that would replace the <code class="language-plaintext highlighter-rouge">WritingPanel</code> at the end of the timer. This new component has two buttons: one to download the sprint, and one to reset the app to sprint again.</p>
+
+<p><img src="/assets/img/posts/writing-sprint/times-up-panel.png" alt="alt text" /></p>
+
+<p>By creating a conditional render of either the <code class="language-plaintext highlighter-rouge">WritingPanel</code> or the <code class="language-plaintext highlighter-rouge">TimesUpPanel</code>, I was able to have the <code class="language-plaintext highlighter-rouge">WritingController</code> component determine which one was necessary.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">inputPanel</span> <span class="o">=</span> <span class="p">(</span><span class="nx">time</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="p">?</span>
+  <span class="o">&lt;</span><span class="nx">WritingPanel</span>
+    <span class="nx">currentParagraph</span><span class="o">=</span><span class="p">{</span><span class="nx">currentParagraph</span><span class="p">}</span>
+    <span class="nx">handleChange</span><span class="o">=</span><span class="p">{(</span><span class="nx">e</span><span class="p">)</span><span class="o">=&gt;</span><span class="nx">setCurrentParagraph</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">target</span><span class="p">.</span><span class="nx">value</span><span class="p">)}</span>
+    <span class="nx">handleKeyPress</span> <span class="o">=</span> <span class="p">{</span><span class="nx">handleKeyPress</span><span class="p">}</span>
+    <span class="sr">/&gt; </span><span class="err">:
+</span>    <span class="o">&lt;</span><span class="nx">TimesUpPanel</span>
+      <span class="nx">downloadSprint</span><span class="o">=</span><span class="p">{</span><span class="nx">downloadSprint</span><span class="p">}</span>
+      <span class="nx">resetClick</span><span class="o">=</span><span class="p">{</span><span class="nx">resetClick</span><span class="p">}</span>
+      <span class="nx">confirmClick</span><span class="o">=</span><span class="p">{</span><span class="nx">confirmClick</span><span class="p">}</span><span class="sr">/</span><span class="err">&gt;
+</span>  <span class="p">)</span></code></pre></figure>
+
+<p>Here, <code class="language-plaintext highlighter-rouge">time</code> is again the global Redux timer variable.</p>
+
+<p>I then needed to write the actual functions that would execute when these buttons were pressed. To download the sprint, I created a new <code class="language-plaintext highlighter-rouge">&lt;a&gt;</code> element and set it to download when clicked. Then I simulated a click with the <code class="language-plaintext highlighter-rouge">element.click()</code> function.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">downloadSprint</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">element</span> <span class="o">=</span> <span class="nb">document</span><span class="p">.</span><span class="nx">createElement</span><span class="p">(</span><span class="dl">"</span><span class="s2">a</span><span class="dl">"</span><span class="p">)</span>
+  <span class="kd">const</span> <span class="nx">file</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Blob</span><span class="p">([</span><span class="nx">completedParagraphs</span><span class="p">.</span><span class="nx">join</span><span class="p">(</span><span class="dl">"</span><span class="s2"> </span><span class="dl">"</span><span class="p">)],</span> <span class="p">{</span><span class="na">type</span><span class="p">:</span> <span class="dl">'</span><span class="s1">text/plain</span><span class="dl">'</span><span class="p">})</span>
+  <span class="nx">element</span><span class="p">.</span><span class="nx">href</span> <span class="o">=</span> <span class="nx">URL</span><span class="p">.</span><span class="nx">createObjectURL</span><span class="p">(</span><span class="nx">file</span><span class="p">)</span>
+  <span class="nx">element</span><span class="p">.</span><span class="nx">download</span><span class="o">=</span><span class="dl">"</span><span class="s2">sprint.txt</span><span class="dl">"</span>
+  <span class="nb">document</span><span class="p">.</span><span class="nx">body</span><span class="p">.</span><span class="nx">appendChild</span><span class="p">(</span><span class="nx">element</span><span class="p">)</span>
+  <span class="nx">element</span><span class="p">.</span><span class="nx">click</span><span class="p">()</span>
+  <span class="nx">setHasDownloaded</span><span class="p">(</span><span class="kc">true</span><span class="p">)</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>I also implemented a piece of state to tell if the file had been downloaded. I did this because resetting the sprint would cause the old sprint to be deleted, and I wanted to ask for confirmation before doing so. In the same vein, I implemented a piece of state to act as a “confirmation click.” Clicking on the reset button would first trigger the confirmation click to <code class="language-plaintext highlighter-rouge">true</code>, and a second click would actually reset the app.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">resetClick</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">hasDownloaded</span> <span class="o">||</span> <span class="nx">confirmClick</span><span class="p">){</span>
+    <span class="nx">resetWritingPanel</span><span class="p">()</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">confirmClick</span><span class="p">){</span>
+    <span class="nx">setConfirmClick</span><span class="p">(</span><span class="kc">true</span><span class="p">)</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">const</span> <span class="nx">resetWritingPanel</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span><span class="p">{</span>
+  <span class="nx">dispatch</span><span class="p">(</span><span class="nx">reset</span><span class="p">())</span>
+  <span class="nx">setCompletedParagraphs</span><span class="p">([])</span>
+  <span class="nx">setConfirmClick</span><span class="p">(</span><span class="kc">false</span><span class="p">)</span>
+  <span class="nx">setHasDownloaded</span><span class="p">(</span><span class="kc">false</span><span class="p">)</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>I also created a separate button for confirming the reset. When clicked on, the reset button would change to the confirm reset button, and a second click would actually initiate the reset.</p>
+
+<p><img src="/assets/img/posts/writing-sprint/confirm-reset.png" alt="alt text" /></p>
+
+<h3 id="implementing-a-floating-panel">Implementing a floating panel</h3>
+
+<p>There was one final quality-of-life feature that I wanted to add. Although the <code class="language-plaintext highlighter-rouge">WritingPanel</code> looked good at first, any sprint of any real length would cause the page to run past the screen, creating a scroll bar. And when that happened, the prompt would quickly fall out of screen. In order to fix this, I wanted to make the prompt float using a <code class="language-plaintext highlighter-rouge">position: fixed</code> command, so that it functioned more like a navbar than a static element on the screen. I used the <code class="language-plaintext highlighter-rouge">makeStyles()</code> hook provided by Material-UI to alter the style of the <code class="language-plaintext highlighter-rouge">PromptWindow</code>:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="nx">onst</span> <span class="nx">useStyles</span> <span class="o">=</span> <span class="nx">makeStyles</span><span class="p">({</span>
+  <span class="na">headerBox</span><span class="p">:</span> <span class="p">{</span>
+    <span class="na">position</span><span class="p">:</span> <span class="dl">"</span><span class="s2">fixed</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">width</span><span class="p">:</span> <span class="dl">"</span><span class="s2">100%</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">top</span><span class="p">:</span> <span class="mi">32</span><span class="p">,</span>
+    <span class="na">left</span><span class="p">:</span> <span class="mi">0</span>
+  <span class="p">},</span>
+  <span class="na">headerPaper</span><span class="p">:</span> <span class="p">{</span>
+    <span class="na">width</span><span class="p">:</span> <span class="dl">"</span><span class="s2">90%</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">margin</span><span class="p">:</span> <span class="dl">"</span><span class="s2">auto</span><span class="dl">"</span>
+  <span class="p">}</span>
+<span class="p">})</span>
+
+<span class="kd">const</span> <span class="nx">PromptWindow</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">classes</span> <span class="o">=</span> <span class="nx">useStyles</span><span class="p">()</span>
+
+  <span class="kd">const</span> <span class="nx">headerHeight</span> <span class="o">=</span> <span class="mi">250</span>
+
+  <span class="k">return</span> <span class="p">(</span>
+      <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">p</span><span class="o">=</span><span class="p">{</span><span class="mi">2</span><span class="p">}</span> <span class="nx">height</span><span class="o">=</span><span class="p">{</span><span class="nx">headerHeight</span><span class="p">}</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">headerBox</span><span class="p">}</span><span class="o">&gt;</span>
+          <span class="o">&lt;</span><span class="nx">Paper</span> <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">headerPaper</span><span class="p">}</span><span class="o">&gt;</span>
+            <span class="o">&lt;</span><span class="nx">Grid</span> <span class="nx">container</span><span class="o">&gt;</span>
+              <span class="c1">// Text and Image prompts go here</span></code></pre></figure>
+
+<p>This ensured that the image and text prompts would remain in the user’s view no matter how long their sprint lasted.</p>
+
+<h3 id="the-future">The Future</h3>
+
+<p>With most of the actual functionality of the app created, my last step is to create dynamic image and text prompts. The Mona Lisa and my made-up excerpt have served well as placeholders, but it’s time to provide a bit more variety. But that’s for next time.</p>
+
+</div>
+
+    </div>
+    <footer>
+      <span><a href="/index.html">Home</a></span>
+      <span><a href="/blog">Blog</a></span>
+      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+    </footer>
+    </div>
+  </body>
+</html>

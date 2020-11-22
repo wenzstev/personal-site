@@ -1,0 +1,336 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Designing A Calculator with React</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-header">
+      <h2>Designing A Calculator with React</h2>
+      <small>30 May 2020</small>
+  </div>
+</header>
+
+<div class="margin">
+<p>Time for a slight change of pace. As I’ve been winding down work on the backend (although there’s still a fair amount to do), I’ve also been spending time teaching myself React, which I plan to use to build the frontend of my app. Whereas previously I used a combination if jinja templating and jQuery, that whole model felt outdated from the beginning (especially the jQuery), and I didn’t feel like I was developing skills that a modern full-stack developer needs. I first learned about React a few years ago and tried to learn it then, but at the time I knew very little JavaScript and even less about web development, and I didn’t get very far.</p>
+
+<p>This time has been different, however. While I’m not using the same frontend materials this time around, I’m bringing my newfound knowledge of HTML, CSS, and JavaScript to the table, and I’m pleased to report that learning was much smoother this time around. I’m not going to spend a bunch of time on the details of the tutorials I went through but <a href="https://scrimba.com/course/glearnreact">this</a> course was particularly useful for me. I really like Bob Ziroll’s teaching style.</p>
+
+<p>For my first small React project, I decided to make a calculator. Yes, it’s been done before, but I feel like a calculator effectively covers all the bases: you have to create a number of different components, provide a certain level of functionality, and make it look good in a neat box. Additionally, I decided to use a component library for the exercise, as I didn’t want to spend a bunch of time working out a theme, and I think it’s important to know more than just the base React system. I’ll be using <a href="https://material-ui.com/">Material UI</a> for this project, as it’s the most popular React component library around, and I like the way it looks.</p>
+
+<p>I’m going to split this post into two parts. The first concerns building the layout of the app, and the second will concern adding the functionality. I’m doing it this way to conform with the “smart/dumb component” dichotomy, and because building layout and building functionality sort of engage two different areas of my brain. So, without further ado, let’s get to it.</p>
+
+<h3 id="basic-components">Basic Components</h3>
+
+<p>First off, I started by thinking through the basic components that would be needed to build the calculator. I wanted to design them in such a way that they could be easily reused, so that I wouldn’t have to manually set a bunch of attributes each time I wanted a new component.</p>
+
+<p>For the case of a calculator, there are really two separate component types: Buttons and the Display. This keeps things nice and simple. I started with the Buttons, designing a <code class="language-plaintext highlighter-rouge">BaseButton</code> component that could then be build on into various, more specific, buttons.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="k">import</span> <span class="nx">React</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">react</span><span class="dl">"</span>
+<span class="k">import</span> <span class="p">{</span>
+  <span class="nx">Button</span><span class="p">,</span>
+  <span class="nx">Box</span>
+<span class="p">}</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">@material-ui/core</span><span class="dl">"</span>
+
+<span class="k">export</span> <span class="kd">const</span> <span class="nx">BaseButton</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">width</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">width</span><span class="p">}</span> <span class="nx">m</span><span class="o">=</span><span class="p">{</span><span class="mi">1</span><span class="p">}</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">Button</span>
+        <span class="nx">variant</span><span class="o">=</span><span class="dl">"</span><span class="s2">contained</span><span class="dl">"</span>
+        <span class="nx">color</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">color</span> <span class="o">!=</span> <span class="kc">null</span> <span class="p">?</span> <span class="nx">props</span><span class="p">.</span><span class="nx">color</span> <span class="p">:</span> <span class="dl">"</span><span class="s2">default</span><span class="dl">"</span><span class="p">}</span>
+        <span class="nx">disableElevation</span>
+        <span class="nx">onClick</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">clickHandler</span><span class="p">}</span>
+        <span class="nx">fullWidth</span><span class="o">=</span><span class="dl">"</span><span class="s2">true</span><span class="dl">"</span><span class="o">&gt;</span>
+        <span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">label</span><span class="p">}</span>
+      <span class="o">&lt;</span><span class="sr">/Button</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>This class essentially defines all the basic attributes that I want from the <code class="language-plaintext highlighter-rouge">Button</code> Material-UI class, including that it uses the “contained” variant and has no elevation. I also surround the button with a <code class="language-plaintext highlighter-rouge">Box</code> component and set the <code class="language-plaintext highlighter-rouge">fullWidth</code> variable to true, allowing me to resize the button as necessary. The rest of the components are passed in through the <code class="language-plaintext highlighter-rouge">props</code> attribute, including what happens when the button is pressed, the color of the button, and what’s on the button.</p>
+
+<p>From this base class, I defined two additional classes: a <code class="language-plaintext highlighter-rouge">NumButton</code> class for the digits 0-9 and a <code class="language-plaintext highlighter-rouge">FuncButton</code> class for all other buttons (so named because clicking on them executes some sort of function).</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="k">export</span> <span class="kd">const</span> <span class="nx">NumButton</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">BaseButton</span>
+      <span class="nx">label</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">number</span><span class="p">}</span>
+      <span class="nx">width</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">width</span><span class="p">}</span>
+      <span class="nx">clickHandler</span><span class="o">=</span><span class="p">{()</span><span class="o">=&gt;</span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">props</span><span class="p">.</span><span class="nx">number</span><span class="p">)}</span>
+      <span class="nx">width</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">width</span><span class="p">}</span>
+      <span class="sr">/</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span>
+
+<span class="k">export</span> <span class="kd">const</span> <span class="nx">FuncButton</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">BaseButton</span>
+      <span class="nx">label</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">label</span><span class="p">}</span>
+      <span class="nx">clickHandler</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">func</span><span class="p">}</span>
+      <span class="nx">color</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">color</span><span class="p">}</span>
+      <span class="nx">width</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">width</span><span class="p">}</span>
+      <span class="sr">/</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>These two are largely the same, except <code class="language-plaintext highlighter-rouge">NumButton</code> uses a different placeholder function, but even now that I’m looking at them for the blog post, I can see that I should probably combine them further; there’s too much repeated code here. So look for that later when I add some finishing touches.</p>
+
+<h3 id="the-layout">The Layout</h3>
+
+<p>I separated the buttons into three different groups, which I’m informally calling “Pads.” Each Pad makes use of the <code class="language-plaintext highlighter-rouge">Box</code> and <code class="language-plaintext highlighter-rouge">Grid</code> components to lay out their associated sets of buttons. They also all take a single <code class="language-plaintext highlighter-rouge">color</code> prop in and pass it to the children buttons, ensuring that each set has a uniform color.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">KeyPad</code> stores the numbers 0-9, as well as the decimal (“.”) symbol.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="k">import</span> <span class="nx">React</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">react</span><span class="dl">"</span>
+<span class="k">import</span> <span class="p">{</span><span class="nx">Grid</span><span class="p">,</span> <span class="nx">Box</span><span class="p">}</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">@material-ui/core</span><span class="dl">"</span>
+<span class="k">import</span> <span class="p">{</span><span class="nx">NumButton</span><span class="p">,</span> <span class="nx">FuncButton</span><span class="p">}</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">./Buttons</span><span class="dl">"</span>
+
+<span class="kd">const</span> <span class="nx">KeyPad</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">return</span><span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">display</span><span class="o">=</span><span class="dl">"</span><span class="s2">inline-block</span><span class="dl">"</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">Grid</span> <span class="nx">container</span><span class="o">&gt;</span>
+          <span class="o">&lt;</span><span class="nx">NumButton</span> <span class="nx">number</span><span class="o">=</span><span class="p">{</span><span class="mi">7</span><span class="p">}</span><span class="sr">/</span><span class="err">&gt;
+</span>          <span class="o">&lt;</span><span class="nx">NumButton</span> <span class="nx">number</span><span class="o">=</span><span class="p">{</span><span class="mi">8</span><span class="p">}</span><span class="sr">/</span><span class="err">&gt;
+</span>          <span class="o">&lt;</span><span class="nx">NumButton</span> <span class="nx">number</span><span class="o">=</span><span class="p">{</span><span class="mi">9</span><span class="p">}</span><span class="sr">/</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="sr">/Grid</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="nx">Grid</span> <span class="nx">container</span><span class="o">&gt;</span>
+          <span class="o">&lt;</span><span class="nx">NumButton</span> <span class="nx">number</span><span class="o">=</span><span class="p">{</span><span class="mi">4</span><span class="p">}</span><span class="sr">/</span><span class="err">&gt;
+</span>          <span class="o">&lt;</span><span class="nx">NumButton</span> <span class="nx">number</span><span class="o">=</span><span class="p">{</span><span class="mi">5</span><span class="p">}</span><span class="sr">/</span><span class="err">&gt;
+</span>          <span class="o">&lt;</span><span class="nx">NumButton</span> <span class="nx">number</span><span class="o">=</span><span class="p">{</span><span class="mi">6</span><span class="p">}</span><span class="sr">/</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="sr">/Grid</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="nx">Grid</span> <span class="nx">container</span><span class="o">&gt;</span>
+          <span class="o">&lt;</span><span class="nx">NumButton</span> <span class="nx">number</span><span class="o">=</span><span class="p">{</span><span class="mi">1</span><span class="p">}</span><span class="sr">/</span><span class="err">&gt;
+</span>          <span class="o">&lt;</span><span class="nx">NumButton</span> <span class="nx">number</span><span class="o">=</span><span class="p">{</span><span class="mi">2</span><span class="p">}</span><span class="sr">/</span><span class="err">&gt;
+</span>          <span class="o">&lt;</span><span class="nx">NumButton</span> <span class="nx">number</span><span class="o">=</span><span class="p">{</span><span class="mi">3</span><span class="p">}</span><span class="sr">/</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="sr">/Grid</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="nx">Grid</span> <span class="nx">container</span><span class="o">&gt;</span>
+          <span class="o">&lt;</span><span class="nx">NumButton</span> <span class="nx">number</span><span class="o">=</span><span class="p">{</span><span class="mi">0</span><span class="p">}</span> <span class="nx">width</span><span class="o">=</span><span class="dl">"</span><span class="s2">60%</span><span class="dl">"</span><span class="o">/&gt;</span>
+          <span class="o">&lt;</span><span class="nx">FuncButton</span> <span class="nx">label</span><span class="o">=</span><span class="p">{</span><span class="dl">"</span><span class="s2">.</span><span class="dl">"</span><span class="p">}</span> <span class="nx">func</span><span class="o">=</span><span class="p">{()</span><span class="o">=&gt;</span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">"</span><span class="s2">decimal</span><span class="dl">"</span><span class="p">)}</span><span class="sr">/</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="sr">/Grid</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span>
+
+<span class="k">export</span> <span class="k">default</span> <span class="nx">KeyPad</span></code></pre></figure>
+
+<p>Note how I take advantage of the fact that my buttons have customizable width to give the “0” button a larger width (as is often the case on calculators).</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">OperationsPad</code> stores the basic operations: “+, -, ×, ÷, =”. I also created a <code class="language-plaintext highlighter-rouge">placeholderFunction</code> that simply prints out the name of the operation that will occur (since right now I’m only worrying about how everything looks).</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="k">import</span> <span class="nx">React</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">react</span><span class="dl">"</span>
+<span class="k">import</span> <span class="p">{</span><span class="nx">FuncButton</span><span class="p">}</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">./Buttons</span><span class="dl">"</span>
+<span class="k">import</span> <span class="p">{</span><span class="nx">Grid</span><span class="p">,</span> <span class="nx">Box</span><span class="p">}</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">@material-ui/core</span><span class="dl">"</span>
+
+<span class="kd">const</span> <span class="nx">OperationsPad</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+
+  <span class="kd">const</span> <span class="nx">placeholderFunction</span> <span class="o">=</span> <span class="p">(</span><span class="nx">val</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">val</span><span class="p">)</span>
+
+  <span class="k">return</span><span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">display</span><span class="o">=</span><span class="dl">"</span><span class="s2">inline-block</span><span class="dl">"</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">Grid</span>
+        <span class="nx">container</span>
+        <span class="nx">direction</span><span class="o">=</span><span class="dl">"</span><span class="s2">column</span><span class="dl">"</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">FuncButton</span>
+          <span class="nx">label</span><span class="o">=</span><span class="dl">"</span><span class="s2">+</span><span class="dl">"</span>
+          <span class="nx">func</span><span class="o">=</span><span class="p">{()</span><span class="o">=&gt;</span><span class="nx">placeholderFunction</span><span class="p">(</span><span class="dl">"</span><span class="s2">+</span><span class="dl">"</span><span class="p">)}</span>
+          <span class="nx">color</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">color</span><span class="p">}</span>
+        <span class="sr">/</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="nx">FuncButton</span>
+          <span class="nx">label</span><span class="o">=</span><span class="dl">"</span><span class="s2">-</span><span class="dl">"</span>
+          <span class="nx">func</span><span class="o">=</span><span class="p">{()</span><span class="o">=&gt;</span><span class="nx">placeholderFunction</span><span class="p">(</span><span class="dl">"</span><span class="s2">-</span><span class="dl">"</span><span class="p">)}</span>
+          <span class="nx">color</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">color</span><span class="p">}</span>
+        <span class="sr">/</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="nx">FuncButton</span>
+          <span class="nx">label</span><span class="o">=</span><span class="dl">"</span><span class="s2">×</span><span class="dl">"</span>
+          <span class="nx">func</span><span class="o">=</span><span class="p">{()</span><span class="o">=&gt;</span><span class="nx">placeholderFunction</span><span class="p">(</span><span class="dl">"</span><span class="s2">×</span><span class="dl">"</span><span class="p">)}</span>
+          <span class="nx">color</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">color</span><span class="p">}</span>
+        <span class="sr">/</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="nx">FuncButton</span>
+          <span class="nx">label</span><span class="o">=</span><span class="dl">"</span><span class="s2">÷</span><span class="dl">"</span>
+          <span class="nx">func</span><span class="o">=</span><span class="p">{()</span><span class="o">=&gt;</span><span class="nx">placeholderFunction</span><span class="p">(</span><span class="dl">"</span><span class="s2">÷</span><span class="dl">"</span><span class="p">)}</span>
+          <span class="nx">color</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">color</span><span class="p">}</span>
+        <span class="sr">/</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="nx">FuncButton</span>
+          <span class="nx">label</span><span class="o">=</span><span class="dl">"</span><span class="s2">=</span><span class="dl">"</span>
+          <span class="nx">func</span><span class="o">=</span><span class="p">{()</span><span class="o">=&gt;</span><span class="nx">placeholderFunction</span><span class="p">(</span><span class="dl">"</span><span class="s2">=</span><span class="dl">"</span><span class="p">)}</span>
+          <span class="nx">color</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">color</span><span class="p">}</span><span class="sr">/</span><span class="err">&gt;
+</span>      <span class="o">&lt;</span><span class="sr">/Grid</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span>
+
+<span class="k">export</span> <span class="k">default</span> <span class="nx">OperationsPad</span></code></pre></figure>
+
+<p>Finally, the <code class="language-plaintext highlighter-rouge">AdditionalFunctionsPad</code> (I know, I was running out of name ideas) stores the extraneous functions that don’t fit elsewhere, such as clearing the screen and changing a number from positive to negative.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="k">import</span> <span class="nx">React</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">react</span><span class="dl">"</span>
+<span class="k">import</span> <span class="p">{</span><span class="nx">FuncButton</span><span class="p">}</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">./Buttons</span><span class="dl">"</span>
+<span class="k">import</span> <span class="p">{</span><span class="nx">Grid</span><span class="p">}</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">@material-ui/core</span><span class="dl">"</span>
+
+
+<span class="kd">const</span> <span class="nx">AdditionalFunctionsPad</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span><span class="p">{</span>
+  <span class="k">return</span><span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">Grid</span> <span class="nx">container</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">FuncButton</span>
+        <span class="nx">label</span><span class="o">=</span><span class="dl">"</span><span class="s2">AC</span><span class="dl">"</span>
+        <span class="nx">color</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">color</span><span class="p">}</span><span class="sr">/</span><span class="err">&gt;
+</span>      <span class="o">&lt;</span><span class="nx">FuncButton</span>
+        <span class="nx">label</span><span class="o">=</span><span class="dl">"</span><span class="s2">%</span><span class="dl">"</span>
+        <span class="nx">color</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">color</span><span class="p">}</span><span class="sr">/</span><span class="err">&gt;
+</span>      <span class="o">&lt;</span><span class="nx">FuncButton</span>
+        <span class="nx">label</span><span class="o">=</span><span class="dl">"</span><span class="s2">+/-</span><span class="dl">"</span>
+        <span class="nx">color</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">color</span><span class="p">}</span><span class="sr">/</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/Grid</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span>
+
+<span class="k">export</span> <span class="k">default</span> <span class="nx">AdditionalFunctionsPad</span></code></pre></figure>
+
+<p>These three pads are then combined in the main <code class="language-plaintext highlighter-rouge">App.js</code>, with a few <code class="language-plaintext highlighter-rouge">Box</code> and <code class="language-plaintext highlighter-rouge">Grid</code> components to facilitate layout.</p>
+
+<p>I also created a <code class="language-plaintext highlighter-rouge">CalculatorContainer</code> component, which is basically just a <code class="language-plaintext highlighter-rouge">Container</code> wrapper to make sure everything looks neat and tidy.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="k">import</span> <span class="nx">React</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">react</span><span class="dl">"</span>
+
+<span class="k">import</span> <span class="p">{</span><span class="nx">Paper</span><span class="p">,</span> <span class="nx">Container</span><span class="p">,</span> <span class="nx">Box</span><span class="p">}</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">@material-ui/core</span><span class="dl">"</span>
+
+<span class="kd">const</span> <span class="nx">CalculatorContainer</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span><span class="p">{</span>
+  <span class="k">return</span><span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">Container</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">mt</span><span class="o">=</span><span class="p">{</span><span class="mi">2</span><span class="p">}</span> <span class="nx">align</span><span class="o">=</span><span class="dl">"</span><span class="s2">center</span><span class="dl">"</span> <span class="nx">display</span><span class="o">=</span><span class="dl">'</span><span class="s1">inline-block</span><span class="dl">'</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">Paper</span> <span class="nx">mt</span><span class="o">=</span><span class="p">{</span><span class="mi">2</span><span class="p">}</span><span class="o">&gt;</span>
+          <span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">children</span><span class="p">}</span>
+        <span class="o">&lt;</span><span class="sr">/Paper</span><span class="err">&gt;
+</span>      <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/Container</span><span class="err">&gt;
+</span>
+  <span class="p">)</span>
+<span class="p">}</span>
+
+<span class="k">export</span> <span class="k">default</span> <span class="nx">CalculatorContainer</span></code></pre></figure>
+
+<p>Here’s everything put together:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="k">import</span> <span class="nx">React</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">react</span><span class="dl">'</span><span class="p">;</span>
+<span class="k">import</span> <span class="p">{</span>
+  <span class="nx">Button</span><span class="p">,</span>
+  <span class="nx">Container</span><span class="p">,</span>
+  <span class="nx">CssBaseline</span><span class="p">,</span>
+  <span class="nx">Grid</span><span class="p">,</span>
+  <span class="nx">Box</span><span class="p">,</span>
+  <span class="nx">ThemeProvider</span>
+<span class="p">}</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">@material-ui/core</span><span class="dl">'</span>
+<span class="k">import</span> <span class="nx">KeyPad</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">./components/KeyPad</span><span class="dl">"</span>
+<span class="k">import</span> <span class="nx">Display</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">./components/Display</span><span class="dl">"</span>
+<span class="k">import</span> <span class="nx">CalculatorContainer</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">./components/CalculatorContainer</span><span class="dl">"</span>
+<span class="k">import</span> <span class="nx">OperationsPad</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">./components/OperationsPad</span><span class="dl">"</span>
+<span class="k">import</span> <span class="nx">AdditionalFunctionsPad</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">./components/AdditionalFunctionsPad</span><span class="dl">"</span>
+<span class="k">import</span> <span class="nx">theme</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">./Theme</span><span class="dl">"</span>
+<span class="kd">function</span> <span class="nx">App</span><span class="p">()</span> <span class="p">{</span>
+
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">React</span><span class="p">.</span><span class="nx">Fragment</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">ThemeProvider</span> <span class="nx">theme</span><span class="o">=</span><span class="p">{</span><span class="nx">theme</span><span class="p">}</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">CssBaseline</span> <span class="o">/&gt;</span>
+        <span class="o">&lt;</span><span class="nx">CalculatorContainer</span><span class="o">&gt;</span>
+          <span class="o">&lt;</span><span class="nx">Grid</span>
+            <span class="nx">container</span>
+            <span class="nx">direction</span><span class="o">=</span><span class="dl">"</span><span class="s2">row</span><span class="dl">"</span><span class="o">&gt;</span>
+            <span class="o">&lt;</span><span class="nx">Box</span><span class="o">&gt;</span>
+              <span class="o">&lt;</span><span class="nx">AdditionalFunctionsPad</span><span class="o">/&gt;</span>
+              <span class="o">&lt;</span><span class="nx">KeyPad</span> <span class="o">/&gt;</span>
+            <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span>            <span class="o">&lt;</span><span class="nx">OperationsPad</span> <span class="o">/&gt;</span>
+          <span class="o">&lt;</span><span class="sr">/Grid</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="sr">/CalculatorContainer</span><span class="err">&gt;
+</span>      <span class="o">&lt;</span><span class="sr">/ThemeProvider</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/React.Fragment</span><span class="err">&gt;
+</span>
+  <span class="p">);</span>
+<span class="p">}</span>
+
+<span class="k">export</span> <span class="k">default</span> <span class="nx">App</span><span class="p">;</span></code></pre></figure>
+
+<p>Note also that I’m using a <code class="language-plaintext highlighter-rouge">ThemeProvider</code> class here. I defined my theme in a separate folder, making use of Material-UI’s colors to ensure consistency. To copy a basic calculator look, I went for a gray primary color and an orange secondary.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="k">import</span> <span class="nx">React</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">react</span><span class="dl">"</span>
+<span class="k">import</span> <span class="p">{</span><span class="nx">ThemeProvider</span><span class="p">}</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">@material-ui/core</span><span class="dl">"</span>
+
+<span class="k">import</span> <span class="p">{</span> <span class="nx">createMuiTheme</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">@material-ui/core/styles</span><span class="dl">"</span>
+<span class="k">import</span> <span class="nx">grey</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">@material-ui/core/colors/grey</span><span class="dl">'</span>
+<span class="k">import</span> <span class="nx">orange</span> <span class="k">from</span> <span class="dl">'</span><span class="s1">@material-ui/core/colors/orange</span><span class="dl">'</span>
+
+<span class="kd">const</span> <span class="nx">theme</span> <span class="o">=</span> <span class="nx">createMuiTheme</span><span class="p">({</span>
+  <span class="na">palette</span><span class="p">:</span> <span class="p">{</span>
+    <span class="na">primary</span><span class="p">:</span> <span class="p">{</span>
+      <span class="na">main</span><span class="p">:</span> <span class="nx">grey</span><span class="p">[</span><span class="mi">400</span><span class="p">]</span>
+    <span class="p">},</span>
+    <span class="na">secondary</span><span class="p">:</span> <span class="p">{</span>
+      <span class="na">main</span><span class="p">:</span> <span class="nx">orange</span><span class="p">[</span><span class="mi">300</span><span class="p">]</span>
+    <span class="p">}</span>
+  <span class="p">},</span>
+  <span class="na">status</span><span class="p">:</span> <span class="p">{</span>
+    <span class="na">danger</span><span class="p">:</span> <span class="dl">'</span><span class="s1">orange</span><span class="dl">'</span><span class="p">,</span>
+  <span class="p">},</span>
+<span class="p">})</span>
+
+
+<span class="k">export</span> <span class="k">default</span> <span class="nx">theme</span></code></pre></figure>
+
+<p>I then added these colors to the individual keypads, like so:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="o">&lt;</span><span class="nx">OperationsPad</span> <span class="nx">color</span><span class="o">=</span><span class="dl">"</span><span class="s2">primary</span><span class="dl">"</span><span class="o">/&gt;</span></code></pre></figure>
+
+<p>Put it all together, and here’s what you get.</p>
+
+<p><img src="/assets/img/posts/calculator/calculator-no-display.png" alt="alt text" /></p>
+
+<p>Not too shabby, no? But it still needs a display. Becuase the display is primarily going to involve function, my implementation here is fairly simple: a <code class="language-plaintext highlighter-rouge">Paper</code> and a <code class="language-plaintext highlighter-rouge">Typography</code> object that is drawn across the top of the calculator. It shows a static <code class="language-plaintext highlighter-rouge">0</code> right now, but this is just a placeholder.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="k">import</span> <span class="nx">React</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">react</span><span class="dl">"</span>
+
+<span class="k">import</span> <span class="p">{</span><span class="nx">Paper</span><span class="p">,</span> <span class="nx">Typography</span><span class="p">,</span> <span class="nx">Box</span><span class="p">}</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">@material-ui/core</span><span class="dl">"</span>
+
+<span class="kd">const</span> <span class="nx">Display</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span><span class="p">{</span>
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">Paper</span> <span class="nx">elevation</span><span class="o">=</span><span class="p">{</span><span class="mi">0</span><span class="p">}</span> <span class="nx">variant</span><span class="o">=</span><span class="dl">"</span><span class="s2">outlined</span><span class="dl">"</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">mx</span><span class="o">=</span><span class="p">{</span><span class="mi">2</span><span class="p">}</span> <span class="nx">my</span><span class="o">=</span><span class="p">{</span><span class="mi">1</span><span class="p">}</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">Typography</span>
+          <span class="nx">variant</span><span class="o">=</span><span class="dl">"</span><span class="s2">h5</span><span class="dl">"</span>
+          <span class="nx">align</span><span class="o">=</span><span class="dl">"</span><span class="s2">right</span><span class="dl">"</span><span class="o">&gt;</span>
+          <span class="mi">0</span>
+        <span class="o">&lt;</span><span class="sr">/Typography</span><span class="err">&gt;
+</span>      <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/Paper</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span>
+
+<span class="k">export</span> <span class="k">default</span> <span class="nx">Display</span></code></pre></figure>
+
+<p>All together, here is the completed basic calculator look.</p>
+
+<p><img src="/assets/img/posts/calculator/calculator-display.png" alt="alt text" /></p>
+
+<p>And there you have it! It still doesn’t do anything, but the look is there and I have my structure, which should hopefully make adding the functionality a much easier process. But that’s for next time. Stay tuned!</p>
+
+</div>
+
+    </div>
+    <footer>
+      <span><a href="/index.html">Home</a></span>
+      <span><a href="/blog">Blog</a></span>
+      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+    </footer>
+    </div>
+  </body>
+</html>

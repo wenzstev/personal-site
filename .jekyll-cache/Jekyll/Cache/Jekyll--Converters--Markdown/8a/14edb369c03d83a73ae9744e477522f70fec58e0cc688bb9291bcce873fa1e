@@ -1,0 +1,362 @@
+I"_�<p>Well, this post has been a little while in the making. I’ve been hard at work figuring out best practices for my fledgling API, and learning a whole lot more about the process along the way. In the process, I’ve managed to deepen my understanding of sqlalchemy fairly significantly, improved my error handling, get in an increasingly good place for the future of this app.</p>
+
+<h3 id="before-we-dive-in-error-handling">Before we dive in: Error Handling</h3>
+
+<p>In the process of making my first few endpoints, I quickly realized that I was going to need a few additional error codes that provided more input than the default flask ones. Checking the documentation, I followed <a href="https://flask.palletsprojects.com/en/1.1.x/patterns/apierrors/">these</a> recommendations for a quick-and-dirty implementation. My intention here was not to completely flesh out my error handling, but instead to provide something that I could use in the basic creation of my endpoints, so that I could put the errors in <em>now</em> and not have to worry about tracking them down later.</p>
+
+<p>I created two errors: the first is essentially a carbon copy of the <code class="language-plaintext highlighter-rouge">InvalidUsage</code> Exception outlined above, and the second is a more specific <code class="language-plaintext highlighter-rouge">NotFoundException</code> for 404 errors.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">class</span> <span class="nc">InvalidUsage</span><span class="p">(</span><span class="nb">Exception</span><span class="p">):</span>
+    <span class="n">status_code</span> <span class="o">=</span> <span class="mi">400</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">status_code</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">payload</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="nb">Exception</span><span class="p">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">message</span> <span class="o">=</span> <span class="n">message</span>
+        <span class="k">if</span> <span class="n">status_code</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="p">.</span><span class="n">status_code</span> <span class="o">=</span> <span class="n">status_code</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">payload</span> <span class="o">=</span> <span class="n">payload</span>
+
+    <span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">rv</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="p">.</span><span class="n">payload</span> <span class="ow">or</span> <span class="p">())</span>
+        <span class="n">rv</span><span class="p">[</span><span class="s">'message'</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="p">.</span><span class="n">message</span>
+        <span class="k">return</span> <span class="n">rv</span>
+
+
+<span class="k">class</span> <span class="nc">NotFoundException</span><span class="p">(</span><span class="n">InvalidUsage</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">resource</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">message</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="s">"The resource you've requested does not exist."</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span><span class="s">"details"</span><span class="p">:</span> <span class="p">{</span><span class="s">"resource"</span><span class="p">:</span> <span class="n">resource</span><span class="p">,</span> <span class="s">"id"</span><span class="p">:</span> <span class="nb">id</span><span class="p">}}</span>
+        <span class="nb">super</span><span class="p">().</span><span class="n">__init__</span><span class="p">(</span><span class="n">message</span><span class="o">=</span><span class="n">message</span><span class="p">,</span> <span class="n">payload</span><span class="o">=</span><span class="n">payload</span><span class="p">,</span> <span class="n">status_code</span><span class="o">=</span><span class="mi">404</span><span class="p">)</span></code></pre></figure>
+
+<p>As you can see, the <code class="language-plaintext highlighter-rouge">NotFoundException</code> is a child of <code class="language-plaintext highlighter-rouge">InvalidUsage</code> and customizes it for 404 responses.</p>
+
+<p>I then created a simple error handler and initialized it as a blueprint.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">errors</span><span class="p">.</span><span class="n">app_errorhandler</span><span class="p">(</span><span class="n">InvalidUsage</span><span class="p">)</span>
+<span class="o">@</span><span class="n">errors</span><span class="p">.</span><span class="n">app_errorhandler</span><span class="p">(</span><span class="n">NotFoundException</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">handle_invalid_usage</span><span class="p">(</span><span class="n">error</span><span class="p">):</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">error</span><span class="p">.</span><span class="n">to_dict</span><span class="p">())</span>
+    <span class="n">response</span><span class="p">.</span><span class="n">status_code</span> <span class="o">=</span> <span class="n">error</span><span class="p">.</span><span class="n">status_code</span>
+    <span class="k">return</span> <span class="n">response</span></code></pre></figure>
+
+<p>And that’s it (for now). Like I said, nothing fancy, just something to use so that I didn’t feel like I was leaving huge holes in my endpoints. I plan to come back through later and add some other exceptions, such as an invalid schema.</p>
+
+<p>Anyway, on to the main story.</p>
+
+<h3 id="ingredient-schemas-and-endpoints">Ingredient Schemas and Endpoints</h3>
+
+<p>First up is the Ingredient class. I decided to use <a href="https://marshmallow.readthedocs.io/en/stable/">marshmallow</a> (specifically, the <a href="https://flask-marshmallow.readthedocs.io/en/latest/">flask-marshmallow</a> and <a href="https://marshmallow-sqlalchemy.readthedocs.io/en/latest/">marshmallow-sqlalchemy</a> integrations) for my serializing and validating. I liked the idea of holding all of my validating, loading, and dumping into a series of classes, and after writing the code for a few of my endpoints, I’m confident I made the right decision.</p>
+
+<p>The integration with flask-sqlalchemy makes serilization very easy; I just have to declare the schema as a child of <code class="language-plaintext highlighter-rouge">SQLAlchemyAutoSchema</code> and marshmallow does most of the heavy lifting for me.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># schema that returns/validates an ingredient
+</span><span class="k">class</span> <span class="nc">IngredientSchema</span><span class="p">(</span><span class="n">ma</span><span class="p">.</span><span class="n">SQLAlchemyAutoSchema</span><span class="p">):</span>
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">Ingredient</span>
+        <span class="n">include_fk</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="c1"># links to the ingredient, via name and id
+</span>    <span class="n">_</span> <span class="n">links</span> <span class="o">=</span> <span class="n">ma</span><span class="p">.</span><span class="n">Hyperlinks</span><span class="p">(</span>
+        <span class="p">{</span><span class="s">"by name"</span><span class="p">:</span> <span class="n">ma</span><span class="p">.</span><span class="n">URLFor</span><span class="p">(</span><span class="s">"ingredient.get_ingredient"</span><span class="p">,</span> <span class="n">identifier</span><span class="o">=</span><span class="s">"&lt;name&gt;"</span><span class="p">),</span>
+         <span class="s">"by id"</span><span class="p">:</span> <span class="n">ma</span><span class="p">.</span><span class="n">URLFor</span><span class="p">(</span><span class="s">"ingredient.get_ingredient"</span><span class="p">,</span> <span class="n">identifier</span><span class="o">=</span><span class="s">"&lt;id&gt;"</span><span class="p">)}</span>
+    <span class="p">)</span>
+
+    <span class="c1"># return an ingredient when schema is loaded
+</span>    <span class="o">@</span><span class="n">post_load</span>
+    <span class="k">def</span> <span class="nf">make_ingredient</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">**</span> <span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Ingredient</span><span class="p">(</span><span class="o">**</span> <span class="n">data</span><span class="p">)</span></code></pre></figure>
+
+<p>The two other piece of code here to note are the <code class="language-plaintext highlighter-rouge">_links</code> field, which links to my endpoints for the ingredient (more on that in a moment), and the <code class="language-plaintext highlighter-rouge">@post_load</code> function, which returns the actual object rather than a dictionary of attributes.</p>
+
+<p>With the schema defined, I created my endpoints. The first is the simplest; a <code class="language-plaintext highlighter-rouge">"/ingredients"</code> <code class="language-plaintext highlighter-rouge">GET</code> call will return a list of all ingredients in the database.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">ingredient</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/ingredients"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">'GET'</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">get_ingredients</span><span class="p">():</span>
+    <span class="n">all_ingredients</span> <span class="o">=</span> <span class="n">Ingredient</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="nb">all</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">ingredients_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">all_ingredients</span><span class="p">))</span></code></pre></figure>
+
+<p>Likewise, a <code class="language-plaintext highlighter-rouge">POST</code> call to the same route inserts a new ingredient. Here I added a try/except block to catch several of the most common errors that might happen (errors that I’d tried to plan for in my creation of the database). An <code class="language-plaintext highlighter-rouge">IntegrityError</code> means that the ingredient is already in the database, while a <code class="language-plaintext highlighter-rouge">ValueError</code> means that the ingredient does not conform to database standards (just letters and spaces).</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">ingredient</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/ingredients"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">'POST'</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">add_ingredients</span><span class="p">():</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">new_ingredient</span> <span class="o">=</span> <span class="n">ingredient_schema</span><span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">json</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"ingredient"</span><span class="p">))</span>
+        <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">new_ingredient</span><span class="p">)</span>
+        <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">ingredient_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">new_ingredient</span><span class="p">)),</span> <span class="mi">201</span>
+    <span class="k">except</span> <span class="n">IntegrityError</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"The ingredient you tried to submit is already in the database"</span><span class="p">,</span>
+                           <span class="n">payload</span><span class="o">=</span><span class="n">request</span><span class="p">.</span><span class="n">json</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"ingredient"</span><span class="p">))</span>
+    <span class="k">except</span> <span class="nb">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"The ingredient you tried to submit does not conform to database standards."</span><span class="p">,</span>
+                           <span class="n">payload</span><span class="o">=</span><span class="p">{</span><span class="s">"details"</span><span class="p">:</span> <span class="p">{</span><span class="s">"resource"</span><span class="p">:</span> <span class="n">request</span><span class="p">.</span><span class="n">json</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"ingredient"</span><span class="p">),</span> <span class="s">"comments"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">)}})</span></code></pre></figure>
+
+<p>Finally, I added specific <code class="language-plaintext highlighter-rouge">GET</code> and <code class="language-plaintext highlighter-rouge">DELETE</code> calls. Here I did something a bit differently; I wanted people to be able to identify the ingredient either by name or by id (though I figure that identifying by name will be more common). To achieve this, I created two decorators for each route with a common variable name <code class="language-plaintext highlighter-rouge">identifier</code>, and wrote a simple function that returns an ingredient for the <code class="language-plaintext highlighter-rouge">id</code> or the <code class="language-plaintext highlighter-rouge">name</code>. This prevented a lot of double code.</p>
+
+<p><em>(Note also that I replace the “-“ sumbols with spaces; that way “whole milk” can be written as either “whole-milk” or the automatic encoding “whole%20milk.”)</em></p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># method that can take either a name or an id and return an ingredient
+</span><span class="k">def</span> <span class="nf">ingredient_by_name_or_id</span><span class="p">(</span><span class="n">identifier</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Ingredient</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">identifier</span><span class="p">.</span><span class="n">replace</span><span class="p">(</span><span class="s">"-"</span><span class="p">,</span> <span class="s">" "</span><span class="p">)).</span><span class="n">first</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span> <span class="o">==</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Ingredient</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span>
+
+
+<span class="o">@</span><span class="n">ingredient</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/ingredients/&lt;int:identifier&gt;"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"GET"</span><span class="p">])</span>
+<span class="o">@</span><span class="n">ingredient</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/ingredients/&lt;string:identifier&gt;"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"GET"</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">get_ingredient</span><span class="p">(</span><span class="n">identifier</span><span class="p">):</span>
+    <span class="n">cur_ingredient</span> <span class="o">=</span> <span class="n">ingredient_by_name_or_id</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">cur_ingredient</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">NotFoundException</span><span class="p">(</span><span class="s">"ingredient"</span><span class="p">,</span> <span class="n">identifier</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">ingredient_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">cur_ingredient</span><span class="p">))</span>
+
+
+<span class="o">@</span><span class="n">ingredient</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/ingredients/&lt;string:identifier&gt;"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"DELETE"</span><span class="p">])</span>
+<span class="o">@</span><span class="n">ingredient</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/ingredients/&lt;int:identifier&gt;"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"DELETE"</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">delete_ingredients</span><span class="p">(</span><span class="n">identifier</span><span class="p">):</span>
+    <span class="n">ingredient_to_delete</span> <span class="o">=</span> <span class="n">ingredient_by_name_or_id</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">ingredient_to_delete</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"The ingredient you're trying to delete does not exist"</span><span class="p">,</span> <span class="mi">404</span><span class="p">)</span>
+
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">delete</span><span class="p">(</span><span class="n">ingredient_to_delete</span><span class="p">)</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="p">(</span><span class="s">''</span><span class="p">,</span> <span class="mi">204</span><span class="p">)</span></code></pre></figure>
+
+<p>… and those are my ingredient endpoints! Definitely the simplest among them, as each ingredient is just a single atomic value that can’t be changed. They can be added and deleted (although I’m going to restrict who can delete them), but otherwise they’re kind of inert.</p>
+
+<h3 id="recipeline-schemas-and-endpoints">RecipeLine Schemas and Endpoints</h3>
+
+<p>Next I built endpoints for the RecipeLine objects. This might not seem strictly necessary at first glance, but remember that I need to add ways for individual ingredients to be added to and taken away from recipe lines, so it was necessary to have a way to get to an individual line.</p>
+
+<p>First I created a new schema for the RecipeLine object. This schema has a <code class="language-plaintext highlighter-rouge">Nested</code> field that returns the schemas for the ingredients that make up the line.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># schema that returns/validates a recipeLine
+</span><span class="k">class</span> <span class="nc">RecipeLineSchema</span><span class="p">(</span><span class="n">ma</span><span class="p">.</span><span class="n">SQLAlchemyAutoSchema</span><span class="p">):</span>
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">RecipeLine</span>
+        <span class="n">include_fk</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="c1"># nested schema for the ingredients on the line
+</span>    <span class="n">ingredients</span> <span class="o">=</span> <span class="n">Nested</span><span class="p">(</span><span class="n">IngredientSchema</span><span class="p">,</span> <span class="n">many</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">exclude</span><span class="o">=</span><span class="p">(</span><span class="s">"_links"</span><span class="p">,))</span>
+
+    <span class="c1"># link to individual line
+</span>    <span class="n">_links</span> <span class="o">=</span> <span class="n">ma</span><span class="p">.</span><span class="n">Hyperlinks</span><span class="p">({</span>
+        <span class="s">"line"</span><span class="p">:</span> <span class="n">ma</span><span class="p">.</span><span class="n">URLFor</span><span class="p">(</span><span class="s">"line.get_line"</span><span class="p">,</span> <span class="n">id_</span><span class="o">=</span><span class="s">"&lt;id&gt;"</span><span class="p">)</span>
+    <span class="p">})</span>
+
+    <span class="c1"># return a recipeline when schema is loaded
+</span>    <span class="o">@</span><span class="n">post_load</span>
+    <span class="k">def</span> <span class="nf">make_recipe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">**</span> <span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">RecipeLine</span><span class="p">(</span><span class="o">**</span> <span class="n">data</span><span class="p">)</span></code></pre></figure>
+
+<p>My <code class="language-plaintext highlighter-rouge">GET</code> and <code class="language-plaintext highlighter-rouge">DELETE</code> calls are essentially the same as with my ingredients: they identify a line by its <code class="language-plaintext highlighter-rouge">id</code> attribute and return/delete it as necessary. Currently, I’m using the “/lines” route. I toyed with the idea of nesting routes with recipes (i.e., “/recipe/recipe-id/lines/line-id”), but at the moment the identity of the recipe a line is part of isn’t needed to get the line, and I wanted to avoid unnecessary routes.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">line</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/lines/&lt;int:id_&gt;"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">'GET'</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">get_line</span><span class="p">(</span><span class="n">id_</span><span class="p">):</span>
+    <span class="n">current_line</span> <span class="o">=</span> <span class="n">RecipeLine</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">id_</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">current_line</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">NotFoundException</span><span class="p">(</span><span class="s">"line"</span><span class="p">,</span> <span class="n">id_</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">recipeline_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">current_line</span><span class="p">))</span>
+
+
+<span class="o">@</span><span class="n">line</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/lines/&lt;int:id_&gt;"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"DELETE"</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">delete_line</span><span class="p">(</span><span class="n">id_</span><span class="p">):</span>
+    <span class="n">line_to_delete</span> <span class="o">=</span> <span class="n">RecipeLine</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">id_</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">line_to_delete</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">NotFoundException</span><span class="p">(</span><span class="s">"line"</span><span class="p">,</span> <span class="n">id_</span><span class="p">)</span>
+
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">delete</span><span class="p">(</span><span class="n">line_to_delete</span><span class="p">)</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="p">(</span><span class="s">''</span><span class="p">,</span> <span class="mi">204</span><span class="p">)</span></code></pre></figure>
+
+<p>My next endpoint, however, is a bit different. It’s a <code class="language-plaintext highlighter-rouge">PUT</code> call to an individual line, and is used to set the ingredients on the line. In creating this method, I knew that I wanted several features. I wanted to be able to input a list of ingredients, and I wanted the program to automatically add any of the ingredients in the list to the database if they were not already there. It would then link the ingredients to the line, raising the database’s validator error if the ingredient in question was not on the line.</p>
+
+<p>In order to do this, I created a new schema, <code class="language-plaintext highlighter-rouge">RecipeLineUpdateSchema</code>, that checks the <code class="language-plaintext highlighter-rouge">PUT</code> data and validates it as ingredients. If so, it “cleans” the ingredient by making it all lower case and removing dashes, and checks the database to see if the ingredients are there. If not, it adds them. Finally, it returns a list of all the ingredients, ready to be added to the recipe line.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># schema for updating a recipe line with new ingredients
+</span><span class="k">class</span> <span class="nc">RecipeLineUpdateSchema</span><span class="p">(</span><span class="n">ma</span><span class="p">.</span><span class="n">Schema</span><span class="p">):</span>
+    <span class="n">ingredient</span> <span class="o">=</span> <span class="n">fields</span><span class="p">.</span><span class="n">Str</span><span class="p">(</span><span class="n">requred</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+    <span class="c1"># check if the found ingredients exist, and create them if not
+</span>    <span class="o">@</span><span class="n">post_load</span>
+    <span class="k">def</span> <span class="nf">check_if_ingredients</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">**</span> <span class="n">kwargs</span><span class="p">):</span>
+        <span class="c1"># clean the ingredient
+</span>        <span class="n">data</span><span class="p">[</span><span class="s">"ingredient"</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">"ingredient"</span><span class="p">].</span><span class="n">lower</span><span class="p">()</span>
+        <span class="n">data</span><span class="p">[</span><span class="s">"ingredient"</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">"ingredient"</span><span class="p">].</span><span class="n">replace</span><span class="p">(</span><span class="s">"-"</span><span class="p">,</span> <span class="s">" "</span><span class="p">)</span>
+
+        <span class="c1"># check if it's in the database
+</span>        <span class="k">if</span> <span class="ow">not</span> <span class="n">Ingredient</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s">"ingredient"</span><span class="p">]).</span><span class="n">first</span><span class="p">():</span>
+            <span class="n">new_ingredient</span> <span class="o">=</span> <span class="n">Ingredient</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s">"ingredient"</span><span class="p">])</span>
+            <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">new_ingredient</span><span class="p">)</span>
+            <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">new_ingredient</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Ingredient</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s">"ingredient"</span><span class="p">]).</span><span class="n">first</span><span class="p">()</span></code></pre></figure>
+
+<p>This schema is then used to validate the input in my actual route:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">line</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/lines/&lt;int:id_&gt;"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">'PUT'</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">set_line_ingredients</span><span class="p">(</span><span class="n">id_</span><span class="p">):</span>
+    <span class="n">current_line</span> <span class="o">=</span> <span class="n">RecipeLine</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">id_</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">current_line</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">NotFoundException</span><span class="p">(</span><span class="s">"line"</span><span class="p">,</span> <span class="n">id_</span><span class="p">)</span>
+
+    <span class="k">print</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">json</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"ingredients"</span><span class="p">))</span>
+
+    <span class="c1"># load ingredients, validating them and creating new Ingredient classes if necessary
+</span>    <span class="n">new_ingredients</span> <span class="o">=</span> <span class="n">recipelines_update_schema</span><span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">json</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"ingredients"</span><span class="p">))</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">new_ingredients</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">current_line</span><span class="p">.</span><span class="n">ingredients</span><span class="p">.</span><span class="n">extend</span><span class="p">(</span><span class="n">new_ingredients</span><span class="p">)</span>
+        <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="k">except</span> <span class="n">IntegrityError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s">"error"</span><span class="p">:</span> <span class="s">"One or more of the ingredients is not in the line"</span><span class="p">})</span>
+
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">recipeline_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">current_line</span><span class="p">))</span></code></pre></figure>
+
+<p>What I like about this approach is how it simplifies my routes. Because most of the logic is done in other classes, my endpoints end up looking much cleaner. I may push this further in the future, however, and abstract them away to a series of nice looking functions.</p>
+
+<h3 id="recipe-schema-and-endpoints">Recipe Schema and Endpoints</h3>
+
+<p>Finally, we come to the third schema/endpoint grouping that I have created. The recipe schema is essentially the same as the two previous schemas (including a <code class="language-plaintext highlighter-rouge">Nested</code> field for the RecipeLine objects). There is one critical difference, however: I wanted to be able to easily access all the ingredients in <em>all</em> the lines of the recipe–essentially have a list of all the ingredients needed to make the recipe. But the Recipe objects don’t actually know all their ingredients–the lines do. This meant I would need some <code class="language-plaintext highlighter-rouge">join</code> statements for my database.</p>
+
+<p>Honestly, it took me longer than I care to admit to get this one working, but I persisted and I feel like I have a much better grasp on SQLAlchemy now. With my last attempt, dealing with the database was more or less like a black box; I could ask for simple things and otherwise tried to leave it alone. This time around, I have a much better concept of how it actually works.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">ingredients_in_recipe</span> <span class="o">=</span> <span class="n">Ingredient</span><span class="p">.</span><span class="n">query</span><span class="p">.</span>\
+    <span class="n">join</span><span class="p">(</span><span class="n">RecipeLine</span><span class="p">,</span> <span class="n">Ingredient</span><span class="p">.</span><span class="n">recipe_lines</span><span class="p">).</span>\
+    <span class="n">join</span><span class="p">(</span><span class="n">Recipe</span><span class="p">).</span><span class="nb">filter</span><span class="p">(</span><span class="n">Recipe</span><span class="p">.</span><span class="nb">id</span> <span class="o">==</span> <span class="n">data</span><span class="p">[</span><span class="s">"id"</span><span class="p">]).</span>\
+    <span class="nb">all</span><span class="p">()</span></code></pre></figure>
+
+<p>I query the Ingredient class and create a join with the RecipeLine class, based on the RecipeLines that are associate with an ingredient (this eliminates ingredients that are not in any RecipeLine). Then I join that with the Recipe table; I don’t need to specify the join here because SQLAlchemy automatically defaults to a many-to-one relaitonship. This would, I believe, eliminate any Recipe without lines, although that isn’t really a situation I expect will be encounted.</p>
+
+<p><em>Then</em>, this query is filtered by the id of the current recipe (that’s the <code class="language-plaintext highlighter-rouge">data["id"]</code> call), resulting in only ingredients that are in the given recipe. The final <code class="language-plaintext highlighter-rouge">.all()</code> just returns them as a list.</p>
+
+<p>Here’s the call in the entire schema:</p>
+
+<p><em>(NOTE: Some of this information is no longer current. Please see [this]/2020/05/09/Schemas-Part-2.html for an updated look at how I’m filtering ingredients.)</em></p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># schema that returns/validates a recipe
+</span><span class="k">class</span> <span class="nc">RecipeSchema</span><span class="p">(</span><span class="n">ma</span><span class="p">.</span><span class="n">SQLAlchemyAutoSchema</span><span class="p">):</span>
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">Recipe</span>
+        <span class="n">include_fk</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="c1"># nested Schema for recipe lines
+</span>    <span class="n">recipe_lines</span> <span class="o">=</span> <span class="n">Nested</span><span class="p">(</span><span class="s">"RecipeLineSchema"</span><span class="p">,</span> <span class="n">many</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">exclude</span><span class="o">=</span><span class="p">(</span><span class="s">"recipe_id"</span><span class="p">,))</span>
+
+    <span class="c1"># provide links to the resource
+</span>    <span class="n">_links</span> <span class="o">=</span> <span class="n">ma</span><span class="p">.</span><span class="n">Hyperlinks</span><span class="p">(</span>
+        <span class="p">{</span><span class="s">"individual"</span><span class="p">:</span> <span class="n">ma</span><span class="p">.</span><span class="n">URLFor</span><span class="p">(</span><span class="s">"recipe.get_recipe_info"</span><span class="p">,</span> <span class="n">id_</span><span class="o">=</span><span class="s">"&lt;id&gt;"</span><span class="p">),</span>
+         <span class="s">"collection"</span><span class="p">:</span> <span class="n">ma</span><span class="p">.</span><span class="n">URLFor</span><span class="p">(</span><span class="s">"recipe.get_recipes"</span><span class="p">)}</span>
+    <span class="p">)</span>
+
+    <span class="c1"># gather all ingredients in recipe together
+</span>    <span class="o">@</span><span class="n">post_dump</span>
+    <span class="k">def</span> <span class="nf">consolidate_ingredients</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">**</span> <span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">ingredients_in_recipe</span> <span class="o">=</span> <span class="n">Ingredient</span><span class="p">.</span><span class="n">query</span><span class="p">.</span>\
+            <span class="n">join</span><span class="p">(</span><span class="n">RecipeLine</span><span class="p">,</span> <span class="n">Ingredient</span><span class="p">.</span><span class="n">recipe_lines</span><span class="p">).</span>\
+            <span class="n">join</span><span class="p">(</span><span class="n">Recipe</span><span class="p">).</span><span class="nb">filter</span><span class="p">(</span><span class="n">Recipe</span><span class="p">.</span><span class="nb">id</span> <span class="o">==</span> <span class="n">data</span><span class="p">[</span><span class="s">"id"</span><span class="p">]).</span>\
+            <span class="nb">all</span><span class="p">()</span>
+        <span class="n">ingredients_schema</span> <span class="o">=</span> <span class="n">IngredientSchema</span><span class="p">(</span><span class="n">many</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+        <span class="n">data</span><span class="p">[</span><span class="s">"all_ingredients"</span><span class="p">]</span> <span class="o">=</span> <span class="n">ingredients_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">ingredients_in_recipe</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data</span>
+
+    <span class="c1"># create the Recipe object
+</span>    <span class="o">@</span><span class="n">post_load</span>
+    <span class="k">def</span> <span class="nf">make_recipe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">**</span> <span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Recipe</span><span class="p">(</span><span class="o">**</span> <span class="n">data</span><span class="p">)</span></code></pre></figure>
+
+<p>Next, I created some endpoints for the recipe, including a <code class="language-plaintext highlighter-rouge">GET</code> for all recipes and for an individual recipe, and a <code class="language-plaintext highlighter-rouge">POST</code> to add an additional recipe.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">recipe</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/recipes"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"GET"</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">get_recipes</span><span class="p">():</span>
+    <span class="n">all_recipes</span> <span class="o">=</span> <span class="n">Recipe</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="nb">all</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">recipes_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">all_recipes</span><span class="p">))</span>
+
+
+<span class="o">@</span><span class="n">recipe</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/recipes"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"POST"</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">post_recipe</span><span class="p">():</span>
+    <span class="n">new_recipe</span> <span class="o">=</span> <span class="n">recipe_schema</span><span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">json</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"recipe"</span><span class="p">))</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">new_recipe</span><span class="p">)</span>
+
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">recipe_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">new_recipe</span><span class="p">)),</span> <span class="mi">201</span>
+
+
+<span class="o">@</span><span class="n">recipe</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/recipes/&lt;int:id_&gt;"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"GET"</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">get_recipe_info</span><span class="p">(</span><span class="n">id_</span><span class="p">):</span>
+    <span class="n">current_recipe</span> <span class="o">=</span> <span class="n">Recipe</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">id_</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">current_recipe</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">NotFoundException</span><span class="p">(</span><span class="s">"recipe"</span><span class="p">,</span> <span class="n">id_</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">recipe_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">current_recipe</span><span class="p">))</span>
+
+
+<span class="o">@</span><span class="n">recipe</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/recipes/&lt;int:id_&gt;"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"DELETE"</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">delete_recipe</span><span class="p">(</span><span class="n">id_</span><span class="p">):</span>
+    <span class="n">recipe_to_delete</span> <span class="o">=</span> <span class="n">Recipe</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">id_</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">recipe_to_delete</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">NotFoundException</span><span class="p">(</span><span class="s">"recipe"</span><span class="p">,</span> <span class="n">id_</span><span class="p">,</span> <span class="s">"The recipe you are trying to delete does not exist."</span><span class="p">)</span>
+
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">delete</span><span class="p">(</span><span class="n">recipe_to_delete</span><span class="p">)</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="p">(</span><span class="s">''</span><span class="p">,</span> <span class="mi">204</span><span class="p">)</span></code></pre></figure>
+
+<p>Another great thing about using Marshmallow is that the nested schemas allow me to create Recipes, RecipeLines, and Ingredients all in one, if I want. For example, a valid <code class="language-plaintext highlighter-rouge">POST</code> to create a new recipe, lines, and ingredients could look like:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="p">{</span>
+	<span class="dl">"</span><span class="s2">recipe</span><span class="dl">"</span><span class="p">:</span> <span class="p">{</span>
+		<span class="dl">"</span><span class="s2">name</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">Chicken n' Eggs</span><span class="dl">"</span><span class="p">,</span>
+		<span class="dl">"</span><span class="s2">url</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">www.test.com</span><span class="dl">"</span><span class="p">,</span>
+		<span class="dl">"</span><span class="s2">recipe_lines</span><span class="dl">"</span><span class="p">:</span> <span class="p">[</span>
+			<span class="p">{</span><span class="dl">"</span><span class="s2">text</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">one pound chicken breasts</span><span class="dl">"</span><span class="p">,</span>
+				<span class="dl">"</span><span class="s2">ingredients</span><span class="dl">"</span><span class="p">:</span> <span class="p">[{</span><span class="dl">"</span><span class="s2">name</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">chicken breasts</span><span class="dl">"</span><span class="p">}]</span>
+			<span class="p">},</span>
+			<span class="p">{</span><span class="dl">"</span><span class="s2">text</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">2 tablespoons flour</span><span class="dl">"</span><span class="p">,</span>
+				<span class="dl">"</span><span class="s2">ingredients</span><span class="dl">"</span><span class="p">:</span> <span class="p">[{</span><span class="dl">"</span><span class="s2">name</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">flour</span><span class="dl">"</span><span class="p">}]</span>
+			<span class="p">},</span>
+			<span class="p">{</span><span class="dl">"</span><span class="s2">text</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">3 large eggs</span><span class="dl">"</span><span class="p">,</span>
+				<span class="dl">"</span><span class="s2">ingredients</span><span class="dl">"</span><span class="p">:[{</span><span class="dl">"</span><span class="s2">name</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">eggs</span><span class="dl">"</span><span class="p">}]</span>
+			<span class="p">}</span>
+		<span class="p">]</span>
+	<span class="p">}</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>This is the format that I hope to initalize new recipes with on the frontend, but I’m getting ahead of myself. Plus, there are still some bugs to work out in this area.</p>
+
+<h3 id="filtering-recipes-by-ingredient">Filtering Recipes by Ingredient</h3>
+
+<p>One last area to note here before I close out this post. There will be times when I user might want to search for a recipe based on the ingredients in it. Maybe they have some extra eggs or something and want to know what to do with them. Because of this, and because I would need how to add filters anyway, I created a query for the main recipe route that filters by ingredients. Ingredients would be requested in the format “/recipes?ingredients=eggs,bacon,whatever-you-want” and the route would return a list of all recipes in the database with these ingredients. This necessitated another lengthy join statement, but this one didn’t take as long; I think I’m getting the hang of it.</p>
+
+<p>More difficult was filtering by all of the different ingredients. At first, the base <code class="language-plaintext highlighter-rouge">in_</code> SQLAlchemy command functioned as an “OR” statement, returning every recipe that had, say, eggs OR bacon, which is cool but not what I wanted for this command (maybe later though). Ultimately, I used <code class="language-plaintext highlighter-rouge">set</code>s, creating a simple <code class="language-plaintext highlighter-rouge">__hash__</code> in the Recipe model class, building a set for each requested ingredient, and then finding the intersection of all the sets.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">filter_by_ingredients</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">args</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"ingredient"</span><span class="p">)</span>  <span class="c1"># ingredient filter
+</span>    <span class="k">if</span> <span class="n">filter_by_ingredients</span><span class="p">:</span>
+        <span class="c1"># create a list, then iterate through the list and return a set of recipes that contain that ingredient
+</span>        <span class="n">recipes_by_ingredient</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">ingredient</span> <span class="ow">in</span> <span class="n">filter_by_ingredients</span><span class="p">.</span><span class="n">split</span><span class="p">(</span><span class="s">','</span><span class="p">):</span>
+            <span class="n">recipes_by_ingredient</span><span class="p">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="nb">set</span><span class="p">(</span><span class="n">Recipe</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">RecipeLine</span><span class="p">).</span>
+                    <span class="n">join</span><span class="p">(</span><span class="n">Ingredient</span><span class="p">,</span> <span class="n">RecipeLine</span><span class="p">.</span><span class="n">ingredients</span><span class="p">).</span>
+                    <span class="nb">filter</span><span class="p">(</span><span class="n">Ingredient</span><span class="p">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">ingredient</span><span class="p">).</span><span class="nb">all</span><span class="p">()))</span>
+        <span class="c1"># find the intersection of all the sets and return
+</span>        <span class="n">intersection_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">recipes_by_ingredient</span><span class="p">[</span><span class="mi">0</span><span class="p">]).</span><span class="n">intersection</span><span class="p">(</span><span class="o">*</span> <span class="p">(</span><span class="n">recipes_by_ingredient</span><span class="p">[</span><span class="mi">1</span><span class="p">:]))</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">recipes_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">intersection_set</span><span class="p">))</span></code></pre></figure>
+
+<p>Currently, this code is in the main route of the “/recipes” <code class="language-plaintext highlighter-rouge">GET</code> method, but I plan to change that. Right now, I’m just glad it works.</p>
+
+<h3 id="conclusions">Conclusions</h3>
+
+<p>This has been a very long post, and, especially towards the end of this work, I felt that I was maybe not structuring as well as I could be, and there are certainly areas to go back to and build on. But still, I’m quite pleased with what I’ve accomplished here. I’ve made great progress on the endpoints and vastly expanded my knowlege of how APIs work. Plus, I think I’m writing much better code. I’ll have to post some to Reddit soon to rid myself of that notion.</p>
+
+<p>Until next time, signing off.</p>
+:ET

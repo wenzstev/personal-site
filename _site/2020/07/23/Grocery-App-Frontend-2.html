@@ -1,0 +1,165 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Creating the Login and Register Pages</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-header">
+      <h2>Creating the Login and Register Pages</h2>
+      <small>23 Jul 2020</small>
+  </div>
+</header>
+
+<div class="margin">
+<p>In order for this app to have any function at all, people are going to need to log in to it. With that in mind, I decided that the next page I would implement would be the login page.</p>
+
+<h3 id="enter-formik">Enter Formik</h3>
+
+<p>Forms, at the best of times, can be complicated, and I wanted to make mine as simple as possible. Back when I was first learning React, the course that I was using recommended <a href="https://formik.org/">Formik</a> for all of my form needs, and I decided it was time to test it out.</p>
+
+<p>Folks, it’s great. Once I got over the (pretty small) learning curve, it was a cinch to implement Formik’s solution to forms in a simple, reusable way. I followed the documentation’s recommendation and first created a reusable component that implemented Formik with the particular styles I wanted (in this case, Material-UI’s <code class="language-plaintext highlighter-rouge">TextField</code> component).</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">useStyles</span> <span class="o">=</span> <span class="nx">makeStyles</span><span class="p">({</span>
+  <span class="na">root</span><span class="p">:</span> <span class="p">{</span>
+  <span class="dl">"</span><span class="s2">&amp; fieldset</span><span class="dl">"</span><span class="p">:</span> <span class="p">{</span>
+    <span class="na">borderRadius</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>
+  <span class="p">},</span>
+  <span class="dl">"</span><span class="s2">&amp; input</span><span class="dl">"</span><span class="p">:</span> <span class="p">{</span>
+    <span class="na">backgroundColor</span><span class="p">:</span> <span class="dl">"</span><span class="s2">#B3B3B3</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">borderRadius</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span>
+  <span class="p">},</span>
+  <span class="dl">"</span><span class="s2">&amp; label</span><span class="dl">"</span><span class="p">:</span> <span class="p">{</span>
+    <span class="na">backgroundColor</span><span class="p">:</span> <span class="dl">"</span><span class="s2">#B3B3B3</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">padding</span><span class="p">:</span> <span class="dl">"</span><span class="s2">0px 5px</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">borderRadius</span><span class="p">:</span> <span class="dl">"</span><span class="s2">10px</span><span class="dl">"</span><span class="p">,</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">})</span>
+
+<span class="k">export</span> <span class="kd">const</span> <span class="nx">FormikTextField</span> <span class="o">=</span> <span class="p">({</span><span class="nx">label</span><span class="p">,</span> <span class="p">...</span><span class="nx">props</span><span class="p">})</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="p">[</span><span class="nx">field</span><span class="p">,</span> <span class="nx">meta</span><span class="p">]</span> <span class="o">=</span> <span class="nx">useField</span><span class="p">(</span><span class="nx">props</span><span class="p">)</span>
+  <span class="kd">const</span> <span class="nx">classes</span> <span class="o">=</span> <span class="nx">useStyles</span><span class="p">()</span>
+  <span class="k">return</span><span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">my</span><span class="o">=</span><span class="p">{</span><span class="mi">2</span><span class="p">}</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">TextField</span>
+        <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">root</span><span class="p">}</span>
+        <span class="nx">label</span><span class="o">=</span><span class="p">{</span><span class="nx">label</span><span class="p">}</span>
+        <span class="nx">variant</span><span class="o">=</span><span class="dl">"</span><span class="s2">outlined</span><span class="dl">"</span>
+        <span class="nx">fullWidth</span>
+        <span class="p">{...</span><span class="nx">field</span><span class="p">}</span>
+        <span class="p">{...</span><span class="nx">props</span><span class="p">}</span>
+        <span class="p">{...</span><span class="nx">meta</span><span class="p">.</span><span class="nx">touched</span> <span class="o">&amp;&amp;</span> <span class="nx">meta</span><span class="p">.</span><span class="nx">error</span> <span class="p">?</span>
+          <span class="p">({</span><span class="na">error</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span> <span class="na">helperText</span><span class="p">:</span> <span class="nx">meta</span><span class="p">.</span><span class="nx">error</span><span class="p">})</span>
+          <span class="p">:</span> <span class="kc">null</span><span class="p">}</span>
+      <span class="sr">/</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>This again makes use of the <code class="language-plaintext highlighter-rouge">makeStyles</code> hook to inject custom styling into my component, as well as the <a href="https://formik.org/docs/api/useField"><code class="language-plaintext highlighter-rouge">useField</code></a> hook from Formik to hook up my custom inputs with Formik’s goodies.</p>
+
+<p>From there, I was able to create two separate forms: one for registering a new account, and one for loggin in. I’ll include only the login form here, because they’re essentially identical. First, we have the <code class="language-plaintext highlighter-rouge">&lt;Formik&gt;</code> component, which sets up our initial values and validation requirements (making use of <a href="https://github.com/jquense/yup">Yup</a> as recommended by Formik documentation).</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="o">&lt;</span><span class="nx">Formik</span>
+  <span class="nx">initialValues</span> <span class="o">=</span> 
+  <span class="nx">validationSchema</span> <span class="o">=</span> <span class="p">{</span><span class="nx">Yup</span><span class="p">.</span><span class="nx">object</span><span class="p">({</span>
+    <span class="na">email</span><span class="p">:</span> <span class="nx">Yup</span><span class="p">.</span><span class="nx">string</span><span class="p">()</span>
+      <span class="p">.</span><span class="nx">email</span><span class="p">(</span><span class="dl">"</span><span class="s2">Invalid email address</span><span class="dl">"</span><span class="p">)</span>
+      <span class="p">.</span><span class="nx">required</span><span class="p">(</span><span class="dl">"</span><span class="s2">Required</span><span class="dl">"</span><span class="p">),</span>
+    <span class="na">password</span><span class="p">:</span> <span class="nx">Yup</span><span class="p">.</span><span class="nx">string</span><span class="p">()</span>
+      <span class="p">.</span><span class="nx">required</span><span class="p">(</span><span class="dl">"</span><span class="s2">Required</span><span class="dl">"</span><span class="p">)</span>
+  <span class="p">})}</span></code></pre></figure>
+
+<p>Then, we have the <code class="language-plaintext highlighter-rouge">onSubmit</code> function, which in this case sends a <code class="language-plaintext highlighter-rouge">GET</code> request to my locally hosted server, and requests a token (see my <a href="/2020/05/14/User-Schema.html">previous post</a>) from the server. This token will then be used to make additional requests as necessary.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="nx">onSubmit</span><span class="o">=</span><span class="p">{(</span><span class="nx">values</span><span class="p">,</span> <span class="nx">actions</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+          <span class="kd">let</span> <span class="nx">url</span> <span class="o">=</span> <span class="dl">"</span><span class="s2">http://localhost:5000/users/token</span><span class="dl">"</span>
+          <span class="kd">let</span> <span class="nx">username</span> <span class="o">=</span> <span class="nx">values</span><span class="p">.</span><span class="nx">email</span>
+          <span class="kd">let</span> <span class="nx">password</span> <span class="o">=</span> <span class="nx">values</span><span class="p">.</span><span class="nx">password</span>
+
+          <span class="kd">let</span> <span class="nx">headers</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Headers</span><span class="p">()</span>
+
+          <span class="nx">headers</span><span class="p">.</span><span class="nx">append</span><span class="p">(</span><span class="dl">'</span><span class="s1">Authorization</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">Basic </span><span class="dl">'</span> <span class="o">+</span> <span class="nx">btoa</span><span class="p">(</span><span class="nx">username</span> <span class="o">+</span> <span class="dl">"</span><span class="s2">:</span><span class="dl">"</span> <span class="o">+</span> <span class="nx">password</span><span class="p">))</span>
+
+          <span class="nx">fetch</span> <span class="p">(</span><span class="nx">url</span><span class="p">,</span> <span class="p">{</span><span class="na">method</span><span class="p">:</span><span class="dl">'</span><span class="s1">GET</span><span class="dl">'</span><span class="p">,</span> <span class="na">headers</span><span class="p">:</span> <span class="nx">headers</span><span class="p">,})</span>
+            <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">response</span> <span class="o">=&gt;</span> <span class="nx">response</span><span class="p">.</span><span class="nx">json</span><span class="p">())</span>
+            <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">json</span> <span class="o">=&gt;</span> <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">json</span><span class="p">))</span>
+
+        <span class="p">}}</span></code></pre></figure>
+
+<p>Finally, I returned the actual layout of the form, which makes use of my <code class="language-plaintext highlighter-rouge">FormikTextField</code> component, and some other Material-UI components to make it look nice and purty:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="o">&lt;</span><span class="nx">Form</span><span class="o">&gt;</span>
+  <span class="o">&lt;</span><span class="nx">Paper</span> <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">root</span><span class="p">}</span><span class="o">&gt;</span>
+    <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">p</span><span class="o">=</span><span class="p">{</span><span class="mi">2</span><span class="p">}</span><span class="o">&gt;</span>
+    <span class="o">&lt;</span><span class="nx">FormikTextField</span> <span class="nx">label</span><span class="o">=</span><span class="dl">"</span><span class="s2">Email</span><span class="dl">"</span> <span class="nx">name</span><span class="o">=</span><span class="dl">"</span><span class="s2">email</span><span class="dl">"</span> <span class="nx">type</span><span class="o">=</span><span class="dl">"</span><span class="s2">text</span><span class="dl">"</span> <span class="o">/&gt;</span>
+    <span class="o">&lt;</span><span class="nx">FormikTextField</span> <span class="nx">label</span><span class="o">=</span><span class="dl">"</span><span class="s2">Password</span><span class="dl">"</span> <span class="nx">name</span><span class="o">=</span><span class="dl">"</span><span class="s2">password</span><span class="dl">"</span> <span class="nx">type</span><span class="o">=</span><span class="dl">"</span><span class="s2">password</span><span class="dl">"</span> <span class="o">/&gt;</span>
+    <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span>  <span class="o">&lt;</span><span class="sr">/Paper</span><span class="err">&gt;
+</span>  <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">m</span><span class="o">=</span><span class="p">{</span><span class="mi">2</span><span class="p">}</span><span class="o">&gt;</span>
+    <span class="o">&lt;</span><span class="nx">ButtonTemplate</span> <span class="nx">type</span><span class="o">=</span><span class="dl">"</span><span class="s2">submit</span><span class="dl">"</span> <span class="nx">color</span><span class="o">=</span><span class="dl">"</span><span class="s2">secondary</span><span class="dl">"</span><span class="o">&gt;</span><span class="nx">Log</span> <span class="nx">In</span><span class="o">&lt;</span><span class="sr">/ButtonTemplate</span><span class="err">&gt;
+</span>  <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span><span class="o">&lt;</span><span class="sr">/Form</span><span class="err">&gt;
+</span><span class="o">&lt;</span><span class="sr">/Formik&gt;</span></code></pre></figure>
+
+<p>I added in some custom styles, and this was the result:</p>
+
+<p><img src="/assets/img/posts/grocery-app/login-page/signin-form.png" alt="alt text" /></p>
+
+<p>Unfortunately, Material-UI isn’t exactly what I’m going for with this implementation, and I’m going to need to think about where I go from there. In particular, the way that the form label minimizes itself and moves to the top left of the input field does not work well when the color of the input field differs from the color of the background, as it does here. But that’s a relatively minor complaint, and I’m trying to focus instead on getting everything functional.</p>
+
+<p>I created the  <code class="language-plaintext highlighter-rouge">RegisterPanel</code> in a similar fashion and arranged them together on a single page using the <code class="language-plaintext highlighter-rouge">Grid</code> component:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="k">return</span> <span class="p">(</span>
+  <span class="o">&lt;</span><span class="nx">div</span> <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">root</span><span class="p">}</span><span class="o">&gt;</span>
+    <span class="o">&lt;</span><span class="nx">LoginSquiggle</span> <span class="o">/&gt;</span>
+    <span class="o">&lt;</span><span class="nx">Container</span> <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">panel</span><span class="p">}</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">Grid</span> <span class="nx">container</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">Grid</span> <span class="nx">item</span> <span class="nx">xs</span><span class="o">=</span><span class="p">{</span><span class="mi">12</span><span class="p">}</span> <span class="nx">md</span><span class="o">=</span><span class="p">{</span><span class="mi">6</span><span class="p">}</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">mx</span><span class="o">=</span><span class="p">{</span><span class="mi">5</span><span class="p">}</span><span class="o">&gt;</span>
+          <span class="o">&lt;</span><span class="nx">LoginPanel</span> <span class="o">/&gt;</span>
+        <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span>      <span class="o">&lt;</span><span class="sr">/Grid</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="nx">Grid</span> <span class="nx">item</span> <span class="nx">xs</span><span class="o">=</span><span class="p">{</span><span class="mi">12</span><span class="p">}</span> <span class="nx">md</span><span class="o">=</span><span class="p">{</span><span class="mi">6</span><span class="p">}</span><span class="o">&gt;</span>
+          <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">mx</span><span class="o">=</span><span class="p">{</span><span class="mi">5</span><span class="p">}</span><span class="o">&gt;</span>
+            <span class="o">&lt;</span><span class="nx">RegisterPanel</span> <span class="o">/&gt;</span>
+          <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="sr">/Grid</span><span class="err">&gt;
+</span>      <span class="o">&lt;</span><span class="sr">/Grid</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/Container</span><span class="err">&gt;
+</span>  <span class="o">&lt;</span><span class="sr">/div</span><span class="err">&gt;
+</span><span class="p">)</span></code></pre></figure>
+
+<p>To be honest, though, I might just split these two panels into separate pages. It feels cleaner that way, and I don’t really want returning users to be faced with the option to register an account every time. But I’m going to save that for another time.</p>
+
+<p>Of course, this page isn’t really done yet, because I still need to implement the calls to the backend to log in and register new accounts. That also comes with the added need to set up a way to verify an account through the frontend of the app. I’ve begun to work on those things, but I felt that I needed to get out a blog post, since it’s been over a week since I last posted. Additionally, learning Formik and figuring out the verification process took longer than I expected it to, and I think I’m going to switch gears here for a bit and focus on other parts of the app. My hope is to get all of the base pages in and then focus on linking them all up.</p>
+
+<h3 id="next-steps">Next Steps</h3>
+
+<ul>
+  <li>implement the home page</li>
+  <li>implement the list modification page</li>
+  <li>begin hooking all the separate pages up</li>
+</ul>
+
+</div>
+
+    </div>
+    <footer>
+      <span><a href="/index.html">Home</a></span>
+      <span><a href="/blog">Blog</a></span>
+      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+    </footer>
+    </div>
+  </body>
+</html>

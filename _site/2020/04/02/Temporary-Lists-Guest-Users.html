@@ -1,0 +1,182 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Enabling the Creation of Temporary Lists with Guest Users</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-header">
+      <h2>Enabling the Creation of Temporary Lists with Guest Users</h2>
+      <small>02 Apr 2020</small>
+  </div>
+</header>
+
+<div class="margin">
+<p>The creation of user accounts invites a new question: what do we do if someone does not want to make an account? While I could fairly easily arrange it so that a user <em>must</em> make an account to use the app, I think it would be better to allow the creation of temporary accounts that allow the creation of just one list. In order to save the list or to create additional lists, the user would have to register, which would upgrade the account into a fully-fledged one. While logged on as a guest user, certain pages and features would not be available.</p>
+
+<p>I decided to implement this by making use of my <code class="language-plaintext highlighter-rouge">User</code> model, and adding a new line to it to check if an account was “temporary” or not:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># in users class
+</span><span class="n">temporary</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Boolean</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>  <span class="c1"># determines if user account is temporary (for guest users)</span></code></pre></figure>
+
+<p>Designating this as <code class="language-plaintext highlighter-rouge">default=False</code> ensures that, unless notified otherwise, the model will make all accounts “real.” In order to initialize a guest user, I created a new function in my <code class="language-plaintext highlighter-rouge">constructors.py</code> folder, which assigns random strings to the username, password, and email (since they are all required for an account).</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">create_guest_user</span><span class="p">():</span>
+    <span class="n">guest_username</span> <span class="o">=</span> <span class="n">secrets</span><span class="p">.</span><span class="n">token_urlsafe</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+    <span class="n">guest_password</span> <span class="o">=</span> <span class="n">secrets</span><span class="p">.</span><span class="n">token_urlsafe</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+    <span class="n">guest_email</span> <span class="o">=</span> <span class="n">secrets</span><span class="p">.</span><span class="n">token_urlsafe</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+
+    <span class="n">guest_user</span> <span class="o">=</span> <span class="n">User</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="n">guest_username</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="n">guest_password</span><span class="p">,</span> <span class="n">email</span><span class="o">=</span><span class="n">guest_email</span><span class="p">,</span> <span class="n">temporary</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">guest_user</span><span class="p">)</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">guest_user</span></code></pre></figure>
+
+<p>With this created, it was time to add this functionality to the list. I wanted the guest account to be automatically generated if someone tried to create a list when they weren’t logged on. To do so, I added a check in my list creation function to determine if a user was logged on. If they were not, it generated a new user and assigned the list to this guest user, like so:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">create_methods</span><span class="p">(</span><span class="n">method</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">current_user</span><span class="p">.</span><span class="n">is_authenticated</span><span class="p">:</span>
+        <span class="n">new_list</span> <span class="o">=</span> <span class="n">create_list</span><span class="p">(</span><span class="n">current_user</span><span class="p">.</span><span class="nb">id</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>   <span class="c1"># we need to create a temporary guest account
+</span>        <span class="n">guest_user</span> <span class="o">=</span> <span class="n">create_guest_user</span><span class="p">()</span>
+        <span class="n">login_user</span><span class="p">(</span><span class="n">guest_user</span><span class="p">)</span>
+        <span class="n">new_list</span> <span class="o">=</span> <span class="n">create_list</span><span class="p">(</span><span class="n">guest_user</span><span class="p">.</span><span class="nb">id</span><span class="p">)</span>
+
+  <span class="p">...</span> <span class="c1"># rest of code here</span></code></pre></figure>
+
+<p>Also, as a manner of debugging and to see if everything works, I created a small note at the bottom of my <code class="language-plaintext highlighter-rouge">layout.html</code> to see who is logged in:</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html">{% if current_user.is_authenticated%}
+  <span class="nt">&lt;small</span> <span class="na">class=</span><span class="s">"fixed-bottom"</span><span class="nt">&gt;</span>Logged in as {{current_user.username}}<span class="nt">&lt;/small&gt;</span>
+{% endif %}</code></pre></figure>
+
+<p>Here you can see an example of a guest account, using the same <code class="language-plaintext highlighter-rouge">secrets.token.token_urlsafe()</code> function as the rest of my identifiers in this app:</p>
+
+<p><img src="/assets/img/posts/guest-accounts/login-info.png" alt="alt text" /></p>
+
+<p>Now that guest lists existed, it was time to show the difference between them and a regular account. I rewrote parts of the navbar to hide the “My Lists” dropdown and the “Create List” button, and added a “Welcome” line that would refer to the guest as “Guest” if the account was temporary. I also did a bit of work to justify some of the navbar contents to the right.</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html">{% if not current_user.is_authenticated %}
+    <span class="nt">&lt;li</span> <span class="na">class=</span><span class="s">"nav-item"</span><span class="nt">&gt;&lt;a</span> <span class="na">class=</span><span class="s">"nav-link"</span> <span class="na">href=</span><span class="s">"{{ url_for('account.register') }}"</span><span class="nt">&gt;</span>Register<span class="nt">&lt;/a&gt;&lt;/li&gt;</span>
+    <span class="nt">&lt;li</span> <span class="na">class=</span><span class="s">"nav-item"</span><span class="nt">&gt;&lt;a</span> <span class="na">class=</span><span class="s">"nav-link"</span> <span class="na">href=</span><span class="s">"{{ url_for('account.login') }}"</span><span class="nt">&gt;</span>Login<span class="nt">&lt;/a&gt;&lt;/li&gt;</span>
+{% endif %}
+
+{% if current_user.is_authenticated %}
+    {% if not current_user.temporary %}
+          {% if grocery_lists %}
+              <span class="nt">&lt;li</span> <span class="na">class=</span><span class="s">"nav-item dropdown"</span><span class="nt">&gt;</span>
+                  <span class="nt">&lt;a</span> <span class="na">class=</span><span class="s">"nav-link"</span> <span class="na">data-toggle=</span><span class="s">"dropdown"</span> <span class="na">href=</span><span class="s">"#"</span> <span class="na">role=</span><span class="s">"button"</span><span class="nt">&gt;</span>
+                      My Lists
+                  <span class="nt">&lt;/a&gt;</span>
+                  <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"dropdown-menu"</span><span class="nt">&gt;</span>
+                    {% for list in grocery_lists %}
+                      <span class="nt">&lt;a</span> <span class="na">class=</span><span class="s">"nav-link dropdown-item"</span> <span class="na">id=</span><span class="s">"link-{{list.hex_name}}"</span> <span class="na">href=</span><span class="s">"{{url_for('checklist.compiled_list', hex_name=list.hex_name)}}"</span><span class="nt">&gt;</span>{{ list.name }} ({{ list.hex_name }})<span class="nt">&lt;/a&gt;</span>
+                          {% endfor %}
+                  <span class="nt">&lt;/div&gt;</span>
+                <span class="nt">&lt;/li&gt;</span>
+                {% endif %}
+                <span class="nt">&lt;li</span> <span class="na">class=</span><span class="s">"nav-item"</span><span class="nt">&gt;&lt;a</span> <span class="na">class=</span><span class="s">"nav-link"</span> <span class="na">href=</span><span class="s">"{{ url_for('checklist.create_list_page') }}"</span><span class="nt">&gt;</span>Create New List<span class="nt">&lt;/a&gt;&lt;/li&gt;</span>
+              {% endif %}
+            <span class="nt">&lt;/ul&gt;</span>
+            <span class="nt">&lt;ul</span> <span class="na">class=</span><span class="s">"navbar-nav ml-auto"</span><span class="nt">&gt;</span>
+                <span class="nt">&lt;li</span> <span class="na">class=</span><span class="s">"nav-item navbar-text mr-3"</span><span class="nt">&gt;</span>Welcome, {{current_user.username if not current_user.temporary else "Guest"}}<span class="nt">&lt;/li&gt;</span>
+                <span class="nt">&lt;li</span> <span class="na">class=</span><span class="s">"nav-item"</span><span class="nt">&gt;&lt;a</span> <span class="na">class=</span><span class="s">"nav-link"</span> <span class="na">href=</span><span class="s">"{{ url_for('account.logout') }}"</span><span class="nt">&gt;</span>Logout<span class="nt">&lt;/a&gt;&lt;/li&gt;</span>
+        {% endif %}</code></pre></figure>
+
+<p>A bit later, I went back and added a single link to the guest’s account, since I realized that if a different page was clicked, there wouldn’t be any way back to the list. I also changed the “Logout” button to a “Register” button:</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html"><span class="nt">&lt;li</span> <span class="na">class=</span><span class="s">"nav-item"</span><span class="nt">&gt;&lt;a</span> <span class="na">class=</span><span class="s">"nav-link"</span> <span class="na">href=</span><span class="s">"{{ url_for('checklist.compiled_list', hex_name=grocery_lists[0].hex_name) }}"</span><span class="nt">&gt;</span>Your List<span class="nt">&lt;/a&gt;&lt;/li&gt;</span>
+...
+{% if current_user.temporary %}
+    <span class="nt">&lt;li</span> <span class="na">class=</span><span class="s">"nav-item"</span><span class="nt">&gt;&lt;a</span> <span class="na">class=</span><span class="s">"nav-link"</span> <span class="na">href=</span><span class="s">"{{ url_for('account.register') }}"</span><span class="nt">&gt;</span>Register Account<span class="nt">&lt;/a&gt;&lt;/li&gt;</span>
+{% else %}
+    <span class="nt">&lt;li</span> <span class="na">class=</span><span class="s">"nav-item"</span><span class="nt">&gt;&lt;a</span> <span class="na">class=</span><span class="s">"nav-link"</span> <span class="na">href=</span><span class="s">"{{ url_for('account.logout') }}"</span><span class="nt">&gt;</span>Logout<span class="nt">&lt;/a&gt;&lt;/li&gt;</span>
+{% endif %}</code></pre></figure>
+
+<p>This resulted in the following navbar for the guest user:</p>
+
+<p><img src="/assets/img/posts/guest-accounts/guest-list-nav.png" alt="alt text" /></p>
+
+<p>Now, it was time to add the ability to upgrade a guest account to a regular one. I first added a redirect from the homepage to the registration page if the user was a temporary user. Then, on the registration page, I added a check after the user validated the form, which checked if the user was creating an account or was already logged in as a guest. If the user was logged in as a guest, then the username, password, and email of the already existing guest account were changed, rather than a new user being created. This way, I didn’t have to migrate the list to a new account.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># in main blueprint
+</span><span class="o">@</span><span class="n">main</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">'/'</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">'GET'</span><span class="p">,</span> <span class="s">'POST'</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">home</span><span class="p">():</span>
+    <span class="k">if</span> <span class="n">current_user</span><span class="p">.</span><span class="n">is_authenticated</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">current_user</span><span class="p">.</span><span class="n">temporary</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">url_for</span><span class="p">(</span><span class="s">'account.user_homepage'</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">flash</span><span class="p">(</span><span class="s">'You are currently logged in as a guest and your account is temporary. Please register a permanent account to save your list and make additional lists!'</span><span class="p">,</span> <span class="s">'info'</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">url_for</span><span class="p">(</span><span class="s">'account.register'</span><span class="p">))</span>
+
+<span class="c1"># in account blueprint
+</span><span class="o">@</span><span class="n">account</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">'/register'</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">'GET'</span><span class="p">,</span> <span class="s">'POST'</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">register</span><span class="p">():</span>
+    <span class="k">if</span> <span class="n">current_user</span><span class="p">.</span><span class="n">is_authenticated</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">current_user</span><span class="p">.</span><span class="n">temporary</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">url_for</span><span class="p">(</span><span class="s">'main.home'</span><span class="p">))</span>
+
+    <span class="n">register_form</span> <span class="o">=</span> <span class="n">RegistrationForm</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">register_form</span><span class="p">.</span><span class="n">validate_on_submit</span><span class="p">():</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">'here'</span><span class="p">)</span>
+        <span class="n">hashed_password</span> <span class="o">=</span> <span class="n">bcrypt</span><span class="p">.</span><span class="n">generate_password_hash</span><span class="p">(</span><span class="n">register_form</span><span class="p">.</span><span class="n">password</span><span class="p">.</span><span class="n">data</span><span class="p">).</span><span class="n">decode</span><span class="p">(</span><span class="s">'utf-8'</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">current_user</span><span class="p">.</span><span class="n">is_authenticated</span><span class="p">:</span>
+            <span class="n">user</span> <span class="o">=</span> <span class="n">User</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="n">register_form</span><span class="p">.</span><span class="n">username</span><span class="p">.</span><span class="n">data</span><span class="p">,</span> <span class="n">email</span><span class="o">=</span><span class="n">register_form</span><span class="p">.</span><span class="n">email</span><span class="p">.</span><span class="n">data</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="n">hashed_password</span><span class="p">)</span>
+            <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">user</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">user</span> <span class="o">=</span> <span class="n">User</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">current_user</span><span class="p">.</span><span class="nb">id</span><span class="p">)</span>
+            <span class="n">user</span><span class="p">.</span><span class="n">username</span> <span class="o">=</span> <span class="n">register_form</span><span class="p">.</span><span class="n">username</span><span class="p">.</span><span class="n">data</span>
+            <span class="n">user</span><span class="p">.</span><span class="n">email</span> <span class="o">=</span> <span class="n">register_form</span><span class="p">.</span><span class="n">email</span><span class="p">.</span><span class="n">data</span>
+            <span class="n">user</span><span class="p">.</span><span class="n">password</span> <span class="o">=</span> <span class="n">hashed_password</span>
+            <span class="n">user</span><span class="p">.</span><span class="n">temporary</span> <span class="o">=</span> <span class="bp">False</span></code></pre></figure>
+
+<p>One nice aspect of forcing usernames and emails to be unique is that I can keep most of my <code class="language-plaintext highlighter-rouge">try/except</code> code that already existed in the registration route:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">try</span><span class="p">:</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="n">flash</span><span class="p">(</span><span class="s">"Account created successfully!"</span><span class="p">,</span> <span class="s">"success"</span><span class="p">)</span>
+<span class="k">except</span> <span class="n">exc</span><span class="p">.</span><span class="n">IntegrityError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">rollback</span><span class="p">()</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">error</span><span class="p">.</span><span class="n">args</span><span class="p">)</span>
+    <span class="n">flash</span><span class="p">(</span><span class="s">'Error. Username or email is already in use. Please choose a new one.'</span><span class="p">,</span> <span class="s">'danger'</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">render_template</span><span class="p">(</span><span class="s">'register.html'</span><span class="p">,</span> <span class="n">register_form</span><span class="o">=</span><span class="n">register_form</span><span class="p">,</span> <span class="n">grocery_lists</span><span class="o">=</span><span class="n">grocery_lists</span><span class="p">)</span></code></pre></figure>
+
+<p>Next, I added a quick <code class="language-plaintext highlighter-rouge">&lt;div&gt;</code> to the list page to show guests that their list isn’t permanent, and encourage them to register an account to save the list.</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html">{% if current_user.temporary %}
+<span class="nt">&lt;div&gt;</span>
+    <span class="nt">&lt;p</span> <span class="na">class=</span><span class="s">"font-italic text-muted"</span><span class="nt">&gt;</span>This is a temporary guest list. To make your list permanent (and create additional lists), please
+        <span class="nt">&lt;a</span> <span class="na">href=</span><span class="s">"{{ url_for('account.register') }}"</span><span class="nt">&gt;</span>register an account.<span class="nt">&lt;/a&gt;</span>
+    <span class="nt">&lt;/p&gt;</span>
+<span class="nt">&lt;/div&gt;</span>
+{% endif %}</code></pre></figure>
+
+<p><img src="/assets/img/posts/guest-accounts/guest-list-info.png" alt="alt text" /></p>
+
+<p>That’s all very well and good, but there’s still one area left: what about deleting temporary accounts? I’ve thought about this, and I’m not entirely sure I want to. Obviously if space becomes an issue I may change my mind, but the random username and password makes it pretty hard for anyone to get back into a guest account after it’s made, and I might want to implement a way for a guest to retrieve a list in the future. If I change my mind, implementing it should be pretty easy; just return and delete all accounts with <code class="language-plaintext highlighter-rouge">temporary</code> set to true, and delete all lists associated with them. But for now, the temporary accounts can stay in.</p>
+
+<h4 id="next-steps">Next Steps</h4>
+<ul>
+  <li>“settings” page (with ability to request password reset/change info)</li>
+  <li>stricter requirements for passwords (min 8 characters, etc.)</li>
+  <li>make sure that a user can only edit their own lists</li>
+</ul>
+
+</div>
+
+    </div>
+    <footer>
+      <span><a href="/index.html">Home</a></span>
+      <span><a href="/blog">Blog</a></span>
+      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+    </footer>
+    </div>
+  </body>
+</html>

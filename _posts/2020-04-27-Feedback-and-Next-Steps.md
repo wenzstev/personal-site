@@ -1,0 +1,15 @@
+---
+layout: post
+title: Still Much To Learn
+author: Steve
+---
+
+[Well I put my baby on the internet and it got slaughtered.](https://www.reddit.com/r/flask/comments/g8mvtc/i_made_a_web_app_that_makes_grocery_lists_out_of/)
+
+Okay, maybe not *slaughtered;* there was one really harsh comment and then some nicer ones. Seems like, relative to my experience level, I'm doing okay, but I'm still nowhere near where I need to be. So I've spent the morning and last night figuring out my next steps for the project, as well as, more broadly, my steps to get a job.
+
+First, the project. As was pointed out in the thread (sometimes nicely, sometimes not so nicely), there's a lot of spaghetti code, bloated methods, poor documentation, and the whole thing is still prone to an unfortunate number of errors. Plus, there are security issues that were highlighted, most notably the fact that users don't need to confirm their email to log in, and that the password can be changed to a single digit after the account is created. There were a few other notes that I want to add in, but one thing seems to be certain: this project is not portfolio-ready, at all. At best, it could serve as a "see how far I've come" sort of thing, to compare it to later, hopefully better designed projects.
+
+I admit, I'm a bit bummed at this, but in retrospect it seems obvious. This entire project has been such a huge learning experience for me that it's easy to forget just how much more I have to learn. I created a web app and hosted it; not everyone can say the same, and I'm very proud of that. But it's still a first project, and it shows.
+
+So what's next? Well, first I'm going to correct a few of the security features that were called to my attention in the reddit thread, and then largely keep the program up and running as it is, for now. Then I'm going to retool it from the ground up, splitting the frontend from the backend this time to facilitate development. I'm going back to basics, figure out what I still need to learn, and hopefully come back with a much stronger Round Two. 

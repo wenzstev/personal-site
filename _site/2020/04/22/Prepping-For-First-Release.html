@@ -1,0 +1,86 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Preparing for the First Release</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-header">
+      <h2>Preparing for the First Release</h2>
+      <small>22 Apr 2020</small>
+  </div>
+</header>
+
+<div class="margin">
+<p>So today I’ve been spending a lot of time working through DigitalOcean and trying to figure out how to properly host my app. I don’t think I’m going to have time to get it out tonight, so I wanted to take a moment and provide a brief update on my progress.</p>
+
+<p>Yes, I’m about to publish it for the first time. No, I didn’t quite make my deadline of last weekend. Yes, it still has some bugs. No it isn’t finished. Yes, I still plan to add more to it later. But I realized that I could easily continue on adding and tweaking forever, and no one would ever see what I’ve been working on at all.</p>
+
+<p>Besides, there comes a point when a project just feels like it can’t progress further without outside input. I’ve been working on this entirely on my own, and I’m sure that I’ve missed some fairly obvious areas where user experience could be improved. I want feedback, and putting it online seems like the best way to do it.</p>
+
+<p>Accordingly, I’ve been hard at work since my last post to get everything working, and I’m pleased to say that I have been (largely) successful. Rather than go through in detail over everything I’ve done (there’s too much), I’m going to try a sort of changelog format, with some additional comments on the steps it took to implement each feature.</p>
+
+<p><strong>The App Now Has:</strong></p>
+<ul>
+  <li><em>(mostly) functioning dynamic line changes, additions, and combinations (!!)</em>
+    <ul>
+      <li>honestly this was a huge one for me, and took up the lion’s share of my time. There were many, many additional edge cases, and I really wanted the list to be able to update dynamically, so that the user could see how their different changes to the list page combined and separated the ingredients.</li>
+      <li>It’s all done through ajax, including a new route that renders a snippet of html code for a new ingredient line. I had to figure out how to do that when I realized just how complicated the html snippet for an ingredient line was, and that generating it on the fly with jQuery just seemed like way more hassle than it was worth. I’ve used so much ajax for this project by now, it’s kind of crazy to think that, a couple of months ago, I didn’t even know what it was. At some point soon I need to write a post detailing just how much I’ve learned from this project.</li>
+      <li>There are still some areas that need work; a few bugs to iron out in the dynamic combining/separating. These are chiefly in areas where there is more than one ingredient per line, and you kind of have to work at it to break them. But they’re still bugs, and I want to get them out. But… I needed to stop staring at the same few functions for a bit.</li>
+    </ul>
+  </li>
+  <li><em>much cleaner add line function</em>
+    <ul>
+      <li>this was again inspired by Trello (I know, sue me), and I’m proud of it. Rather than having to click a button, you can now just hit the “enter” key and see your new ingredient line appear. This uses the same template snippet as my dynamic lines (I actually came up for it for this part), and is set to bypass the spaCy model and automatically set the entire input as the ingredient.</li>
+      <li>I also implemented the same dynamic features to this, so if the user enters an ingredient that already exists in the list, the new ingredient is appended to the cleaned line and the entire ingredient is moved to the end of the line, which as a bonus shows the user where the ingredient was already in their list.</li>
+    </ul>
+  </li>
+  <li><em>revamped the recipe div section on the list page, with support to go back and revise the recipe as needed</em>
+    <ul>
+      <li>there are now two buttons by every recipe: one for a link to the recipe’s website, and one to go back and edit the recipe lines. If the user goes back to edit the lines, the app will automatically decouple the recipe from the list, ensuring that no lines are doubled</li>
+      <li>one thing I still need to implement here is the ability to remove an entire recipe from the list. This can be done in a somewhat “hacky” way right now by going back to the recipe and unselecting all ingredients on the list, but it would be better if there was just a simple way to remove the recipe.</li>
+      <li>The “Additional Ingredients” recipe does not have those buttons, although I’m of half a mind to allow the user to edit all “Additional Ingredients” together as a single recipe. Might be something to add later.</li>
+    </ul>
+  </li>
+  <li><em>Added support for more websites (finally)</em>
+    <ul>
+      <li>Proud of this one, because (while it’s still not where I want), I came up with a way to implement DRY principles in the scraper. I realized that I was writing a bunch of functions that were all essentially identical except for the individual components and class names for the websites, and so I instead implemented a big dictionary that holds the specifics for each website, with the website’s domain name as the key. It won’t work for every website, but the ones it does work for saves me a lot of time.</li>
+      <li>Also got my first introduction to anti-scraping techniques when one of the websites I was trying to add returned a 403 Forbidden response. In retrospect, it seems obvious that some websites would implement defenses against scraping. One thing I want to work on in the future is spoofing a user to see if I can get access. I promise I’m not trying to divert your precious traffic, okay? Just trying to make this easier one everyone</li>
+    </ul>
+  </li>
+  <li><em>A bunch of other small miscellaneous changes, including:</em>
+    <ul>
+      <li>rearranged the user page so that the most recently created lists are on top</li>
+      <li>lists now remember when they were created and display that date on the user page</li>
+      <li>there is now a way to log off as a guest (not sure why that wasn’t in before but whatever…)</li>
+      <li>the guest-to-registered-user pipeline now actually works</li>
+      <li>much better look for the recipe lines, the check boxes, and the overall feel of the app</li>
+      <li>better margins everywhere, and significant removal of old spaghetti CSS (there’s still a bit, though)</li>
+    </ul>
+  </li>
+</ul>
+
+<p>… and probably a whole bunch of other things that I’ve forgotten right now. I’ve been pretty busy with it, actually. There’s something about giving yourself a deadline that clarifies what needs to be in it versus what you’d like to be in it. And while I still want to add the other things on my list, the app is now at a point where it does the things that it’s supposed to do, and dammit, I’m proud of that.</p>
+
+<p>Will be updating soon with the actual link to the site. Stay tuned!</p>
+
+</div>
+
+    </div>
+    <footer>
+      <span><a href="/index.html">Home</a></span>
+      <span><a href="/blog">Blog</a></span>
+      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+    </footer>
+    </div>
+  </body>
+</html>

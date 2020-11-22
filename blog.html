@@ -2,14 +2,31 @@
 layout: default
 title: Blog
 ---
+<header>
+  <div class="blog-header">
+    <h1>Blog</h1>
+    <a href="/index.html">Home</a>
+  </div>
+</header>
 
-<h1>Latest Posts</h1>
-
+<div class="margin">
+<h2>Latest Posts</h2>
 <ul>
-  {% for post in site.posts %}
-    <li>
-      <h2><a href="{{ post.url }}">{{ post.title }}</a></h2>
+  {% for post in site.posts limit: 3%}
+    <li class="post-excerpt">
+      <h3><a href="{{ post.url }}">{{ post.title }}</a></h3>
+      <small>{{post.date | date_to_string}}</small>
       {{ post.excerpt }}
     </li>
   {% endfor %}
 </ul>
+
+<h4>Older Posts</h4>
+<ul>
+  {% for post in site.posts %}
+    <li class="old-post">
+      <h5> <a href="{{ post.url }}">{{ post.title }}</a></h5> - <small>{{post.date | date_to_string }}</small>
+    </li>
+  {% endfor %}
+</ul>
+</div>

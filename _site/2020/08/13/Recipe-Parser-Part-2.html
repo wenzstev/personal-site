@@ -1,0 +1,304 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Building the Recipe Page - Part 2</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-header">
+      <h2>Building the Recipe Page - Part 2</h2>
+      <small>13 Aug 2020</small>
+  </div>
+</header>
+
+<div class="margin">
+<p>Well, this post has taken a bit longer to make than I’d expected, and that’s because there’s a <em>lot</em> of code today. It’s taken me a while to wrangle this into working, and I definitely need a refactor at some point, but I wanted to make a post to show what I’ve got, because at the moment I’m just happy it’s working.</p>
+
+<p>Longtime readers will recall from my <a href="/2020/04/17/New-Line-Changes.html">first attempt</a> at designing the recipe cleaning page that I had a lot of trouble with the nitty-gritty details of customizing the ingredients associated with a line. That was due to two primary factors: 1) The problem is an inherently complex one, and 2) My code at that time was seriously flawed. Problem 1 is still an issue, but I was hopeful that, with a few extra months of practice under my belt (as well as a shiny new framework), Problem 2 would not be nearly as much of an issue.</p>
+
+<p>And was it? Well, there’s certainly room for improvement, but I think I did a much better job this time.</p>
+
+<h3 id="the-problem">The Problem</h3>
+
+<p>There are two data structures: <code class="language-plaintext highlighter-rouge">RecipeLines</code> and <code class="language-plaintext highlighter-rouge">Ingredients</code>, connected with a many-to-many relationship. Certain words on a <code class="language-plaintext highlighter-rouge">RecipeLine</code> are directly linked to an <code class="language-plaintext highlighter-rouge">Ingredient</code>. These relationships are initially determined by the Natural Language Processor, but they need to be editable by the user. The user edits them by clicking on words. Multiple <code class="language-plaintext highlighter-rouge">Ingredients</code> can be linked to a single <code class="language-plaintext highlighter-rouge">RecipeLine</code>, but the words have to be separate (i.e., the line “Extra virgin olive oil” can’t have the ingredients “olive oil” and “oil”, but it could have the ingredients “olive” and “oil”).</p>
+
+<p>This is a much trickier problem than I’d first anticipated, but I managed to get through it by breaking it down into smaller pieces and working through them one by one.</p>
+
+<h3 id="setting-up-the-page">Setting up the Page</h3>
+
+<p>First, I created the basic React components that would comprise my Recipe Page. I reused the <code class="language-plaintext highlighter-rouge">MainTemplatePage</code> and then created a <code class="language-plaintext highlighter-rouge">RecipePanel</code> to hold the actual lines.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="c1">// EditRecipePage return function</span>
+<span class="k">return</span> <span class="p">(</span>
+  <span class="o">&lt;</span><span class="nx">MainTemplatePage</span> <span class="nx">noSearchbar</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">TopSquiggle</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">BackButton</span> <span class="o">/&gt;</span>
+        <span class="p">{</span><span class="nx">recipe</span> <span class="p">?</span> <span class="nx">recipe</span><span class="p">.</span><span class="nx">name</span> <span class="p">:</span> <span class="kc">null</span><span class="p">}</span>
+      <span class="o">&lt;</span><span class="sr">/TopSquiggle</span><span class="err">&gt;
+</span>      <span class="o">&lt;</span><span class="nx">RecipePanel</span>
+        <span class="nx">lines</span><span class="o">=</span><span class="p">{</span><span class="nx">recipe</span><span class="p">.</span><span class="nx">recipe_lines</span><span class="p">}</span>
+        <span class="nx">removeLineFromDOM</span><span class="o">=</span><span class="p">{</span><span class="nx">removeLineFromDOM</span><span class="p">}</span>
+        <span class="nx">changeLine</span><span class="o">=</span><span class="p">{</span><span class="nx">changeRecipeLine</span><span class="p">}</span><span class="sr">/</span><span class="err">&gt;
+</span>  <span class="o">&lt;</span><span class="sr">/MainTemplatePage</span><span class="err">&gt;
+</span><span class="p">)</span></code></pre></figure>
+
+<p>This panel was then composed of <code class="language-plaintext highlighter-rouge">RecipeLines</code>, which were themselves composed of <code class="language-plaintext highlighter-rouge">IngredientButtons</code>. Each individual word is a button, and they are determined by a <code class="language-plaintext highlighter-rouge">map()</code> call. There are a number of arrays and functions here that I haven’t discussed yet, but ignore those for now.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"> <span class="c1">// RecipeLine return function</span>
+ <span class="k">return</span> <span class="p">(</span>
+   <span class="o">&lt;</span><span class="nx">ListItem</span> <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">root</span><span class="p">}</span> <span class="nx">onMouseEnter</span><span class="o">=</span><span class="p">{()</span><span class="o">=&gt;</span><span class="nx">setHovering</span><span class="p">(</span><span class="kc">true</span><span class="p">)}</span> <span class="nx">onMouseLeave</span><span class="o">=</span><span class="p">{()</span><span class="o">=&gt;</span><span class="nx">setHovering</span><span class="p">(</span><span class="kc">false</span><span class="p">)}</span><span class="o">&gt;</span>
+     <span class="p">{</span><span class="nx">text</span><span class="p">.</span><span class="nx">map</span><span class="p">((</span><span class="nx">word</span><span class="p">,</span> <span class="nx">index</span><span class="p">)</span><span class="o">=&gt;</span><span class="p">{</span>
+       <span class="k">return</span><span class="p">(</span>
+         <span class="o">&lt;</span><span class="nx">IngredientButton</span>
+           <span class="nx">index</span><span class="o">=</span><span class="p">{</span><span class="nx">index</span><span class="p">}</span>
+           <span class="nx">key</span><span class="o">=</span><span class="p">{</span><span class="nx">index</span><span class="p">}</span>
+           <span class="nx">mappings</span><span class="o">=</span><span class="p">{</span><span class="nx">textToIngredientArray</span><span class="p">[</span><span class="nx">index</span><span class="p">]}</span>
+           <span class="nx">colors</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">colors</span><span class="p">}</span>
+           <span class="nx">clickHandler</span><span class="o">=</span><span class="p">{()</span><span class="o">=&gt;</span><span class="p">{</span><span class="nx">setNewIngredientTokens</span><span class="p">(</span><span class="nx">index</span><span class="p">)}}</span><span class="o">&gt;</span>
+           <span class="p">{</span><span class="nx">word</span><span class="p">}</span>
+         <span class="o">&lt;</span><span class="sr">/IngredientButton</span><span class="err">&gt;
+</span>       <span class="p">)}</span>
+     <span class="p">)}</span>
+     <span class="p">{</span><span class="nx">hovering</span> <span class="p">?</span> <span class="o">&lt;</span><span class="nx">RemoveLineButton</span> <span class="nx">removeLine</span><span class="o">=</span><span class="p">{</span><span class="nx">deleteLine</span><span class="p">}</span><span class="sr">/&gt; : null</span><span class="err">}
+</span>   <span class="o">&lt;</span><span class="sr">/ListItem</span><span class="err">&gt;
+</span> <span class="p">)</span>
+ </code></pre></figure>
+
+<p>An <code class="language-plaintext highlighter-rouge">IngredientButton</code> is just a <code class="language-plaintext highlighter-rouge">ButtonBase</code> component from Material-UI, with a few stylings.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="c1">// IngredientButton return function</span>
+<span class="k">return</span> <span class="p">(</span>
+  <span class="o">&lt;</span><span class="nx">Box</span><span class="o">&gt;</span>
+    <span class="o">&lt;</span><span class="nx">ButtonBase</span>
+      <span class="nx">style</span><span class="o">=</span><span class="p">{</span><span class="nx">colorIndex</span> <span class="o">!=</span> <span class="kc">undefined</span> <span class="p">?</span> <span class="p">{</span><span class="dl">"</span><span class="s2">backgroundColor</span><span class="dl">"</span><span class="p">:</span> <span class="nx">props</span><span class="p">.</span><span class="nx">colors</span><span class="p">[</span><span class="nx">colorIndex</span><span class="p">]}</span> <span class="p">:</span> <span class="kc">null</span><span class="p">}</span>
+      <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">buttonClasses</span><span class="p">}</span>
+      <span class="nx">onClick</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">clickHandler</span><span class="p">}</span><span class="o">&gt;</span>
+      <span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">children</span><span class="p">}</span>
+    <span class="o">&lt;</span><span class="sr">/ButtonBase</span><span class="err">&gt;
+</span>  <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span><span class="p">)</span></code></pre></figure>
+
+<p>This is the general structure of the page. There are other components, but they are mostly concerned with peripheral actions and we’ll discuss them in time.</p>
+
+<h3 id="mapping-text-to-ingredients">Mapping Text to Ingredients</h3>
+
+<p>Recall that the backend does not give us every word in an ingredient, but rather just the start (inclusive) and the end (exclusive) points. From this, we need to generate a mapping of the status of every word in the line, so that its individual button knows what it’s supposed to look like. We do this with a function, <code class="language-plaintext highlighter-rouge">mapTextToIngredients</code>, which takes in an <code class="language-plaintext highlighter-rouge">arrayLength</code> the length of the line and an <code class="language-plaintext highlighter-rouge">ingredientArray</code>, which is the ingredients on the line (not to be confused with the array of text of the line).</p>
+
+<p>In designing this function, I wanted it to run in O(n) time and avoid nested <code class="language-plaintext highlighter-rouge">for</code> loops (which would have happened if I simply iterated over each array). Instead, I keep track of a which ingredient I am currently looking at. When that ingredient is finished, I can simply move to the next ingredient, since I know they have to be in order and cannot use the same word.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">mapTextToIngredients</span> <span class="o">=</span> <span class="p">(</span><span class="nx">arrayLength</span><span class="p">,</span> <span class="nx">ingredientArray</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">emptyArray</span> <span class="o">=</span> <span class="k">new</span> <span class="nb">Array</span><span class="p">(</span><span class="nx">arrayLength</span><span class="p">)</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">ingredientArray</span><span class="p">.</span><span class="nx">length</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span><span class="k">return</span> <span class="nx">emptyArray</span><span class="p">}</span>
+  <span class="kd">var</span> <span class="nx">curIngredient</span> <span class="o">=</span> <span class="mi">0</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">arrayLength</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">){</span>
+    <span class="k">if</span><span class="p">(</span><span class="nx">ingredientArray</span><span class="p">[</span><span class="nx">curIngredient</span><span class="p">]</span> <span class="o">!=</span> <span class="kc">null</span><span class="p">){</span>
+      <span class="kd">const</span> <span class="p">[</span><span class="nx">tokenStart</span><span class="p">,</span> <span class="nx">tokenEnd</span><span class="p">]</span> <span class="o">=</span> <span class="nx">ingredientArray</span><span class="p">[</span><span class="nx">curIngredient</span><span class="p">].</span><span class="nx">relevant_tokens</span>
+      <span class="k">if</span> <span class="p">(</span><span class="nx">i</span> <span class="o">===</span> <span class="nx">tokenStart</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">i</span> <span class="o">===</span> <span class="nx">tokenEnd</span><span class="o">-</span><span class="mi">1</span><span class="p">){</span>
+          <span class="nx">emptyArray</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="nx">curIngredient</span><span class="p">,</span> <span class="dl">"</span><span class="s2">single</span><span class="dl">"</span><span class="p">]</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+          <span class="nx">emptyArray</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="nx">curIngredient</span><span class="p">,</span> <span class="dl">"</span><span class="s2">start</span><span class="dl">"</span><span class="p">]</span>
+        <span class="p">}</span>
+      <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">i</span> <span class="o">&gt;</span> <span class="nx">tokenStart</span> <span class="o">&amp;&amp;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">tokenEnd</span> <span class="o">-</span> <span class="mi">1</span><span class="p">){</span>
+        <span class="nx">emptyArray</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="nx">curIngredient</span><span class="p">,</span> <span class="dl">"</span><span class="s2">inside</span><span class="dl">"</span><span class="p">]</span>
+      <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">i</span> <span class="o">===</span> <span class="nx">tokenEnd</span> <span class="o">-</span>  <span class="mi">1</span><span class="p">){</span>
+        <span class="nx">emptyArray</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="nx">curIngredient</span><span class="p">,</span> <span class="dl">"</span><span class="s2">end</span><span class="dl">"</span><span class="p">]</span>
+      <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">i</span> <span class="o">===</span> <span class="nx">tokenEnd</span><span class="p">){</span>
+        <span class="nx">curIngredient</span> <span class="o">++</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="nx">emptyArray</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>A couple of things to note here. The array that returns actually returns a second array of two values. One is the index ingredient for the color of the line (more on this later), and the other is a word indicating the position (if at all) of the word in the ingredient. This is necessary for styling the <code class="language-plaintext highlighter-rouge">IngredientButton</code> component, which has a number of custom styles depending on the button’s position. Additionally, the array is constructed so that words that are not part of ingredients are just empty spaces in the array.</p>
+
+<p>This function not only helps with mapping words to their ingredients, but it is also used when it comes time to change that relationship.</p>
+
+<h3 id="adding-and-removing-words-from-ingredients">Adding and Removing Words from Ingredients</h3>
+
+<p>Now we start to get to the trickier stuff. When the user clicks on a word, the program needs to understand which ingredient they are modifying and how they want it modified. For example, clicking on a word that is <em>inside</em> an ingredient is different than clicking on one that is <em>outside</em>. Furthermore, clicking on a different ingredient than the one currently selected should “paint over” that ingredient with the selected ingredient. At no time should one word have two ingredients associated with it.</p>
+
+<p>After figuring out exactly what the user wants, the program then needs to repackage that information in a way the backend can understand. After sending it, the backend then needs to actually make the necessary changes to the underlying association.</p>
+
+<p>It’s a multi-step process, but it begins with the click.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">setNewIngredientTokens</span> <span class="o">=</span> <span class="p">(</span><span class="nx">buttonId</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="nx">ingredients</span><span class="p">[</span><span class="nx">props</span><span class="p">.</span><span class="nx">curColor</span><span class="p">]</span> <span class="o">!=</span> <span class="kc">null</span><span class="p">){</span>
+    <span class="kd">var</span> <span class="nx">ingredientToChange</span> <span class="o">=</span> <span class="nx">ingredients</span><span class="p">[</span><span class="nx">props</span><span class="p">.</span><span class="nx">curColor</span><span class="p">]</span>
+    <span class="kd">var</span> <span class="p">[</span><span class="nx">start</span><span class="p">,</span> <span class="nx">end</span><span class="p">]</span> <span class="o">=</span> <span class="nx">ingredientToChange</span><span class="p">.</span><span class="nx">relevant_tokens</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">buttonId</span> <span class="o">&lt;</span> <span class="nx">start</span><span class="p">){</span>
+      <span class="nx">start</span> <span class="o">=</span> <span class="nx">buttonId</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">buttonId</span> <span class="o">&gt;=</span> <span class="nx">end</span><span class="p">){</span>
+      <span class="nx">end</span> <span class="o">=</span> <span class="nx">buttonId</span> <span class="o">+</span> <span class="mi">1</span> <span class="c1">// add one because end is exclusive in spaCy</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+      <span class="c1">// inside ingredient</span>
+      <span class="kd">let</span> <span class="nx">disFromStart</span> <span class="o">=</span> <span class="nx">buttonId</span> <span class="o">-</span> <span class="nx">start</span>
+      <span class="kd">let</span> <span class="nx">disFromEnd</span> <span class="o">=</span> <span class="nx">end</span> <span class="o">-</span> <span class="nx">buttonId</span> <span class="o">-</span> <span class="mi">1</span> <span class="c1">// subtract one because end is exclusive</span>
+      <span class="k">if</span><span class="p">(</span><span class="nx">disFromStart</span> <span class="o">&gt;</span> <span class="nx">disFromEnd</span><span class="p">){</span>
+        <span class="nx">end</span> <span class="o">=</span> <span class="nx">buttonId</span>
+      <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="nx">start</span> <span class="o">=</span> <span class="nx">buttonId</span> <span class="o">+</span> <span class="mi">1</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="c1">// creating new ingredinet</span>
+      <span class="nx">start</span> <span class="o">=</span> <span class="nx">buttonId</span>
+      <span class="nx">end</span> <span class="o">=</span> <span class="nx">buttonId</span> <span class="o">+</span> <span class="mi">1</span>
+  <span class="p">}</span>
+    <span class="c1">// get other ingredients in line</span>
+    <span class="kd">const</span> <span class="nx">lineWithoutChangedIng</span> <span class="o">=</span> <span class="p">[...</span><span class="nx">ingredients</span><span class="p">]</span>
+    <span class="nx">lineWithoutChangedIng</span><span class="p">.</span><span class="nx">splice</span><span class="p">(</span><span class="nx">props</span><span class="p">.</span><span class="nx">curColor</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="kd">const</span> <span class="nx">oldTextToIngredientArray</span> <span class="o">=</span> <span class="nx">mapTextToIngredients</span><span class="p">(</span><span class="nx">text</span><span class="p">.</span><span class="nx">length</span><span class="p">,</span> <span class="nx">lineWithoutChangedIng</span><span class="p">)</span>
+    <span class="c1">// overlay new ingredient on old array</span>
+    <span class="kd">const</span> <span class="nx">newTextToIngredientArray</span> <span class="o">=</span> <span class="p">[...</span><span class="nx">oldTextToIngredientArray</span><span class="p">]</span>
+    <span class="k">if</span><span class="p">(</span><span class="nx">start</span> <span class="o">!=</span> <span class="nx">end</span><span class="p">){</span>
+      <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">newTextToIngredientArray</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">){</span>
+        <span class="k">if</span><span class="p">(</span><span class="nx">i</span> <span class="o">&gt;=</span> <span class="nx">start</span> <span class="o">&amp;&amp;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">end</span><span class="p">){</span>
+          <span class="nx">newTextToIngredientArray</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">=</span> <span class="nx">props</span><span class="p">.</span><span class="nx">curColor</span>
+        <span class="p">}</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="kd">const</span> <span class="nx">body</span> <span class="o">=</span> <span class="p">{</span>
+      <span class="dl">"</span><span class="s2">new_ingredients</span><span class="dl">"</span><span class="p">:</span> <span class="nx">newTextToIngredientArray</span>
+    <span class="p">}</span>
+    <span class="kd">const</span> <span class="nx">headers</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Headers</span><span class="p">()</span>
+    <span class="nx">headers</span><span class="p">.</span><span class="nx">append</span><span class="p">(</span><span class="dl">'</span><span class="s1">Authorization</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">Basic </span><span class="dl">'</span> <span class="o">+</span> <span class="nx">btoa</span><span class="p">(</span><span class="nx">token</span> <span class="o">+</span> <span class="dl">"</span><span class="s2">:</span><span class="dl">"</span><span class="p">))</span>
+    <span class="nx">headers</span><span class="p">.</span><span class="nx">append</span><span class="p">(</span><span class="dl">'</span><span class="s1">Content-Type</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">application/json</span><span class="dl">'</span><span class="p">)</span>
+    <span class="nx">fetch</span><span class="p">(</span><span class="s2">`/lines/</span><span class="p">${</span><span class="nx">props</span><span class="p">.</span><span class="nx">line</span><span class="p">.</span><span class="nx">id</span><span class="p">}</span><span class="s2">/ingredients`</span><span class="p">,{</span>
+      <span class="na">method</span><span class="p">:</span><span class="dl">"</span><span class="s2">PUT</span><span class="dl">"</span><span class="p">,</span>
+      <span class="na">body</span><span class="p">:</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">body</span><span class="p">),</span>
+      <span class="na">headers</span><span class="p">:</span> <span class="nx">headers</span>
+    <span class="p">})</span>
+    <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">response</span><span class="o">=&gt;</span><span class="nx">response</span><span class="p">.</span><span class="nx">json</span><span class="p">())</span>
+    <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">json</span><span class="o">=&gt;</span><span class="p">{</span>
+      <span class="nx">props</span><span class="p">.</span><span class="nx">changeLine</span><span class="p">(</span><span class="nx">json</span><span class="p">)</span>
+    <span class="p">})</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>This is a pretty meaty function, so lets break it down. First, the function figures out what ingredient it is modifying. This is stored as a piece of state in the <code class="language-plaintext highlighter-rouge">RecipePanel</code> component and passed down as props. The function then unpacks the original <code class="language-plaintext highlighter-rouge">start</code> and <code class="language-plaintext highlighter-rouge">end</code> values for the ingredient. It compares them to the <code class="language-plaintext highlighter-rouge">buttonId</code> of the button that was pushed.</p>
+
+<p>The first two if statements concern what happens if the <code class="language-plaintext highlighter-rouge">buttonId</code> outside the old bounds of the ingredient; that is, it is either less than <code class="language-plaintext highlighter-rouge">start</code> or greater than or equal to <code class="language-plaintext highlighter-rouge">end</code>. In these cases, <code class="language-plaintext highlighter-rouge">buttonId</code> is simply swapped out with whichever token it is closer to.</p>
+
+<p>The final <code class="language-plaintext highlighter-rouge">else</code> statement is used if the <code class="language-plaintext highlighter-rouge">buttonId</code> is inside the old bounds of the ingredient; that is, we need to shrink the ingredient. When this happens, the function figures out if the <code class="language-plaintext highlighter-rouge">buttonId</code> is closer to the beginning or the end of the ingredient. It then swaps out accordingly, biasing towards the end of the ingredient (which I picked more or less arbitrarily).</p>
+
+<p>Now that the function has the new <code class="language-plaintext highlighter-rouge">start</code> and <code class="language-plaintext highlighter-rouge">end</code> values, it needs to actually change the ingredient. It does this by creating a new, spliced, version of the ingredient array (copied so as to prevent mutation of state). The <code class="language-plaintext highlighter-rouge">mapTextToIngredients</code> function is then called on this new array. Finally, the changed ingredient is overlaid onto the old ingredient array, creating the new version. This is what we send to the backend.</p>
+
+<h3 id="the-backend">The Backend</h3>
+
+<p>When the backend receives the array, it must still convert it into the new line association. It does this through a new function, <code class="language-plaintext highlighter-rouge">get_new_ingredients_on_line</code>, which takes the JSON data the frontend created and the line that needs to be changed.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">get_new_ingredients_on_line</span><span class="p">(</span><span class="n">new_ingredient_json</span><span class="p">,</span> <span class="n">line_to_change</span><span class="p">):</span>
+
+    <span class="n">new_ingredients</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">cur_ingredient_index</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">cur_ingredient</span> <span class="o">=</span> <span class="s">""</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="n">line_text_list</span> <span class="o">=</span> <span class="n">json</span><span class="p">.</span><span class="n">loads</span><span class="p">(</span><span class="n">line_to_change</span><span class="p">.</span><span class="n">text</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">word</span><span class="p">,</span> <span class="n">ingredient_index</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">line_text_list</span><span class="p">,</span> <span class="n">new_ingredient_json</span><span class="p">)):</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">word</span><span class="p">,</span> <span class="n">ingredient_index</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ingredient_index</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c1"># check if we are in a new ingredient
+</span>            <span class="k">if</span> <span class="n">cur_ingredient_index</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">cur_ingredient_index</span> <span class="o">=</span> <span class="n">ingredient_index</span>
+                <span class="n">start</span> <span class="o">=</span> <span class="n">i</span>
+            <span class="k">elif</span> <span class="n">cur_ingredient_index</span> <span class="o">!=</span> <span class="n">ingredient_index</span><span class="p">:</span>
+                <span class="n">end</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span> <span class="c1"># add one because spaCy end is exclusive
+</span>                <span class="n">new_ingredients</span><span class="p">.</span><span class="n">append</span><span class="p">({</span><span class="s">"ingredient"</span><span class="p">:</span> <span class="n">cur_ingredient</span><span class="p">.</span><span class="n">strip</span><span class="p">(),</span> <span class="s">"relevant_tokens"</span><span class="p">:</span> <span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">)})</span>
+                <span class="n">cur_ingredient_index</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">cur_ingredient</span> <span class="o">=</span> <span class="s">""</span>
+                <span class="n">start</span> <span class="o">=</span> <span class="n">i</span>
+            <span class="n">cur_ingredient</span> <span class="o">+=</span> <span class="n">word</span> <span class="o">+</span> <span class="s">" "</span>
+        <span class="k">elif</span> <span class="n">cur_ingredient_index</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">new_ingredients</span><span class="p">.</span><span class="n">append</span><span class="p">({</span><span class="s">"ingredient"</span><span class="p">:{</span><span class="s">"name"</span><span class="p">:</span><span class="n">cur_ingredient</span><span class="p">.</span><span class="n">strip</span><span class="p">()},</span> <span class="s">"relevant_tokens"</span><span class="p">:(</span><span class="n">start</span><span class="p">,</span> <span class="n">i</span><span class="p">)})</span>
+            <span class="n">cur_ingredient_index</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="n">cur_ingredient</span> <span class="o">=</span> <span class="s">""</span>
+
+    <span class="k">if</span> <span class="n">cur_ingredient</span><span class="p">:</span>
+        <span class="n">new_ingredients</span><span class="p">.</span><span class="n">append</span><span class="p">({</span><span class="s">"ingredient"</span><span class="p">:{</span><span class="s">"name"</span><span class="p">:</span> <span class="n">cur_ingredient</span><span class="p">},</span> <span class="s">"relevant_tokens"</span><span class="p">:</span> <span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">line_text_list</span><span class="p">))})</span>
+
+    <span class="k">return</span> <span class="n">json</span><span class="p">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">new_ingredients</span><span class="p">)</span></code></pre></figure>
+
+<p>Let’s go through this function. After defining a few initial values, the server iterates through an enumerated, zipped combination of the words on the line and the <code class="language-plaintext highlighter-rouge">ingredient_index</code> JSON. The <code class="language-plaintext highlighter-rouge">enumerate</code> addition is needed for the creation of indices.</p>
+
+<p>For each word, the function checks if it is part of an ingredient. If so, it appends the word onto the current ingredient being created. Once the end of the ingredient has been reached, it appends the ingredient’s start and end values, as determined by the <code class="language-plaintext highlighter-rouge">enumerate</code> call. It then returns a dumped version of the ingredients. Because these ingredients are compatible with the <code class="language-plaintext highlighter-rouge">RecipelineIngredientAssociationSchema</code> that I created <a href="/2020/08/08/Recipe-Page-Part-1.html">last time</a>, I can simply feed them in and the backend will take care of creating/associating the ingredients as necessary. The route then returns the new <code class="language-plaintext highlighter-rouge">RecipeLine</code>, ready for the frontend to update.</p>
+
+<h3 id="updating-the-frontend">Updating the Frontend</h3>
+
+<p>Updating the frontend is actually quite easy, although I may want to come back here later to improve the performance.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">changeRecipeLine</span> <span class="o">=</span> <span class="p">(</span><span class="nx">lineId</span><span class="p">,</span> <span class="nx">newLineJSON</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">newLines</span> <span class="o">=</span> <span class="p">[...</span><span class="nx">recipe</span><span class="p">.</span><span class="nx">recipe_lines</span><span class="p">]</span>
+  <span class="nx">newLines</span><span class="p">[</span><span class="nx">lineId</span><span class="p">]</span> <span class="o">=</span> <span class="nx">newLineJSON</span>
+  <span class="nx">setRecipe</span><span class="p">({...</span><span class="nx">recipe</span><span class="p">,</span> <span class="p">...{</span><span class="na">recipe_lines</span><span class="p">:</span> <span class="nx">newLines</span><span class="p">}})</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>This function makes use of object spread to create a new version of the recipe lines. It then swaps out the changed line and sets the recipe state to a new object, with the new version of the recipe lines. The problem with this is that it causes the whole recipe to re-render. So far it’s not causing performance issues, but this whole section is probably due for a refactor at some point anyway, and I’ll take another look at it then.</p>
+
+<h3 id="deleting-a-recipe-line">Deleting a Recipe Line</h3>
+
+<p>I also included a simple function to delete a line from the recipe. It operates essentially the same way that modifying a line does, except it makes use of the <code class="language-plaintext highlighter-rouge">splice()</code> function to cut out the removed line.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">removeLineFromDOM</span> <span class="o">=</span> <span class="p">(</span><span class="nx">lineId</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">newLines</span> <span class="o">=</span> <span class="p">[...</span><span class="nx">recipe</span><span class="p">.</span><span class="nx">recipe_lines</span><span class="p">]</span>
+  <span class="nx">newLines</span><span class="p">.</span><span class="nx">splice</span><span class="p">(</span><span class="nx">lineId</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+  <span class="nx">setRecipe</span><span class="p">({...</span><span class="nx">recipe</span><span class="p">,</span> <span class="p">...{</span><span class="na">recipe_lines</span><span class="p">:</span> <span class="nx">newLines</span><span class="p">}})</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>The RecipeLine also sends a <code class="language-plaintext highlighter-rouge">fetch</code> request to actually remove the line from the database.</p>
+
+<h3 id="colors">Colors</h3>
+
+<p>The colors are stored in an array in the <code class="language-plaintext highlighter-rouge">RecipePanel</code> component:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">colors</span> <span class="o">=</span> <span class="p">[</span>
+  <span class="dl">"</span><span class="s2">teal</span><span class="dl">"</span><span class="p">,</span>
+  <span class="dl">"</span><span class="s2">orange</span><span class="dl">"</span><span class="p">,</span>
+  <span class="dl">"</span><span class="s2">green</span><span class="dl">"</span><span class="p">,</span>
+  <span class="dl">"</span><span class="s2">red</span><span class="dl">"</span><span class="p">,</span>
+  <span class="dl">"</span><span class="s2">blue</span><span class="dl">"</span>
+<span class="p">]</span></code></pre></figure>
+
+<p>The current color is managed by a piece of state, also at this level. Users select different colors using the <code class="language-plaintext highlighter-rouge">ColorButton</code> component, which is held by the <code class="language-plaintext highlighter-rouge">ColorPicker</code> component.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">ColorButton</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">classes</span> <span class="o">=</span> <span class="nx">useStyles</span><span class="p">(</span><span class="nx">props</span><span class="p">)</span>
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">ButtonBase</span> <span class="nx">className</span> <span class="o">=</span> <span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">root</span><span class="p">}</span> <span class="nx">onClick</span><span class="o">=</span><span class="p">{()</span><span class="o">=&gt;</span><span class="nx">props</span><span class="p">.</span><span class="nx">setCurColor</span><span class="p">(</span><span class="nx">props</span><span class="p">.</span><span class="nx">colorNum</span><span class="p">)}</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">Teardrop</span> <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">selected</span> <span class="p">?</span> <span class="nx">classes</span><span class="p">.</span><span class="nx">selected</span> <span class="p">:</span> <span class="kc">null</span><span class="p">}</span><span class="sr">/</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/ButtonBase</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>The <code class="language-plaintext highlighter-rouge">setCurColor</code> function changes the <code class="language-plaintext highlighter-rouge">curColor</code> state. When a new ingredient button is clicked, this is how the program knows what ingredient to modify. The color that is selected is visually represented to the user with the <code class="language-plaintext highlighter-rouge">selected</code> attribute.</p>
+
+<h3 id="conclusions">Conclusions</h3>
+
+<p>And that’s most of it! There are a few other small additions I made, but I don’t think they’re important enough to take up space in this already fairly long post. That said, there’s definitely some clean-up to do here. The whole thing could take a lot of polish, and I’d like to break up some of the larger functions into more manageable chunks. That said, I’ve been working on this nonstop for a week and I need a break. I plan to focus on some other aspects of the app now, namely the list page. Once I get that working properly, I’m going to give this thing a big round of polish and then hopefully push for first release. I’ll keep adding features after, but I’m looking for a job right now and I want to have something to show prospective employers.</p>
+
+<p>Until next time!</p>
+
+</div>
+
+    </div>
+    <footer>
+      <span><a href="/index.html">Home</a></span>
+      <span><a href="/blog">Blog</a></span>
+      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+    </footer>
+    </div>
+  </body>
+</html>

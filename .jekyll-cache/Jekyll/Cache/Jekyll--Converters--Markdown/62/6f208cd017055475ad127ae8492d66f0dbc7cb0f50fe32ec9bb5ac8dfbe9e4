@@ -1,0 +1,236 @@
+I"��<p>Well, this post has taken a bit longer than I would have liked, but I’ve been pretty busy so hopefully that’ll make up for it.</p>
+
+<p>It was time for the list page to get a bit more love. The <a href="/2020/07/16/Grocery-App-Frontend-1.html">last time I worked on it</a> was at the very beginning of this project, and it was little more than a quick sweep over to get the layout down. Well, I’m going to be doing some changes to the layout in the future (stay tuned for that blog post), but in the mean time I wanted to add some new functions: namely, the ability to add and remove recipes from the list, and the ability to add additional ingredients.</p>
+
+<p>Both of these proved more complicated than I expected.</p>
+
+<h3 id="the-quick-recipe-bar">The Quick Recipe Bar</h3>
+
+<p>I wanted a way for a user to quickly add and remove recipes from their grocery list without having to toggle back to the main page and do it there (not that they can currently do it there either… man, there’s still a lot to do on this project). My idea was to have a sidebar that would list all of the user’s recipes, with a single button to choose if they wanted the recipe in or out of the list. This toolbar would have to load the recipes itself, check if they were in the list, and then conditionally render a button to add or remove them. The list would then need to be refreshed.</p>
+
+<p>After some work, here’s what I came up with. Each recipe is stored on a <code class="language-plaintext highlighter-rouge">RecipeSideSelector</code> component, which is basically a card with some styling.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="k">return</span><span class="p">(</span>
+  <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">mb</span><span class="o">=</span><span class="p">{</span><span class="mi">2</span><span class="p">}</span> <span class="nx">mx</span><span class="o">=</span><span class="p">{</span><span class="mi">1</span><span class="p">}</span><span class="o">&gt;</span>
+    <span class="o">&lt;</span><span class="nx">Card</span> <span class="nx">variant</span><span class="o">=</span><span class="dl">"</span><span class="s2">outlined</span><span class="dl">"</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">Typography</span> <span class="nx">variant</span><span class="o">=</span><span class="dl">"</span><span class="s2">h6</span><span class="dl">"</span><span class="o">&gt;</span>
+        <span class="p">{</span><span class="nx">recipe</span><span class="p">.</span><span class="nx">name</span><span class="p">}</span>
+      <span class="o">&lt;</span><span class="sr">/Typography</span><span class="err">&gt;
+</span>      <span class="o">&lt;</span><span class="nx">List</span><span class="o">&gt;</span>
+        <span class="p">{</span><span class="nx">ingredientsToDisplay</span><span class="p">.</span><span class="nx">map</span><span class="p">((</span><span class="nx">ingredient</span><span class="p">,</span> <span class="nx">index</span><span class="p">)</span><span class="o">=&gt;&lt;</span><span class="nx">ListItem</span> <span class="nx">key</span><span class="o">=</span><span class="p">{</span><span class="nx">index</span><span class="p">}</span><span class="o">&gt;</span><span class="p">{</span><span class="nx">ingredient</span><span class="p">.</span><span class="nx">name</span><span class="p">}</span><span class="o">&lt;</span><span class="sr">/ListItem&gt;</span><span class="se">)</span><span class="err">}
+</span>      <span class="o">&lt;</span><span class="sr">/List</span><span class="err">&gt;
+</span>      <span class="p">{</span><span class="nx">inList</span> <span class="p">?</span>
+        <span class="o">&lt;</span><span class="nx">Button</span> <span class="nx">onClick</span><span class="o">=</span><span class="p">{</span><span class="nx">removeRecipeFromList</span><span class="p">}</span><span class="o">&gt;</span><span class="nx">Remove</span><span class="o">&lt;</span><span class="sr">/Button</span><span class="err">&gt;
+</span>      <span class="p">:</span> <span class="o">&lt;</span><span class="nx">Button</span> <span class="nx">onClick</span><span class="o">=</span><span class="p">{</span><span class="nx">addRecipeToList</span><span class="p">}</span><span class="o">&gt;</span><span class="nx">Add</span><span class="o">&lt;</span><span class="sr">/Button&gt;</span><span class="err">}
+</span>    <span class="o">&lt;</span><span class="sr">/Card</span><span class="err">&gt;
+</span>  <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span><span class="p">)</span></code></pre></figure>
+
+<p>It has functions to both add and remove a recipe from a list, depending on the recipe’s current state. It does so by making the necessary funciton calls (notice I have switched to using <a href="https://www.npmjs.com/package/axios">axios</a>, an ongoing process).</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">addRecipeToList</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="nx">axios</span><span class="p">.</span><span class="nx">post</span><span class="p">(</span><span class="dl">'</span><span class="s1">/list-recipe-associations</span><span class="dl">'</span><span class="p">,</span> <span class="p">{</span>
+    <span class="dl">'</span><span class="s1">grocerylist_id</span><span class="dl">'</span><span class="p">:</span> <span class="nx">listId</span><span class="p">,</span>
+    <span class="dl">'</span><span class="s1">recipe_id</span><span class="dl">'</span><span class="p">:</span> <span class="nx">recipe</span><span class="p">.</span><span class="nx">id</span>
+  <span class="p">})</span>
+  <span class="p">.</span><span class="nx">then</span><span class="p">(()</span><span class="o">=&gt;</span><span class="nx">updateList</span><span class="p">())</span>
+<span class="p">}</span>
+
+<span class="kd">const</span> <span class="nx">removeRecipeFromList</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="nx">axios</span><span class="p">.</span><span class="k">delete</span><span class="p">(</span><span class="dl">'</span><span class="s1">/list-recipe-associations/${inList.id}</span><span class="dl">'</span><span class="p">)</span>
+  <span class="p">.</span><span class="nx">then</span><span class="p">(()</span><span class="o">=&gt;</span><span class="nx">updateList</span><span class="p">())</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>The appearance and presence of these cards is governed by the <code class="language-plaintext highlighter-rouge">QuickRecipeAdd</code> component, which gathers the recipes and determines if they are a part of the list or not. It’s <code class="language-plaintext highlighter-rouge">render</code> method makes use of the <code class="language-plaintext highlighter-rouge">Drawer</code> component from Material UI, like so:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="k">return</span> <span class="p">(</span>
+  <span class="o">&lt;</span><span class="nx">Drawer</span> <span class="nx">anchor</span><span class="o">=</span><span class="dl">"</span><span class="s2">left</span><span class="dl">"</span> <span class="nx">open</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">open</span><span class="p">}</span> <span class="nx">onClose</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">onClose</span><span class="p">}</span><span class="o">&gt;</span>
+    <span class="p">{</span><span class="nx">recipes</span><span class="p">.</span><span class="nx">map</span><span class="p">((</span><span class="nx">recipe</span><span class="p">,</span> <span class="nx">index</span><span class="p">)</span><span class="o">=&gt;</span><span class="p">{</span>
+      <span class="kd">const</span> <span class="nx">assoc</span> <span class="o">=</span> <span class="nx">recipeIsAssociated</span><span class="p">(</span><span class="nx">recipe</span><span class="p">)</span>
+      <span class="k">return</span> <span class="p">(</span>
+        <span class="o">&lt;</span><span class="nx">RecipeSideSelector</span>
+          <span class="nx">key</span><span class="o">=</span><span class="p">{</span><span class="nx">index</span><span class="p">}</span>
+          <span class="nx">recipe</span><span class="o">=</span><span class="p">{</span><span class="nx">recipe</span><span class="p">}</span>
+          <span class="nx">listId</span> <span class="o">=</span> <span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">listId</span><span class="p">}</span>
+          <span class="nx">inList</span><span class="o">=</span><span class="p">{</span><span class="nx">recipeIsAssociated</span><span class="p">(</span><span class="nx">recipe</span><span class="p">)}</span>
+          <span class="nx">updateList</span><span class="o">=</span><span class="p">{</span><span class="nx">updateList</span><span class="p">}</span><span class="sr">/</span><span class="err">&gt;
+</span>    <span class="p">)}</span>
+  <span class="p">)}</span>
+  <span class="o">&lt;</span><span class="sr">/Drawer</span><span class="err">&gt;
+</span><span class="p">)</span></code></pre></figure>
+
+<p>Whenever the drawer is opened, a <code class="language-plaintext highlighter-rouge">useEffect</code> hook calls the recipes and the associations:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="p">[</span><span class="nx">recipes</span><span class="p">,</span> <span class="nx">setRecipes</span><span class="p">]</span> <span class="o">=</span> <span class="nx">useState</span><span class="p">([])</span>
+<span class="kd">const</span> <span class="p">[</span><span class="nx">associations</span><span class="p">,</span> <span class="nx">setAssociations</span><span class="p">]</span> <span class="o">=</span> <span class="nx">useState</span><span class="p">([])</span>
+
+
+<span class="kd">const</span> <span class="nx">getRecipes</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="nx">axios</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="s2">`/recipes?user=</span><span class="p">${</span><span class="nx">user</span><span class="p">.</span><span class="nx">id</span><span class="p">}</span><span class="s2">`</span><span class="p">)</span>
+  <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">res</span><span class="o">=&gt;</span><span class="nx">setRecipes</span><span class="p">(</span><span class="nx">res</span><span class="p">.</span><span class="nx">data</span><span class="p">))</span>
+<span class="p">}</span>
+
+<span class="kd">const</span> <span class="nx">getAssociations</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="nx">axios</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="s2">`/list-recipe-associations?list=</span><span class="p">${</span><span class="nx">props</span><span class="p">.</span><span class="nx">listId</span><span class="p">}</span><span class="s2">`</span><span class="p">)</span>
+  <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">res</span><span class="o">=&gt;</span><span class="nx">setAssociations</span><span class="p">(</span><span class="nx">res</span><span class="p">.</span><span class="nx">data</span><span class="p">))</span>
+<span class="p">}</span>
+
+<span class="nx">useEffect</span><span class="p">(()</span><span class="o">=&gt;</span><span class="p">{</span>
+  <span class="nx">getRecipes</span><span class="p">()</span>
+  <span class="nx">getAssociations</span><span class="p">()</span>
+<span class="p">},</span> <span class="p">[</span><span class="nx">props</span><span class="p">.</span><span class="nx">open</span><span class="p">])</span></code></pre></figure>
+
+<p>The (still buggy) <code class="language-plaintext highlighter-rouge">recipeIsAssociated</code> method determines if an association is in the recipe or not, depending on the provided <code class="language-plaintext highlighter-rouge">associations</code> state.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">recipeIsAssociated</span> <span class="o">=</span> <span class="p">(</span><span class="nx">recipe</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">associations</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">){</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">associations</span><span class="p">[</span><span class="nx">i</span><span class="p">].</span><span class="nx">recipe_id</span> <span class="o">==</span> <span class="nx">recipe</span><span class="p">.</span><span class="nx">id</span><span class="p">){</span>
+      <span class="k">return</span> <span class="nx">associations</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="kc">null</span>
+  <span class="p">}</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>Finally, there’s a small method (passed down to the <code class="language-plaintext highlighter-rouge">RecipeSideSelector</code> component) that essentially refreshes the list of ingredients whenever a recipe is added or removed.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">updateList</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="nx">props</span><span class="p">.</span><span class="nx">getIngredients</span><span class="p">()</span>
+  <span class="nx">getAssociations</span><span class="p">()</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>And that pretty much sums up the quick recipe toolbar. As I mentioned above, there are some bugs that still need fixing, but my next cycle is a bunch of polishing and bug fixing, so I’ll take care of those things then.</p>
+
+<h3 id="additional-ingredients">Additional Ingredients</h3>
+
+<p>This one was significantly harder, and required some modifying of the backend before I could get it to work.</p>
+
+<p>First, I created a few new components, all variants of a single <code class="language-plaintext highlighter-rouge">AddIngredient</code> component. There was the parent component and then two children, one for when the component was “open” and one for when it was “closed.”</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">AddIngredientButton</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="p">[</span><span class="nx">inputOpen</span><span class="p">,</span> <span class="nx">setInputOpen</span><span class="p">]</span> <span class="o">=</span> <span class="nx">useState</span><span class="p">(</span><span class="kc">false</span><span class="p">)</span>
+  <span class="kd">const</span> <span class="p">[</span><span class="nx">newIngredient</span><span class="p">,</span> <span class="nx">setNewIngredient</span><span class="p">]</span> <span class="o">=</span> <span class="nx">useState</span><span class="p">(</span><span class="dl">""</span><span class="p">)</span>
+
+
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">div</span><span class="o">&gt;</span>
+      <span class="p">{</span><span class="nx">inputOpen</span> <span class="p">?</span>
+        <span class="o">&lt;</span><span class="nx">OpenAddIngredient</span>
+          <span class="nx">newIngredient</span><span class="o">=</span><span class="p">{</span><span class="nx">newIngredient</span><span class="p">}</span>
+          <span class="nx">setInputOpen</span><span class="o">=</span><span class="p">{</span><span class="nx">setInputOpen</span><span class="p">}</span>
+          <span class="nx">setNewIngredient</span><span class="o">=</span><span class="p">{</span><span class="nx">setNewIngredient</span><span class="p">}</span>
+          <span class="nx">getIngredients</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">getIngredients</span><span class="p">}</span> <span class="sr">/</span><span class="err">&gt;
+</span>        <span class="p">:</span> <span class="o">&lt;</span><span class="nx">ClosedAddIngredient</span>
+          <span class="nx">setInputOpen</span><span class="o">=</span><span class="p">{</span><span class="nx">setInputOpen</span><span class="p">}</span><span class="sr">/&gt;</span><span class="err">}
+</span>    <span class="o">&lt;</span><span class="sr">/div</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>The <code class="language-plaintext highlighter-rouge">ClosedAddIngredient</code> is the simpler of the two: it’s just a button with a “plus” on it that, when clicked, opens the <code class="language-plaintext highlighter-rouge">OpenAddIngredient</code> component.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">ClosedAddIngredient</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">ButtonBase</span> <span class="nx">onClick</span><span class="o">=</span><span class="p">{()</span><span class="o">=&gt;</span><span class="nx">props</span><span class="p">.</span><span class="nx">setInputOpen</span><span class="p">(</span><span class="kc">true</span><span class="p">)}</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">AddCircleIcon</span> <span class="o">/&gt;</span>
+    <span class="o">&lt;</span><span class="sr">/ButtonBase</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>The <code class="language-plaintext highlighter-rouge">OpenAddIngredient</code> component is a bit more complex, and a bit of it won’t make sense until I explain the backend changes, so keep that in mind. It first calls the new route “/lists/[listId]/additionalingredinets” to retrieve the new, dedicated “Additional Ingredients” recipe. Then, it defines a function that will add an ingredient to that recipe, saving most of the formatting work for the backend.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">OpenAddIngredient</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="p">[</span><span class="nx">additionalIngredients</span><span class="p">,</span> <span class="nx">setAdditionalIngredients</span><span class="p">]</span> <span class="o">=</span> <span class="nx">useState</span><span class="p">()</span>
+  <span class="kd">const</span> <span class="p">{</span><span class="nx">listId</span><span class="p">}</span> <span class="o">=</span> <span class="nx">useParams</span><span class="p">()</span>
+
+  <span class="nx">useEffect</span><span class="p">(()</span><span class="o">=&gt;</span><span class="p">{</span>
+    <span class="nx">axios</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="s2">`/lists/</span><span class="p">${</span><span class="nx">listId</span><span class="p">}</span><span class="s2">/additionalingredients`</span><span class="p">)</span>
+    <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">resp</span><span class="o">=&gt;</span><span class="p">{</span>
+      <span class="nx">setAdditionalIngredients</span><span class="p">(</span><span class="nx">resp</span><span class="p">.</span><span class="nx">data</span><span class="p">)</span>
+    <span class="p">})</span>
+  <span class="p">},[])</span>
+
+  <span class="kd">const</span> <span class="nx">addAdditionalIngredient</span> <span class="o">=</span> <span class="p">(</span><span class="nx">ing</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="nx">axios</span><span class="p">.</span><span class="nx">post</span><span class="p">(</span><span class="s2">`/lines`</span><span class="p">,{</span>
+      <span class="na">text</span><span class="p">:</span> <span class="nx">ing</span><span class="p">,</span>
+      <span class="na">recipe_id</span><span class="p">:</span> <span class="nx">additionalIngredients</span><span class="p">[</span><span class="dl">'</span><span class="s1">id</span><span class="dl">'</span><span class="p">],</span>
+      <span class="na">additional_ingredient</span><span class="p">:</span> <span class="kc">true</span>
+    <span class="p">})</span>
+    <span class="p">.</span><span class="nx">then</span><span class="p">(()</span><span class="o">=&gt;</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">getIngredients</span><span class="p">()})</span>
+    <span class="p">.</span><span class="k">catch</span><span class="p">(</span><span class="nx">err</span><span class="o">=&gt;</span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">err</span><span class="p">))</span>
+  <span class="p">}</span></code></pre></figure>
+
+<p>The actual component returns a <code class="language-plaintext highlighter-rouge">Box</code>, an <code class="language-plaintext highlighter-rouge">Input</code>, and two buttons, one to submit the ingredient and one to close the component.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="k">return</span> <span class="p">(</span>
+  <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">component</span><span class="o">=</span><span class="dl">"</span><span class="s2">span</span><span class="dl">"</span><span class="o">&gt;</span>
+    <span class="o">&lt;</span><span class="nx">Input</span> <span class="nx">value</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">newIngredient</span><span class="p">}</span> <span class="nx">onChange</span><span class="o">=</span><span class="p">{(</span><span class="nx">e</span><span class="p">)</span><span class="o">=&gt;</span><span class="nx">props</span><span class="p">.</span><span class="nx">setNewIngredient</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">target</span><span class="p">.</span><span class="nx">value</span><span class="p">)}</span><span class="sr">/</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="nx">ButtonBase</span> <span class="nx">onClick</span><span class="o">=</span><span class="p">{()</span><span class="o">=&gt;</span><span class="nx">addAdditionalIngredient</span><span class="p">(</span><span class="nx">props</span><span class="p">.</span><span class="nx">newIngredient</span><span class="p">)}</span><span class="o">&gt;&lt;</span><span class="nx">CheckCircleIcon</span> <span class="o">/&gt;&lt;</span><span class="sr">/ButtonBase</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="nx">ButtonBase</span> <span class="nx">onClick</span><span class="o">=</span><span class="p">{()</span><span class="o">=&gt;</span><span class="nx">props</span><span class="p">.</span><span class="nx">setInputOpen</span><span class="p">(</span><span class="kc">false</span><span class="p">)}</span><span class="o">&gt;&lt;</span><span class="nx">RemoveCircleIcon</span> <span class="o">/&gt;&lt;</span><span class="sr">/ButtonBase</span><span class="err">&gt;
+</span>  <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span><span class="p">)</span></code></pre></figure>
+
+<p>On the backend side of things, I first made a few more modifications to my underlying model, adding a new, dedicated <code class="language-plaintext highlighter-rouge">Recipe</code> for storing additional ingredients to every list.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">class</span> <span class="nc">GroceryList</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s">'grocery_list'</span>
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">String</span><span class="p">(</span><span class="mi">50</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+    <span class="n">recipes</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">relationship</span><span class="p">(</span><span class="s">"Recipe"</span><span class="p">,</span>
+                              <span class="n">secondary</span><span class="o">=</span><span class="n">recipe_list_associations</span><span class="p">,</span>
+                              <span class="n">back_populates</span><span class="o">=</span><span class="s">"grocery_lists"</span><span class="p">)</span>
+    <span class="n">additional_ingredients_id</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Integer</span><span class="p">,</span> <span class="n">db</span><span class="p">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="s">"recipe.id"</span><span class="p">))</span>
+    <span class="n">creator_id</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Integer</span><span class="p">,</span> <span class="n">db</span><span class="p">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="s">"user.id"</span><span class="p">))</span>   <span class="c1"># the creator of the grocerylist. can add others to edit
+</span>    <span class="n">creator</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">relationship</span><span class="p">(</span><span class="s">"User"</span><span class="p">,</span> <span class="n">back_populates</span><span class="o">=</span><span class="s">"created_lists"</span><span class="p">)</span>
+    <span class="n">editors</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">relationship</span><span class="p">(</span><span class="s">"User"</span><span class="p">,</span>                           <span class="c1"># other users with permission to edit the grocery list
+</span>                            <span class="n">secondary</span><span class="o">=</span><span class="n">user_list_associations</span><span class="p">,</span>
+                            <span class="n">back_populates</span><span class="o">=</span><span class="s">"editable_lists"</span><span class="p">)</span>
+    <span class="n">additional_ingredients</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">relationship</span><span class="p">(</span><span class="s">"Recipe"</span><span class="p">,</span> <span class="n">back_populates</span><span class="o">=</span><span class="s">"ai_list"</span><span class="p">,</span> <span class="n">cascade</span><span class="o">=</span><span class="s">"all, delete-orphan"</span><span class="p">,</span> <span class="n">single_parent</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">create_additional_ingredients_recipe</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">additional_ingredients_recipe</span> <span class="o">=</span> <span class="n">Recipe</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">"Additional Ingredients"</span><span class="p">,</span> <span class="n">creator_id</span><span class="o">=</span><span class="bp">self</span><span class="p">.</span><span class="n">creator_id</span><span class="p">)</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">additional_ingredients</span> <span class="o">=</span> <span class="n">additional_ingredients_recipe</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">recipes</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="n">additional_ingredients_recipe</span><span class="p">)</span>
+        <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">additional_ingredients_recipe</span><span class="p">)</span>
+        <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span></code></pre></figure>
+
+<p>The <code class="language-plaintext highlighter-rouge">create_additional_ingredients</code> function is called during the creation of every new list:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># post a new GroceryList
+</span><span class="o">@</span><span class="n">grocerylist</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/lists"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"POST"</span><span class="p">])</span>
+<span class="o">@</span><span class="n">auth</span><span class="p">.</span><span class="n">login_required</span>
+<span class="k">def</span> <span class="nf">post_list</span><span class="p">():</span>
+    <span class="n">new_list_json</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">json</span>
+    <span class="n">new_list_json</span><span class="p">[</span><span class="s">"creator_id"</span><span class="p">]</span> <span class="o">=</span> <span class="n">g</span><span class="p">.</span><span class="n">user</span><span class="p">.</span><span class="nb">id</span>
+    <span class="n">new_grocerylist</span> <span class="o">=</span> <span class="n">post_new_resource</span><span class="p">(</span><span class="n">GroceryList</span><span class="p">,</span> <span class="n">new_list_json</span><span class="p">)</span>
+    <span class="n">new_grocerylist</span><span class="p">.</span><span class="n">create_additional_ingredients_recipe</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">grocerylist_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">new_grocerylist</span><span class="p">)),</span> <span class="mi">201</span></code></pre></figure>
+
+<p>I also added a new route for accessing this list:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># special route for accessing the "Additional Ingredients" recipe for a specific list
+</span><span class="o">@</span><span class="n">grocerylist</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/lists/&lt;int:id_&gt;/additionalingredients"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">'GET'</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">get_additional_ingredients</span><span class="p">(</span><span class="n">id_</span><span class="p">):</span>
+    <span class="n">list_to_get</span> <span class="o">=</span> <span class="n">get_resource_or_404</span><span class="p">(</span><span class="n">GroceryList</span><span class="p">,</span> <span class="n">id_</span><span class="p">)</span>
+    <span class="n">recipe_schema</span> <span class="o">=</span> <span class="n">RecipeSchema</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">recipe_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">list_to_get</span><span class="p">.</span><span class="n">additional_ingredients</span><span class="p">))</span></code></pre></figure>
+
+<p>I then made some changes to the <code class="language-plaintext highlighter-rouge">RecipeLine</code> schema, such that it would check for the tag “additional_ingredients”. If it found it, it would run the line through the spaCy parser for an accurate token split, and then set the entire line as the ingredient.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">pre_load</span>
+ <span class="k">def</span> <span class="nf">convert_line_from_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+     <span class="k">if</span> <span class="n">data</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"convert_from_text"</span><span class="p">):</span>
+         <span class="n">converted_data</span> <span class="o">=</span> <span class="n">determine_ingredients_in_line</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">"text"</span><span class="p">])</span>
+         <span class="n">converted_data</span><span class="p">[</span><span class="s">"recipe_id"</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">"recipe_id"</span><span class="p">]</span>
+         <span class="k">return</span> <span class="n">converted_data</span>
+     <span class="k">if</span> <span class="n">data</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"additional_ingredient"</span><span class="p">):</span>
+         <span class="n">converted_data</span> <span class="o">=</span> <span class="n">determine_ingredients_in_line</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">"text"</span><span class="p">])</span>
+         <span class="n">converted_data</span><span class="p">[</span><span class="s">"recipe_id"</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">"recipe_id"</span><span class="p">]</span>
+         <span class="n">end_token</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">json</span><span class="p">.</span><span class="n">loads</span><span class="p">(</span><span class="n">converted_data</span><span class="p">[</span><span class="s">"text"</span><span class="p">]))</span>     <span class="c1"># have to load because it was packed in string form
+</span>         <span class="n">overwrite_ingredients</span> <span class="o">=</span> <span class="p">{</span><span class="s">"ingredient"</span><span class="p">:</span> <span class="p">{</span><span class="s">"name"</span><span class="p">:</span> <span class="n">data</span><span class="p">[</span><span class="s">"text"</span><span class="p">]},</span> <span class="s">"relevant_tokens"</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">end_token</span><span class="p">]}</span>
+         <span class="n">converted_data</span><span class="p">[</span><span class="s">"ingredients"</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">overwrite_ingredients</span><span class="p">]</span>
+         <span class="k">print</span><span class="p">(</span><span class="s">"converted data"</span><span class="p">,</span> <span class="n">converted_data</span><span class="p">)</span>
+         <span class="k">return</span> <span class="n">converted_data</span>
+     <span class="k">return</span> <span class="n">data</span></code></pre></figure>
+
+<p>This is a workaround, and it comes from the fact that there isn’t really an easy way to directly associate an ingredient with a list. The creation of a middle-man recipe is the best way I can think of doing this without drastic changes to the underlying model structure. And I think it has some advantages, too; it eliminates the possibility of duplicate ingredients, since anything the user adds that’s already in the list won’t be added a second time. It took a bit of time to make this work though; some of my earlier modifications to make the recipe page work got in the way. I think that’s a sign that things are starting to get complex and I need to take a step back and do some refactoring. I’ve decided to release my first version soon, with a limited amount of features, just to have something out in the world while I continue to work (and continue to look for a job). So I expect my next few posts will involve polishing features and fixing bugs, as well as some under-the-hood refactoring work. Stay tuned.</p>
+:ET

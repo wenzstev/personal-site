@@ -3,14 +3,15 @@ layout: default
 title: Home
 ---
 <header>
-<img src="/assets/images/cropped_picture.jpg" class="title-image" />
+<img src="/assets/img/cropped_picture.jpg" class="title-image" />
   <div class="subsection">
     <h1 class="heading">Steve Wenzel</h1>
     <h3 class="subheading">Full Stack Developer</h3>
     <nav class="small-nav">
-      <img src="/assets/images/iconmonstr-linkedin-3.svg" />
-      <img src="/assets/images/iconmonstr-github-1.svg" />
-      <img src="/assets/images/iconmonstr-email-10.svg" />
+      <a href="https://www.linkedin.com/in/steven-wenzel/" target="_blank"><img src="/assets/img/iconmonstr-linkedin-3.svg" /></a>
+      <a href="https://github.com/wenzstev" target="_blank"><img src="/assets/img/iconmonstr-github-1.svg" /></a>
+      <a href="mailto:wenzelstev.gmail.com" target="_blank"><img src="/assets/img/iconmonstr-email-10.svg" /></a>
+      <a href="/assets/img/wenzel_resume_2020_technical.pdf" target="_blank"><img src="/assets/img/iconmonstr-note-14.svg" /></a>
     </nav>
   </div>
 </header>
@@ -39,7 +40,7 @@ title: Home
         <ul>
         {% for post in site.posts limit: 3 %}
           <li>
-            <h4>{{ post.title }}</h4>
+            <h4><a href="{{post.url}}">{{ post.title }}</a></h4>
             <h5>{{post.date | date_to_string }}</h5>
             {{ post.excerpt }}
           </li>
