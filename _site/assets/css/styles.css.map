@@ -6,7 +6,7 @@
 		"_sass/main.scss",
 		"_sass/blog.scss",
 		"_sass/default.scss",
-		"_sass/manni.css"
+		"_sass/manni.scss"
 	],
 	"sourcesContent": [
 		"@import \"main\";\n@import \"blog\";\n@import \"default\";\n@import \"manni\";\n",
