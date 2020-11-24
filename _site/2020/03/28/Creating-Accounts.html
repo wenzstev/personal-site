@@ -12,13 +12,16 @@
     <div class="full-page">
     <div class="content">
     <header>
+  <div class="blog-container">
   <div class="blog-header">
       <h2>Creating an Account System</h2>
       <small>28 Mar 2020</small>
   </div>
+  </div>
 </header>
 
-<div class="margin">
+
+<div class="post">
 <p>Well, I can’t put it off any longer. It’s time to add the final large feature of this app: the account system. I decided to implement a system for accounts that closely resembles the one implemented in <a href="https://www.youtube.com/watch?v=MwZwr5Tvyxo&amp;t=2s">this</a> tutorial series, which is what I originally learned to teach myself Flask. I went back through it and reviewed the relevant lessons (plus looked at my example project that I made from those tutorials) to prepare for this implementation.</p>
 
 <p>I started off by creating two new forms, one for registering new accounts, and one for logging in. I saved these in a new <code class="language-plaintext highlighter-rouge">forms.py</code> folder in my <code class="language-plaintext highlighter-rouge">account</code> blueprint (which is what I renamed the <code class="language-plaintext highlighter-rouge">user</code> blueprint).</p>
@@ -290,14 +293,18 @@
 
 </div>
 
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
     </div>
-    <footer>
-      <span><a href="/index.html">Home</a></span>
-      <span><a href="/blog">Blog</a></span>
-      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
-      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
-      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
-    </footer>
     </div>
   </body>
 </html>

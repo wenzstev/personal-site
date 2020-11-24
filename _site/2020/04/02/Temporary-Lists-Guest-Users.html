@@ -12,13 +12,16 @@
     <div class="full-page">
     <div class="content">
     <header>
+  <div class="blog-container">
   <div class="blog-header">
       <h2>Enabling the Creation of Temporary Lists with Guest Users</h2>
       <small>02 Apr 2020</small>
   </div>
+  </div>
 </header>
 
-<div class="margin">
+
+<div class="post">
 <p>The creation of user accounts invites a new question: what do we do if someone does not want to make an account? While I could fairly easily arrange it so that a user <em>must</em> make an account to use the app, I think it would be better to allow the creation of temporary accounts that allow the creation of just one list. In order to save the list or to create additional lists, the user would have to register, which would upgrade the account into a fully-fledged one. While logged on as a guest user, certain pages and features would not be available.</p>
 
 <p>I decided to implement this by making use of my <code class="language-plaintext highlighter-rouge">User</code> model, and adding a new line to it to check if an account was “temporary” or not:</p>
@@ -169,14 +172,18 @@
 
 </div>
 
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
     </div>
-    <footer>
-      <span><a href="/index.html">Home</a></span>
-      <span><a href="/blog">Blog</a></span>
-      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
-      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
-      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
-    </footer>
     </div>
   </body>
 </html>

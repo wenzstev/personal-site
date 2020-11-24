@@ -12,13 +12,16 @@
     <div class="full-page">
     <div class="content">
     <header>
+  <div class="blog-container">
   <div class="blog-header">
       <h2>Building a Recipe Parser -- Part 2</h2>
       <small>18 Jan 2020</small>
   </div>
+  </div>
 </header>
 
-<div class="margin">
+
+<div class="post">
 <p>When last we left our fledgling program, we had <a href="/2020/01/17/Recipe-Parser-Part-1.html">planned our features and set up the basic scaffold</a>. Now, we turn our attention to the meat and potatoes of the program: getting the recipe, and parsing it out.</p>
 
 <p>The first part proved to be the far easier of the two. I’d already decided to use a <code class="language-plaintext highlighter-rouge">beautifulsoup</code> module, and it was a cinch to go to a random recipe on <a href="allrecipes.com">AllRecipes</a>, and inspect the source to find out how ingredients were labelled. They use the name <code class="language-plaintext highlighter-rouge">recipeIngredient</code>, and in a couple lines of code my work was done:</p>
@@ -121,14 +124,18 @@
 
 </div>
 
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
     </div>
-    <footer>
-      <span><a href="/index.html">Home</a></span>
-      <span><a href="/blog">Blog</a></span>
-      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
-      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
-      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
-    </footer>
     </div>
   </body>
 </html>

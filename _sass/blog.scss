@@ -4,8 +4,31 @@ small {
   font-size: .75rem;
 }
 
+.post {
+  max-width: 600px;
+  margin: auto;
+  padding: .75rem;
+}
+
+.post p {
+  margin-bottom: 2rem;
+}
+
+.blog-container {
+  margin: auto;
+}
+
 .blog-header {
-  margin-left: 1rem;
+  width: 600px;
+}
+
+@media only screen and (max-width: 600px) {
+  .blog-header {
+    width: 95vw;
+  }
+  .blog-container {
+    margin: 0;
+  }
 }
 
 .margin {

@@ -12,13 +12,16 @@
     <div class="full-page">
     <div class="content">
     <header>
+  <div class="blog-container">
   <div class="blog-header">
       <h2>First Patch, with Notes on Scraping</h2>
       <small>25 Apr 2020</small>
   </div>
+  </div>
 </header>
 
-<div class="margin">
+
+<div class="post">
 <p>So I’ve just released my first patch for the recipe parser, which took care of a few of the more glaring issues that the program still needed. Most notable was a bug that prevented a number of screens from being showed due to an errant variable in my <code class="language-plaintext highlighter-rouge">layout.html</code> file. I removed the offending variable and set the guest users to be automatically redirected to their list when they click the “home” button instead.</p>
 
 <p>More importantly, however, I added support for a number of additional recipes, and worked on the architecture for my web scraper. This has been a fun bit of coding; because there are so many different recipe websites out there, implementing them one by one is very tedious and I was incentivized to come up with ways to avoid repetition as much as possible.</p>
@@ -144,14 +147,18 @@
 
 </div>
 
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
     </div>
-    <footer>
-      <span><a href="/index.html">Home</a></span>
-      <span><a href="/blog">Blog</a></span>
-      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
-      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
-      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
-    </footer>
     </div>
   </body>
 </html>

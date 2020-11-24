@@ -12,13 +12,16 @@
     <div class="full-page">
     <div class="content">
     <header>
+  <div class="blog-container">
   <div class="blog-header">
       <h2>JSON and Databases and AJAX -- Oh My!</h2>
       <small>13 Feb 2020</small>
   </div>
+  </div>
 </header>
 
-<div class="margin">
+
+<div class="post">
 <p>The last few days have largely been about proof of concept; namely, showing that I can make all the independent pieces of this project work before I bring them all together into a beautiful symphony.</p>
 
 <p>First, I wanted to be able to change the color of the text based on if spaCy found it as an entity or not. I loaded in my old spaCy entity trainer. I decided to do this in the <code class="language-plaintext highlighter-rouge">__init__</code> file, since I would probably be using it numerous times throughout the app. From there, I imported it into my <code class="language-plaintext highlighter-rouge">utils.py</code> file that I currently have in my <code class="language-plaintext highlighter-rouge">main</code> Blueprint.</p>
@@ -187,14 +190,18 @@
 
 </div>
 
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
     </div>
-    <footer>
-      <span><a href="/index.html">Home</a></span>
-      <span><a href="/blog">Blog</a></span>
-      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
-      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
-      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
-    </footer>
     </div>
   </body>
 </html>

@@ -12,13 +12,16 @@
     <div class="full-page">
     <div class="content">
     <header>
+  <div class="blog-container">
   <div class="blog-header">
       <h2>Emailing the Grocery List</h2>
       <small>24 Mar 2020</small>
   </div>
+  </div>
 </header>
 
-<div class="margin">
+
+<div class="post">
 <p>With a basic pdf export available, it’s time to look at emailing the grocery list. When I add accounts, I want to give the user the option to do a one-click email to their inbox, so that they can easily access the grocery list outside of the app. In the meantime, I want to be able to allow the user to input an email address of their choice, and have the app send to the given email.</p>
 
 <p>First, I created a test case, just to make sure I could actually send emails. I created a new gmail account for the app and added the email and password to my environmental variables. Then I imported <code class="language-plaintext highlighter-rouge">flask_email</code> and set up a new email object for my app:</p>
@@ -175,14 +178,18 @@
 
 </div>
 
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
     </div>
-    <footer>
-      <span><a href="/index.html">Home</a></span>
-      <span><a href="/blog">Blog</a></span>
-      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
-      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
-      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
-    </footer>
     </div>
   </body>
 </html>

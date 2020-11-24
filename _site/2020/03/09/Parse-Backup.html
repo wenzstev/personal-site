@@ -12,13 +12,16 @@
     <div class="full-page">
     <div class="content">
     <header>
+  <div class="blog-container">
   <div class="blog-header">
       <h2>What Happens When We Can't Parse a Recipe</h2>
       <small>09 Mar 2020</small>
   </div>
+  </div>
 </header>
 
-<div class="margin">
+
+<div class="post">
 <p>Now that the basic functionality of cleaning and adding new lines is working successfully, it’s time to expand the options a user has to make use of those features. The first way I want to do that is to give the user the ability to add custom recipes. Additionally, I want this ability to function as a fallback, in case the program fails to properly parse the recipe from the urls (which happens <em>a lot</em> right now, although to be fair I haven’t touched that part of the program in a long time). Seeing as this functionality can effectively kill two birds with one stone, I decided that I was going to implement it next.</p>
 
 <p>First, I created a new form in my <code class="language-plaintext highlighter-rouge">forms.py</code> file, consisting of a <code class="language-plaintext highlighter-rouge">&lt;textarea&gt;</code> tag that would enable multi-line entering of a recipe:</p>
@@ -120,14 +123,18 @@
 
 </div>
 
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
     </div>
-    <footer>
-      <span><a href="/index.html">Home</a></span>
-      <span><a href="/blog">Blog</a></span>
-      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
-      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
-      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
-    </footer>
     </div>
   </body>
 </html>

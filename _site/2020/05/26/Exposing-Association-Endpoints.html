@@ -12,13 +12,16 @@
     <div class="full-page">
     <div class="content">
     <header>
+  <div class="blog-container">
   <div class="blog-header">
       <h2>Rewriting PUT Requests with Exposed Association Endpoints</h2>
       <small>26 May 2020</small>
   </div>
+  </div>
 </header>
 
-<div class="margin">
+
+<div class="post">
 <p>This is a bit of an unexpected post, in that it grew out of a need to solve a somewhat different problem. I had completed by refactoring for the “GET” and “POST” endpoints, and was trying to do the same for my “PUT” requests. The problem was that the various attributes that needed to be changed for different “PUT” requests were significantly different from each other, such that trying to write a single function to work with all of them began to feel unnecessary and maybe even counterproductive.</p>
 
 <p>But in the course of doing that work, I had to confront a different, but related problem: there was not a particularly robust or easy way to modify the associations between Recipes and GroceryLists and between Users and GroceryLists. Up to this point, I had been submitting the recipe/ingredient/user ids to the GroceryList PUT request, either as single ids or as the full schematic representation of the resource. This worked, but was clunky and often turned up confusing errors. The program often attempted to create new versions of already existing resources, and then threw <code class="language-plaintext highlighter-rouge">IntegrityError</code>s when it couldn’t successfully insert these objects into the database. I had gotten around that previously by expanding my schemas and adding checks, but as my program became more complicated and the checks required increasing detail and special cases, the whole thing just began to feel a bit janky.</p>
@@ -137,14 +140,18 @@
 
 </div>
 
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
     </div>
-    <footer>
-      <span><a href="/index.html">Home</a></span>
-      <span><a href="/blog">Blog</a></span>
-      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
-      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
-      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
-    </footer>
     </div>
   </body>
 </html>

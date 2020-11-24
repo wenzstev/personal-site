@@ -18,7 +18,7 @@ li {
 }
 
 ul {
-  padding-left: .5rem;
+  padding-left: 0;
 }
 
 h1 {
@@ -47,6 +47,20 @@ a:hover {
   display: flex;
   justify-content: space-around;
   align-items: flex-start;
+  box-sizing: border-box;
+}
+
+@media (max-width: 480px){
+  .container {
+    flex-wrap: wrap;
+  }
+
+}
+
+@media (min-width: 481px){
+  .blog {
+    max-width: 30%;
+  }
 }
 
 .projects {
@@ -80,17 +94,17 @@ a:hover {
 
 .projects li {
   margin: .5rem;
-  background-color: lemonchiffon;
+  background-color: #F6DCB9;
   padding: .5rem;
   border-radius: 3px;
 }
 
 
 .blog {
-  margin: .25rem;
+  margin: .5rem;
+  padding: .5rem;
   border: 1px solid black;
   border-radius: 3px;
-  max-width: 30%;
 }
 
 .blog h2 {

@@ -12,13 +12,16 @@
     <div class="full-page">
     <div class="content">
     <header>
+  <div class="blog-container">
   <div class="blog-header">
       <h2>Working out the Kinks in NER "Quantity" Improvement</h2>
       <small>25 Jan 2020</small>
   </div>
+  </div>
 </header>
 
-<div class="margin">
+
+<div class="post">
 <p>After having successfully shown that I could train the spaCy model to a wider definition of <code class="language-plaintext highlighter-rouge">'QUANTITY'</code>, I still had to iron out some details. The most pressing of which was the fact that spaCy’s model seemed to have learned that any number/word combination equated to a <code class="language-plaintext highlighter-rouge">'QUANTITY'</code> entity. This was fine for something like <code class="language-plaintext highlighter-rouge">'1 cup'</code> but it was also reading <code class="language-plaintext highlighter-rouge">'6 carrots'</code> or <code class="language-plaintext highlighter-rouge">'1 egg'</code> as a <code class="language-plaintext highlighter-rouge">'QUANTITY'</code>, which I did not want. In order to better define the difference between a quantity and a base number, I added some additional training data to my set, specifically involving instances where a number/word pair was <em>not</em> a <code class="language-plaintext highlighter-rouge">'QUANTITY'</code> positive:</p>
 
 <figure class="highlight"><pre><code class="language-python" data-lang="python">  <span class="p">(</span><span class="s">'12 egg whites'</span><span class="p">,</span> <span class="p">{</span><span class="s">"entities"</span><span class="p">:</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="s">"CARDINAL"</span><span class="p">)]}),</span>
@@ -119,14 +122,18 @@
 
 </div>
 
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
     </div>
-    <footer>
-      <span><a href="/index.html">Home</a></span>
-      <span><a href="/blog">Blog</a></span>
-      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
-      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
-      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
-    </footer>
     </div>
   </body>
 </html>

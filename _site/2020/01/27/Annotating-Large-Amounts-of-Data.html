@@ -12,13 +12,16 @@
     <div class="full-page">
     <div class="content">
     <header>
+  <div class="blog-container">
   <div class="blog-header">
       <h2>Building a Command Line App to Annotate Large Amounts of Data</h2>
       <small>27 Jan 2020</small>
   </div>
+  </div>
 </header>
 
-<div class="margin">
+
+<div class="post">
 <p>In order to properly teach spaCy a new entity type, we need a lot of data. SpaCy’s documentation notes that “a few hundred would be a good start.” I’m not the biggest fan of going through hundreds of lines of data and hand typing <code class="language-plaintext highlighter-rouge">{entities: (0, 12, 'QUANTITY')}</code> or whatever until my fingers bleed. So in the spirit of automation, I decided to write a command line app to do most of the work for me.</p>
 
 <p>I planned out the app to work as follows: I would feed in a list of ingredient lines, and it would cycle through them one by one. On each line, it would then prompt the user to type out what the ingredient (or other entity) was. It would then search the line and match the entity, and return the start and end locations of the entity. Finally, it would wrap all of the necessary data in the right format, so when I was done I could just plug it into spaCy and run it.</p>
@@ -144,14 +147,18 @@
 
 </div>
 
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
     </div>
-    <footer>
-      <span><a href="/index.html">Home</a></span>
-      <span><a href="/blog">Blog</a></span>
-      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
-      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
-      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
-    </footer>
     </div>
   </body>
 </html>

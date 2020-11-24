@@ -12,13 +12,16 @@
     <div class="full-page">
     <div class="content">
     <header>
+  <div class="blog-container">
   <div class="blog-header">
       <h2>Second Patch -- Custom Error Pages and the Beginnings of a Control Panel</h2>
       <small>26 Apr 2020</small>
   </div>
+  </div>
 </header>
 
-<div class="margin">
+
+<div class="post">
 <p>Just a quick note today. I pushed out a second patch a few hours ago, which provides some flashy new custom error pages, which is something that my test users have encountered a disheartening number of times. But that’s okay! The fact that I have test users at all is a pretty big accomplishment.</p>
 
 <p>My implementation of the custom pages is extremely simple: I created a new Blueprint called <code class="language-plaintext highlighter-rouge">errors</code>, where I store all the error handlers for the app. Each handler has an associated html template which informs the user of the problem. There’s also a link back to their homepage. For the 404 error:</p>
@@ -81,14 +84,18 @@ And the html:
 
 </div>
 
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
     </div>
-    <footer>
-      <span><a href="/index.html">Home</a></span>
-      <span><a href="/blog">Blog</a></span>
-      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
-      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
-      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
-    </footer>
     </div>
   </body>
 </html>

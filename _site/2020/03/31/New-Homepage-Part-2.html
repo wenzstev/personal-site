@@ -12,13 +12,16 @@
     <div class="full-page">
     <div class="content">
     <header>
+  <div class="blog-container">
   <div class="blog-header">
       <h2>Creating a New Homepage -- Part 2</h2>
       <small>31 Mar 2020</small>
   </div>
+  </div>
 </header>
 
-<div class="margin">
+
+<div class="post">
 <p>After having established a <a href="/2020/03/30/New-Homepage.html">new user list page</a>, it was time to ensure responsive design, as well as add a new way for users to create new lists.</p>
 
 <p>It’s here that my decision to move to Bootstrap 4 has begun to pay dividends, because Bootstrap makes it very easy to create responsive design. My goal was to present the users lists as a set of cards with roughly equal size, and I wanted the number of cards on each row to change depending on the size of the screen. It was fairly easy to find an example of what I was looking for; <a href="https://stackoverflow.com/questions/36430816/bootstrap-4-card-deck-with-number-of-columns-based-on-viewport">this</a> answer provided the most succinct solution. I made use of Bootstrap’s <a href="https://getbootstrap.com/docs/4.1/components/card/#card-decks">card decks</a> to ensure equal lines, and the <code class="language-plaintext highlighter-rouge">.w-100</code> class to create breakpoints when I wanted to.</p>
@@ -158,14 +161,18 @@
 
 </div>
 
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
     </div>
-    <footer>
-      <span><a href="/index.html">Home</a></span>
-      <span><a href="/blog">Blog</a></span>
-      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
-      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
-      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
-    </footer>
     </div>
   </body>
 </html>

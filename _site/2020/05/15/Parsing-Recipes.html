@@ -12,13 +12,16 @@
     <div class="full-page">
     <div class="content">
     <header>
+  <div class="blog-container">
   <div class="blog-header">
       <h2>Parsing Recipes and Refactoring</h2>
       <small>15 May 2020</small>
   </div>
+  </div>
 </header>
 
-<div class="margin">
+
+<div class="post">
 <p>I’ve been working on a bit of a hodgepodge of features as I near completion of the backend. After implementing the endpoints for the users, all that was left to do for full (albeit still buggy) functionality was to implement the ability to parse recipe lines, and add spaCy back into the equation.</p>
 
 <p>The recipe parser was actually quite easy: I pretty much just used the code I’d made for the first version of this app and did some rewriting to make sure it functioned properly in it’s new setting. I also added some tweaks to catch more of the AllRecipes recipes, since before I was having some issues.</p>
@@ -248,14 +251,18 @@
 
 </div>
 
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
     </div>
-    <footer>
-      <span><a href="/index.html">Home</a></span>
-      <span><a href="/blog">Blog</a></span>
-      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
-      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
-      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
-    </footer>
     </div>
   </body>
 </html>

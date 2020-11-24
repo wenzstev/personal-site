@@ -12,13 +12,16 @@
     <div class="full-page">
     <div class="content">
     <header>
+  <div class="blog-container">
   <div class="blog-header">
       <h2>A Command Line App to make Annotating spaCy Data Easier</h2>
       <small>02 Feb 2020</small>
   </div>
+  </div>
 </header>
 
-<div class="margin">
+
+<div class="post">
 <p>Well, this took a bit longer than I wanted it to, but I’m very pleased with the results. I present to you the <a href="https://github.com/wenzstev/spaCy_ner_annotater">spaCy NER Annotator</a>, a command line version of the annotator helper that I made a few posts back. This is a version that’s cleaned up from my personal files and made into a form that hopefully others can use. It’s also a personal follow-up on a goal to learn <code class="language-plaintext highlighter-rouge">plac</code> as well as introducing several new Python concepts to me.</p>
 
 <p>And let me tell you, this thing was more of a pain than I thought it would be. Because I wanted to be able to both annotate new data and add annotations onto partially annotated data, I needed the program to be flexible in its input. Interestingly, the easiest part by far was reading raw lines of text from a .txt file; the hardest by far was doing the same from a .py file. For way too long I couldn’t figure out how to import a module without knowing it’s name; I didn’t even know if that was possible. Learning the <code class="language-plaintext highlighter-rouge">inputlib</code> module fixed this issue for me, but I still had the issue of allowing the user to dynamically choose the list they wanted to add. This required <em>more</em> dynamic input, and I don’t want to bore you with the number of different <code class="language-plaintext highlighter-rouge">eval</code> and <code class="language-plaintext highlighter-rouge">exec</code> lines I tried before finally getting it right. Dynamic programming in general is a new concept to me, and one that I’m eager to learn more about. I want to thank the wonderful people at StackOverflow; time and again I’m blown away by the rapidness and quality of the help that’s provided there.</p>
@@ -29,14 +32,18 @@
 
 </div>
 
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
     </div>
-    <footer>
-      <span><a href="/index.html">Home</a></span>
-      <span><a href="/blog">Blog</a></span>
-      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
-      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
-      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
-    </footer>
     </div>
   </body>
 </html>

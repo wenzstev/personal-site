@@ -12,13 +12,16 @@
     <div class="full-page">
     <div class="content">
     <header>
+  <div class="blog-container">
   <div class="blog-header">
       <h2>Constructing a More Complete Database Model</h2>
       <small>15 Feb 2020</small>
   </div>
+  </div>
 </header>
 
-<div class="margin">
+
+<div class="post">
 <p>With the AJAX proof of concept complete, it was time to turn my attention to a more complicated database model, one that would hopefully sustain me for the foreseeable future. Why would I need a more complex database model? Simply put, because the old system does not store enough data.</p>
 
 <p>Let me explain. The old model, storing a grocery list and a set of lines linked to the list, works for a single recipe, but the whole point of the app is to consolidate recipes, and that’s where things quickly become more difficult. The fact that each line is stored as a string doesn’t give the opportunity to consolidate ingredients and encourages redundant lines. Additionally, although the parser is getting ingredients, it’s not doing anything with them except making those words a different color.</p>
@@ -166,14 +169,18 @@
 
 </div>
 
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
     </div>
-    <footer>
-      <span><a href="/index.html">Home</a></span>
-      <span><a href="/blog">Blog</a></span>
-      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
-      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
-      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
-    </footer>
     </div>
   </body>
 </html>

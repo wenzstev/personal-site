@@ -12,13 +12,16 @@
     <div class="full-page">
     <div class="content">
     <header>
+  <div class="blog-container">
   <div class="blog-header">
       <h2>Adding a Link to the Recipe Source</h2>
       <small>21 Mar 2020</small>
   </div>
+  </div>
 </header>
 
-<div class="margin">
+
+<div class="post">
 <p>Next up on my list was the creation of a link to the recipe source for each recipe (provided the recipe came from a URL). I wanted to do this to provide a quick and easy way for the user to navigate to their desired recipe, and to allow the list to double as a place to store said recipes.</p>
 
 <p>First, I went into the list template page and added a new <code class="language-plaintext highlighter-rouge">&lt;a&gt;</code> tag to each <code class="language-plaintext highlighter-rouge">.recipe-button</code> line. In doing so, I also adjusted a few other features in the area, changing the <code class="language-plaintext highlighter-rouge">.recipe-button</code> to a <code class="language-plaintext highlighter-rouge">&lt;div&gt;</code> to avoid nested buttons, and adding some CSS to make everything look decent. Here’s what I came up with first:</p>
@@ -107,14 +110,18 @@
 
 </div>
 
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
     </div>
-    <footer>
-      <span><a href="/index.html">Home</a></span>
-      <span><a href="/blog">Blog</a></span>
-      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
-      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
-      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
-    </footer>
     </div>
   </body>
 </html>

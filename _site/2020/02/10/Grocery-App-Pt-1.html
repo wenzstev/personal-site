@@ -12,13 +12,16 @@
     <div class="full-page">
     <div class="content">
     <header>
+  <div class="blog-container">
   <div class="blog-header">
       <h2>The Grocery App Part 1 -- Building the Skeleton</h2>
       <small>10 Feb 2020</small>
   </div>
+  </div>
 </header>
 
-<div class="margin">
+
+<div class="post">
 <p>And so begins the new adventure: a Flask application that makes use of the trained spaCy model to generate combined grocery lists. I started by creating a new Flask application. I decided to structure it with <code class="language-plaintext highlighter-rouge">Blueprints</code> from the beginning to avoid having to refactor later, and to make sure the lessons I’d learned were absorbed. Started with a single “main” blueprint for now.</p>
 
 <p>The Flask tutorials I watched used Bootstrap, and so I decided to use it too. I understand that there’s a <code class="language-plaintext highlighter-rouge">flask-bootstrap</code> module, but I decided that it would be better for me to take one thing at a time, and use basic Bootstrap to elevate it above the pure ugliness of raw HTML. I’ll work on making everything look pretty later.</p>
@@ -109,14 +112,18 @@
 
 </div>
 
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
     </div>
-    <footer>
-      <span><a href="/index.html">Home</a></span>
-      <span><a href="/blog">Blog</a></span>
-      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
-      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
-      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
-    </footer>
     </div>
   </body>
 </html>

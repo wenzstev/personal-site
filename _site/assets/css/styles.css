@@ -4,7 +4,7 @@ header { display: flex; background-color: burlywood; padding: .75rem; }
 
 li { list-style-type: none; }
 
-ul { padding-left: .5rem; }
+ul { padding-left: 0; }
 
 h1 { margin: 0 0 .5rem 0; }
 
@@ -16,7 +16,11 @@ a { text-decoration: none; color: inherit; transition: all .2s ease-in-out; }
 
 a:hover { color: darkslategray; }
 
-.container { display: flex; justify-content: space-around; align-items: flex-start; }
+.container { display: flex; justify-content: space-around; align-items: flex-start; box-sizing: border-box; }
+
+@media (max-width: 480px) { .container { flex-wrap: wrap; } }
+
+@media (min-width: 481px) { .blog { max-width: 30%; } }
 
 .projects { margin: .5rem 0; }
 
@@ -30,9 +34,9 @@ a:hover { color: darkslategray; }
 
 .projects a:hover { color: darkgray; }
 
-.projects li { margin: .5rem; background-color: lemonchiffon; padding: .5rem; border-radius: 3px; }
+.projects li { margin: .5rem; background-color: #F6DCB9; padding: .5rem; border-radius: 3px; }
 
-.blog { margin: .25rem; border: 1px solid black; border-radius: 3px; max-width: 30%; }
+.blog { margin: .5rem; padding: .5rem; border: 1px solid black; border-radius: 3px; }
 
 .blog h2 { text-align: center; }
 
@@ -68,7 +72,15 @@ a:hover { color: darkslategray; }
 
 small { font-style: italic; color: darkslategray; font-size: .75rem; }
 
-.blog-header { margin-left: 1rem; }
+.post { max-width: 600px; margin: auto; padding: .75rem; }
+
+.post p { margin-bottom: 2rem; }
+
+.blog-container { margin: auto; }
+
+.blog-header { width: 600px; }
+
+@media only screen and (max-width: 600px) { .blog-header { width: 95vw; } .blog-container { margin: 0; } }
 
 .margin { margin: 1rem; }
 
@@ -78,9 +90,9 @@ small { font-style: italic; color: darkslategray; font-size: .75rem; }
 
 .old-post h5 { display: inline; }
 
-footer { background-color: burlywood; position: absolute; bottom: 0; width: 100%; padding: .75rem 0; }
+footer { background-color: burlywood; position: absolute; bottom: 0; width: 100%; padding: .75rem; font-size: .8rem; box-sizing: border-box; }
 
-footer span { font-size: .75rem; margin-left: .5rem; }
+.footer-spread { max-width: 600px; margin: auto; display: flex; justify-content: space-between; }
 
 .content { padding-bottom: 4rem; }
 

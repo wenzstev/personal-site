@@ -12,13 +12,16 @@
     <div class="full-page">
     <div class="content">
     <header>
+  <div class="blog-container">
   <div class="blog-header">
       <h2>Adding Authentication - Part 1</h2>
       <small>02 Aug 2020</small>
   </div>
+  </div>
 </header>
 
-<div class="margin">
+
+<div class="post">
 <p>Before I could go any further into fleshing out the usability of my app, I needed to add authentication. After all, there’s no way to create or modify recipes or lists without authentication credentials.</p>
 
 <p>Unfortunately, this process sent me down a bit of a wormhole, as security for apps that have a split front and back end like mine does is quite complicated. My backend is set up to use JSON Web Tokens (JWTs) that are sent by the front end in the header. They have a set expiration date, after which the credentials need to be sent again for a new token. After reading a lot about this and practicing on another project (incidentally, my first experience with Express), I realized that I would need to alter this to a two-token system: a refresh token and an access token. Because only the refresh token is stored (as a cookie), it’s a lot more secure than storing the access token in a cookie or (God forbid) storing the access token in local storage. I plan to implement a design similar to how what is described in <a href="https://hasura.io/blog/best-practices-of-using-jwt-with-graphql/#silent_refresh">this</a> blog post.</p>
@@ -173,14 +176,18 @@
 
 </div>
 
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
     </div>
-    <footer>
-      <span><a href="/index.html">Home</a></span>
-      <span><a href="/blog">Blog</a></span>
-      <span>Contact me: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
-      <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
-      <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
-    </footer>
     </div>
   </body>
 </html>
