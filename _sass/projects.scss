@@ -9,24 +9,34 @@
 }
 
 .modal {
-  position: fixed;
-  top: 10vh;
-  left: 5vw;
-  width: 70vw;
-  background-color: white;
-  visibility: hidden;
+  margin: 10% auto;
+  padding: 0;
+  width: 90%;
+
 }
 
 .modal img {
-  width: 100%
+  width: 100%;
+  display: block;
+}
+
+@media (min-width: 480px) {
+  .modal img {
+    max-height: 70vh;
+    width: auto;
+    margin: auto;
+  }
 }
 
 .modal-backdrop {
   height: 100vh;
   width: 100vw;
-  background-color: rgba(0,0,0,.2);
+  background-color: rgba(0,0,0,.4);
+  z-index: 1;
   position: fixed;
   top: 0;
   left: 0;
+  opacity: 0;
   visibility: hidden;
+  transition: all .5s ease-in-out;
 }

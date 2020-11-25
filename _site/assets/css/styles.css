@@ -22,7 +22,7 @@ a:hover { color: darkslategray; }
 
 @media (min-width: 481px) { .blog { max-width: 30%; } .projects { max-width: 70%; } }
 
-.projects { margin: .5rem 0; }
+.projects { margin: .5rem; }
 
 .projects h2 { margin: 1rem; }
 
@@ -30,9 +30,11 @@ a:hover { color: darkslategray; }
 
 .projects p { font-size: .9rem; }
 
-.projects li { margin: .5rem; background-color: #F6DCB9; padding: .5rem; border-radius: 3px; }
+.projects li { margin: 0; background-color: #F6DCB9; padding: .5rem; border-radius: 3px; }
 
-.blog { margin: .5rem; padding: .5rem; border-radius: 3px; background-color: #EEDFFB; }
+.blog { margin: 4.5rem .5rem .5rem .5rem; padding: .5rem; border-radius: 3px; background-color: #EEDFFB; }
+
+@media (max-width: 480px) { .blog { margin: .5rem; } }
 
 .blog h2 { text-align: center; }
 
@@ -282,10 +284,12 @@ p { margin: 1rem 0; }
 
 .project-pictures img { width: 10rem; margin: .5rem; }
 
-.modal { position: fixed; top: 10vh; left: 5vw; width: 70vw; background-color: white; visibility: hidden; }
+.modal { margin: 10% auto; padding: 0; width: 90%; }
 
-.modal img { width: 100%; }
+.modal img { width: 100%; display: block; }
 
-.modal-backdrop { height: 100vh; width: 100vw; background-color: rgba(0, 0, 0, 0.2); position: fixed; top: 0; left: 0; visibility: hidden; }
+@media (min-width: 480px) { .modal img { max-height: 70vh; width: auto; margin: auto; } }
+
+.modal-backdrop { height: 100vh; width: 100vw; background-color: rgba(0, 0, 0, 0.4); z-index: 1; position: fixed; top: 0; left: 0; opacity: 0; visibility: hidden; transition: all .5s ease-in-out; }
 
 /*# sourceMappingURL=styles.css.map */
