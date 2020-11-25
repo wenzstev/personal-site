@@ -18,9 +18,9 @@ a:hover { color: darkslategray; }
 
 .container { display: flex; justify-content: space-around; align-items: flex-start; box-sizing: border-box; }
 
-@media (max-width: 480px) { .container { flex-wrap: wrap; } }
+@media (max-width: 480px) { .container { flex-wrap: wrap; } .projects { width: 95vw; } }
 
-@media (min-width: 481px) { .blog { max-width: 30%; } }
+@media (min-width: 481px) { .blog { max-width: 30%; } .projects { max-width: 70%; } }
 
 .projects { margin: .5rem 0; }
 
@@ -30,13 +30,9 @@ a:hover { color: darkslategray; }
 
 .projects p { font-size: .9rem; }
 
-.projects a { font-weight: bold; color: black; font-size: .75rem; text-decoration: none; transition: all .1s ease-in-out; }
-
-.projects a:hover { color: darkgray; }
-
 .projects li { margin: .5rem; background-color: #F6DCB9; padding: .5rem; border-radius: 3px; }
 
-.blog { margin: .5rem; padding: .5rem; border: 1px solid black; border-radius: 3px; }
+.blog { margin: .5rem; padding: .5rem; border-radius: 3px; background-color: #EEDFFB; }
 
 .blog h2 { text-align: center; }
 
@@ -50,11 +46,11 @@ a:hover { color: darkslategray; }
 
 .blog a:hover { color: darkgray; }
 
-.small-nav { display: flex; align-items: center; }
+.small-nav { display: flex; align-items: center; justify-content: space-around; }
 
-.small-nav img { margin: .5rem; text-decoration: none; transition: all .1s ease-in-out; }
+.small-nav-img { margin-top: .75rem; text-decoration: none; transition: all .1s ease-in-out; }
 
-.small-nav img:hover { transform: scale(1.1); }
+.small-nav-img:hover { transform: scale(1.1); }
 
 .current { color: green; }
 
@@ -282,5 +278,14 @@ p { margin: 1rem 0; }
 .highlight .il { color: #FF6600; }
 
 /* Literal.Number.Integer.Long */
+.project-pictures { overflow-x: auto; display: flex; }
+
+.project-pictures img { width: 10rem; margin: .5rem; }
+
+.modal { position: fixed; top: 10vh; left: 5vw; width: 90vw; background-color: white; visibility: hidden; }
+
+.modal img { width: 100%; }
+
+.modal-backdrop { height: 100vh; width: 100vw; background-color: rgba(0, 0, 0, 0.2); position: fixed; top: 0; left: 0; visibility: hidden; }
 
 /*# sourceMappingURL=styles.css.map */

@@ -7,10 +7,10 @@ title: Home
     <h1 class="heading">Steve Wenzel</h1>
     <h3 class="subheading">Full Stack Developer</h3>
     <nav class="small-nav">
-      <a href="https://www.linkedin.com/in/steven-wenzel/" target="_blank"><img src="/assets/img/iconmonstr-linkedin-3.svg" /></a>
-      <a href="https://github.com/wenzstev" target="_blank"><img src="/assets/img/iconmonstr-github-1.svg" /></a>
-      <a href="mailto:wenzelstev.gmail.com" target="_blank"><img src="/assets/img/iconmonstr-email-10.svg" /></a>
-      <a href="/assets/img/wenzel_resume_2020_technical.pdf" target="_blank"><img src="/assets/img/iconmonstr-note-14.svg" /></a>
+      <a class="small-nav-img" href="https://www.linkedin.com/in/steven-wenzel/" target="_blank"><img src="/assets/img/iconmonstr-linkedin-3.svg" /></a>
+      <a class="small-nav-img" href="https://github.com/wenzstev" target="_blank"><img src="/assets/img/iconmonstr-github-1.svg" /></a>
+      <a class="small-nav-img" href="mailto:wenzelstev.gmail.com" target="_blank"><img src="/assets/img/iconmonstr-email-10.svg" /></a>
+      <a class="small-nav-img" href="/assets/img/wenzel_resume_2020_technical.pdf" target="_blank"><img src="/assets/img/iconmonstr-note-14.svg" /></a>
     </nav>
   </div>
 </header>
@@ -23,11 +23,16 @@ title: Home
       <li class="project-list">
         <h3>{{ project.name }}</h3>
         {{project.content | markdownify }}
+        <div class="project-pictures">
+          {% for image in project.images %}
+            <img onClick="enlarge(this)" src="{{image}}" />
+          {% endfor %}
+        </div>
         {% if project.live_site %}
-        <a href="{{project.live_site}}">Live Site</a>
+        <a  href="{{project.live_site}}"><img class="small-nav-img" src="/assets/img/iconmonstr-globe-3.svg" /></a>
         {% endif %}
         {% if project.github %}
-        <a href="{{project.github}}">GitHub</a>
+        <a href="{{project.github}}"><img class="small-nav-img" src="/assets/img/iconmonstr-github-1.svg" /></a>
         {% endif %}
 
       </li>
@@ -50,3 +55,10 @@ title: Home
 </div>
 
 <footer style="height:2rem;"></footer>
+
+<div id="backdrop" class="modal-backdrop" onclick="closeModal()">
+  <div id="modal" class="modal"></div>
+</div>
+
+
+<script type="text/JavaScript" src="/assets/js/enlarge.js"></script>
