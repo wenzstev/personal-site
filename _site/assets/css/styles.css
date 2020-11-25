@@ -282,7 +282,7 @@ p { margin: 1rem 0; }
 
 .project-pictures img { width: 10rem; margin: .5rem; }
 
-.modal { position: fixed; top: 10vh; left: 5vw; width: 90vw; background-color: white; visibility: hidden; }
+.modal { position: fixed; top: 10vh; left: 5vw; width: 70vw; background-color: white; visibility: hidden; }
 
 .modal img { width: 100%; }
 
