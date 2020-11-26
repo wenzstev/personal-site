@@ -74,6 +74,8 @@ small { font-style: italic; color: darkslategray; font-size: .75rem; }
 
 .post p { margin-bottom: 2rem; }
 
+.post a { color: darkgray; }
+
 .blog-container { margin: auto; }
 
 .blog-header { width: 600px; }

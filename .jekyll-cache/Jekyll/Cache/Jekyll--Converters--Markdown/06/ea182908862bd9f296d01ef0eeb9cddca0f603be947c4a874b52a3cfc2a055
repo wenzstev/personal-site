@@ -1,0 +1,62 @@
+I"2<p>As you may have noticed, things look a bit different around here, and it’s a long time coming. <!--more--></p>
+
+<p>When I first began to blog I knew very little about web development and didn’t want to interrupt my Python work to learn. So I picked a layout someone else had made and called it a day. And for the past 11 (!) months I’ve been hammering away at it.</p>
+
+<p>It’s been a stalwart companion on my journey to learn software development, from my shaky <a href="/2020/01/17/Recipe-Parser-Part-1.html">command line days</a> to my <a href="/2020/02/10/Grocery-App-Pt-1.html">first stab at a web app</a>, <a href="/2020/05/30/Calculator-Part-1.html">discovery of React</a>, and more comprehensive work on a <a href="/2020/07/16/Grocery-App-Frontend-1.html">frontend and backend structure</a>. I’ve talked about my <a href="/2020/09/12/Its-Out.html">successes</a> and my <a href="/2020/04/24/That-Was-Hard.html">failures</a>, and I’m glad to have it as a record.</p>
+
+<p>But the blog was shaky and it didn’t really feel like mine. As part of my current push to consolidate my online presence, a rework was necessary. Here are a few things I learned in the process.</p>
+
+<h3 id="1-bigger-is-not-always-better">1. Bigger is not always better</h3>
+
+<p>Now, I know what you’re thinking: “Steve, didn’t you just build a portfolio site?” And you’re right. I did. <a href="/2020/10/03/Update-Post.html">You can read about it here</a>.</p>
+
+<p>But it wasn’t very good. I was determined to prove that I was a Real Web Developer who Knew His Stuff, and I threw in so many bells and whistles that the whole thing started to look like <a href="https://en.wikipedia.org/wiki/Oh_Brother,_Where_Art_Thou%3F">the car Homer Simpson designed that put his brother out of business</a>.</p>
+
+<p><img src="/assets/img/posts/the-homer-inline4.jpg" alt="Homer's disasterous car" /></p>
+
+<p>Information about my work was too many clicks deep, the pictures took too long to load, and there was a lot of unnecessary information about me. To make matters worse, I built the whole thing in React with Material-UI, totally unnecessary for what should be a static site. I didn’t even use Gatsby.</p>
+
+<p>My new site, on the other hand, is built with 100% grass-fed HTML and CSS, with a little sprinkle of JavaScript for pizzazz. I think us new developers can get so caught up in the fancy web frameworks that we often fail to realize when a simpler site might be better.</p>
+
+<p>This site loads much faster, is much leaner, and tells an overall better story of who I am and what I can do.</p>
+
+<h3 id="2-vanilla-javascript-can-be-fun">2. Vanilla JavaScript can be Fun</h3>
+
+<p>Wait, where are you going? Stick with me for two seconds, and I’ll try to convince you.</p>
+
+<p>Of course there are many, many issues with vanilla JavaScript. Everything can take so long and writing a million <code class="language-plaintext highlighter-rouge">document.getElementById()</code> and <code class="language-plaintext highlighter-rouge">appendTextNode()</code> can be a huge pain in the ass. But I still think there’s something to be said for it.</p>
+
+<p>There is a simplicity to vanilla JavaScript that’s hard to match, and personally there’s something very satisfying about just opening a text document, writing a few lines of code, and having it <em>do something</em>, without having to install webpack or fiddle with npm or whatever the latest thing I’m having to learn is.</p>
+
+<p>No compilers, no bundling, just a web browser and a text editor.</p>
+
+<p>Of course, developers have other tools for a reason, and I certainly wouldn’t want to take this approach for a proper web app. But we should choose best tools for the job at hand. If you just need to stick a few boards together, a hammer works just as good (maybe better) than a nailgun.</p>
+
+<p>And it can be nice to reinvent the wheel from time to time. I coded the modal script on this site without using any external libraries, and it was fun to make my own take on such a ubiquitous web feature.</p>
+
+<h3 id="3-dont-be-afraid-to-start-from-nothing">3. Don’t be afraid to start from nothing</h3>
+
+<p>My first attempt at restarting this blog featured the <a href="https://jekyllrb.com/docs/">Jekyll quick start</a>, but after loading it up, something seemed off. The Jekyll bundler provides a strong base, but included a lot of things that I didn’t really want or need. So I ended up wiping it and truly <a href="https://jekyllrb.com/docs/step-by-step/01-setup/">starting from scratch</a>, with nothing but Gemfile and index.html.</p>
+
+<p>It was a bit more work this way, but the end result feels like <em>mine</em> in a way that using the bundler doesn’t. I had complete control over how all of the HTML, CSS, and JavaScript was implemented, and I drew a craftsman’s satisfaction from that.</p>
+
+<p>It’s like the difference between buying a table kit and visiting the lumber yard. Sometimes you just want to cut the boards yourself.</p>
+
+<h3 id="4-how-you-present-your-blog-content-matters">4. How You Present your blog content Matters</h3>
+
+<p>You may have noticed this post is a bit different than what I normally write. That’s because I’m trying to get with the picture. Over the course of moving my old posts over to the new site, I did a bit of reading on what makes for engaging blog content. Spoiler alert: it’s not my stuff.</p>
+
+<p>My previous posts have been loaded down with <a href="EXAMPLE ONE">huge paragraphs</a> and <a href="EXAMPLE TWO">bloated explainations</a> that were difficult to read; even my own eyes just kind of slide over them.</p>
+
+<p>This time around, I’m limiting the size of my paragraphs to make it easier to read, and overall cutting down on the content. I also added much larger margins around the text for desktop, simulating a mobile experience. <a href="BLOG 1">Most</a> <a href="blog 2">blogs</a> have some form of this, and it was time to get with the picture.</p>
+
+<h3 id="5-your-actual-blog-content-matters-too">5. Your actual blog content matters, too</h3>
+
+<p>This has primarily served as a technical diary of my work, and to that end I think it’s been decent. But for showcasing my writing abilities it hasn’t really done well at all. I mean, I’m supposed to be an English major here.</p>
+
+<p>Partly that’s because I’ve tried to spend as little time writing as possible so I could get back to coding, but it’s also just because I didn’t really know what to write. And, well, I still don’t, but I think this might be a better direction to go in.</p>
+
+<p>Talking about what I’ve learned, how I market myself, how I stick to a regular coding routine, these all feel more productive and interesting than just writing about my latest implementation of a <a href="FLASK BACKEND LINK">Flask backend</a>. Not that I don’t want to write about what I’m coding, but I’m going to try to limit that a bit more and flesh out other of writing.</p>
+
+<p>I still don’t really know what I want this blog to be and where I want it to go, but it’s been a long neglected aspect of my online presence, and I want to take some steps to change that. This feels like a good start.</p>
+:ET

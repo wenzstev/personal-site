@@ -1,28 +1,4 @@
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta content="width=device-width, initial-scale=1" name="viewport" />
-    <title>Where I've Been</title>
-    <link rel="stylesheet" href="/assets/css/styles.css">
-    <link rel="preconnect" href="https://fonts.gstatic.com">
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
-  </head>
-  <body>
-    <div class="full-page">
-    <div class="content">
-    <header>
-  <div class="blog-container">
-  <div class="blog-header">
-      <h2>Where I've Been</h2>
-      <small>03 Oct 2020</small>
-  </div>
-  </div>
-</header>
-
-
-<div class="post">
-<p>Well, it’s been a little while since I last made an update here. <!--more--> I’ve got some new projects in the pipeline, so expect some posts about that coming soon. First, however, I want to talk a little bit about what I’ve been working on.</p>
+I"f#<p>Well, it’s been a little while since I last made an update here. <!--more--> I’ve got some new projects in the pipeline, so expect some posts about that coming soon. First, however, I want to talk a little bit about what I’ve been working on.</p>
 
 <p>Presenting <a href="stevenwenzel.com">stevenwenzel.com</a>, my portfolio site! <em>(UPDATE 11/26/2020: This website is no longer up. It’s been replaced with <a href="https://wenzstev.github.io">this</a>. You can read about the changes <a href="/2020/11/26/5-Things-I-Learned-Blog.html">here</a>)</em> It’s still got a lot of work to be done on it, but I wanted to have something out that I could put on job applications to show what I’m working on. The site is built with React and most of it is bog standard enough to not really warrant posts about it, but I do want to touch on one area that I made use of more extensively than I have in the past: a Redux store.</p>
 
@@ -100,21 +76,4 @@
 <p>These are then inserted as inline CSS for the various components that require them.</p>
 
 <p>This isn’t a huge feature and there are certainly ways I could shrink the code in the future. But one nice thing about it is that I can hypothetically create as many themes as I want and swap them out whenever; now that the boilerplate is in it’s simple to make variations. But at the same time, I’m not sure how long I’ll be keeping this version of the portfolio site, so I didn’t want to spend too much time on it if it was only going to be a temporary thing.</p>
-
-</div>
-
-<footer>
-  <div class="footer-spread">
-  <span><a href="/index.html">Home</a></span>
-  <span><a href="/blog">Blog</a></span>
-  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
-  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
-  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
-  </div>
-</footer>
-
-
-    </div>
-    </div>
-  </body>
-</html>
+:ET
