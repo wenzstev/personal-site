@@ -1,0 +1,405 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Updating the Recipe Adder</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-container">
+  <div class="blog-header">
+      <h2>Updating the Recipe Adder</h2>
+      <small>12 Apr 2020</small>
+  </div>
+  </div>
+</header>
+
+
+<div class="post">
+<p>Well, it’s been a little while since last I posted, but let me tell you, that’s not for lack of work. As I near the end of this project, I’m going to try to blog slightly less, but with more content in each post. While I am fond of the pace I’ve been going on so far, I also feel like it’s taking up a lot of time that could be more valuably spent coding. So I’m going to try a 1-2 post per week and see how that goes.</p>
+
+<p>Today’s post: the Recipe Adder. It’s been a while since I gave it a good update, and there were a number of areas that I wanted to look at. My goal was to get the page to a state of near-completion, where the only things I would want to change after were purely cosmetic palette swaps and other window dressings. And I got pretty close to that goal, or at least, close enough that I feel satisfied.</p>
+
+<p>There were a number of changes that I wanted to make to the recipe adder, to make the use more intuitive and streamlined. For reference, here’s a screenshot of the recipe adder before I started to make changes:</p>
+
+<p><img src="/assets/img/posts/clean-recipe/buttons-working.png" alt="alt text" /></p>
+
+<p>This is the last time I really spent time on the page, and it’s from <em>February.</em> <a href="/2020/02/24/Cleaning-Up-Recipe-Lines.html">Here’s the link</a> if you’re interested, but regardless, it’s clear that this is pretty out of date. The design is utilitarian and uninspired, but that’s the least of its problems: under the hood, it lacks support for more than one <code class="language-plaintext highlighter-rouge">CleanedLine</code> per <code class="language-plaintext highlighter-rouge">RawLine</code> and the use of forms to submit everything is clunky and non-intuitive.</p>
+
+<p>So lets change that.</p>
+
+<h3 id="the-recipe-title">The Recipe Title</h3>
+
+<p>The first thing I wanted to do was to get rid of the clunky “Submit” button at the top of the page, as well as the single-line input for the recipe. I’d set it up this way because submitted the whole recipe as a form, and needed keep all the form elements together, but it just didn’t look good. When using it, I kept expecting the submit button to be on the bottom, and it just… wasn’t.</p>
+
+<p>Plus, I thought that the open text field for the name of the recipe just looked bad. I confess that some of my thoughts in this area were motivated by Trello’s user interface; I liked the fact that you could just click on a title at any time and change it, and wanted to implement something similar here.</p>
+
+<p>First, I encircled everything in my new favorite Bootstrap element, the <code class="language-plaintext highlighter-rouge">card</code>. I liked the idea of visualizing the recipe as a card, the way someone might have an old card box in their kitchen.</p>
+
+<p>Then, I stripped away the old form and the <code class="language-plaintext highlighter-rouge">hex_name</code> out, because there’s no reason for the user to see that. I replaced the form with individual elements: one on top to hold the title, and one on the bottom to submit it. At first I used a <code class="language-plaintext highlighter-rouge">&lt;textarea&gt;</code> to hold the title, but I then switched to a <code class="language-plaintext highlighter-rouge">contenteditable</code> div, because it automatically resized without any javascript needed, and I wasn’t going to submit the name through a form anyway.</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html"><span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"card my-3 shadow"</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"card-header p-2 shadow-sm"</span><span class="nt">&gt;</span>
+        <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"edit-label w-100 text-center"</span> <span class="na">id=</span><span class="s">"recipe-title"</span> <span class="na">contenteditable</span> <span class="na">spellcheck=</span><span class="s">"false"</span><span class="nt">&gt;</span>{{ rlist.name }}<span class="nt">&lt;/div&gt;</span>
+    <span class="nt">&lt;/div&gt;</span></code></pre></figure>
+
+<p>… and on the bottom…</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html"><span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"row justify-content-center"</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"col-md-4 col-lg-2 mb-2"</span><span class="nt">&gt;</span>
+        <span class="nt">&lt;button</span> <span class="na">type=</span><span class="s">"submit"</span> <span class="na">id=</span><span class="s">"submit-list"</span> <span class="na">formmethod=</span><span class="s">"post"</span> <span class="na">class=</span><span class="s">"mt-4 btn btn-success btn-block btn-lg"</span><span class="nt">&gt;</span>Submit<span class="nt">&lt;/button&gt;</span>
+    <span class="nt">&lt;/div&gt;</span>
+<span class="nt">&lt;/div&gt;</span></code></pre></figure>
+
+<p>I then styled the card header in such a way that it would look like a normal div, until it was clicked on:</p>
+
+<figure class="highlight"><pre><code class="language-css" data-lang="css"><span class="nc">.edit-label</span> <span class="p">{</span>
+  <span class="nl">resize</span><span class="p">:</span> <span class="nb">none</span><span class="p">;</span>
+  <span class="nl">overflow</span><span class="p">:</span> <span class="nb">auto</span><span class="p">;</span>
+  <span class="nl">background-color</span><span class="p">:</span> <span class="nb">transparent</span><span class="p">;</span>
+  <span class="nl">border</span><span class="p">:</span> <span class="nb">none</span><span class="p">;</span>
+  <span class="nl">padding</span><span class="p">:</span> <span class="m">.25rem</span><span class="p">;</span>
+  <span class="nl">font-size</span><span class="p">:</span> <span class="m">25px</span><span class="p">;</span>
+  <span class="nl">cursor</span><span class="p">:</span> <span class="nb">pointer</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="nc">.edit-label</span><span class="nd">:focus</span><span class="p">{</span>
+  <span class="nl">background-color</span><span class="p">:</span> <span class="no">white</span><span class="p">;</span>
+  <span class="nl">cursor</span><span class="p">:</span> <span class="nb">text</span><span class="p">;</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>This created a nice looking header and a serviceable, if still pretty basic, submit button.</p>
+
+<p><img src="/assets/img/posts/new-adder/new-title.png" alt="alt text" /></p>
+
+<p><img src="/assets/img/posts/new-adder/new-submit.png" alt="alt text" /></p>
+
+<p>Not bad, but I still needed to make them do things. For the recipe name, I created a script that sent an ajax request to a new route:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">function</span> <span class="nx">change_recipe_name</span><span class="p">(){</span>
+    <span class="nx">$</span><span class="p">(</span><span class="k">this</span><span class="p">).</span><span class="nx">attr</span><span class="p">(</span><span class="dl">'</span><span class="s1">spellcheck</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">false</span><span class="dl">'</span><span class="p">)</span>
+
+    <span class="kd">var</span> <span class="nx">data</span> <span class="o">=</span> <span class="p">{</span><span class="dl">'</span><span class="s1">recipe_id</span><span class="dl">'</span><span class="p">:</span> <span class="nx">$RECIPE_HEX</span><span class="p">,</span>
+                <span class="dl">'</span><span class="s1">name</span><span class="dl">'</span><span class="p">:</span> <span class="nx">$</span><span class="p">(</span><span class="k">this</span><span class="p">).</span><span class="nx">text</span><span class="p">()}</span>
+
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">data</span><span class="p">)</span>
+
+    <span class="nx">$</span><span class="p">.</span><span class="nx">ajax</span><span class="p">({</span>
+      <span class="na">type</span><span class="p">:</span> <span class="dl">'</span><span class="s1">POST</span><span class="dl">'</span><span class="p">,</span>
+      <span class="na">url</span><span class="p">:</span> <span class="nx">$SCRIPT_ROOT</span> <span class="o">+</span> <span class="dl">'</span><span class="s1">/recipe/rename</span><span class="dl">'</span><span class="p">,</span>
+      <span class="na">data</span><span class="p">:</span> <span class="nx">data</span><span class="p">,</span>
+      <span class="na">dataType</span><span class="p">:</span> <span class="dl">'</span><span class="s1">json</span><span class="dl">'</span><span class="p">,</span>
+      <span class="na">success</span><span class="p">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">jsonData</span><span class="p">){</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">'</span><span class="s1">new name is </span><span class="dl">'</span> <span class="o">+</span> <span class="nx">jsonData</span><span class="p">[</span><span class="dl">'</span><span class="s1">new_name</span><span class="dl">'</span><span class="p">])</span>
+      <span class="p">}</span>
+    <span class="p">})</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>From there, I was able to call this script whenever the user clicked away from the div, and whenever the enter key was pressed:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="nx">$</span><span class="p">(</span><span class="dl">'</span><span class="s1">#recipe-title</span><span class="dl">'</span><span class="p">).</span><span class="nx">focusout</span><span class="p">(</span><span class="nx">change_recipe_name</span><span class="p">)</span>
+
+<span class="nx">$</span><span class="p">(</span><span class="dl">'</span><span class="s1">#recipe-title</span><span class="dl">'</span><span class="p">).</span><span class="nx">keypress</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">event</span><span class="p">){</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">keycode</span> <span class="o">=</span> <span class="dl">'</span><span class="s1">13</span><span class="dl">'</span><span class="p">){</span>
+    <span class="nx">event</span><span class="p">.</span><span class="nx">preventDefault</span><span class="p">()</span>
+    <span class="nx">change_recipe_name</span><span class="p">()</span>
+    <span class="nx">$</span><span class="p">(</span> <span class="k">this</span> <span class="p">).</span><span class="nx">blur</span><span class="p">()</span>
+  <span class="p">}</span>
+<span class="p">})</span></code></pre></figure>
+
+<p>I like the responsiveness of this script, the fact that information is essentially saved as soon as it’s changed, without the need to submit any forms. It feels more modern and streamlined to me.</p>
+
+<p>I also took the liberty of moving the <code class="language-plaintext highlighter-rouge">change_recipe_name()</code> function into a new script, called <code class="language-plaintext highlighter-rouge">global_functions.js</code>. I then loaded this function on my <code class="language-plaintext highlighter-rouge">layout.html</code> file. That way, I can access the function from numerous documents, including my list page, on which I plan to implement a version of this same functionality.</p>
+
+<p>With the recipe change working, I then needed to make the new Submit button work. This was a bit tricky for me at first, since I had written all of the logic to create the <code class="language-plaintext highlighter-rouge">CleanedLine</code>s in a <code class="language-plaintext highlighter-rouge">form.validate_on_submit()</code> function on my list adder route. I thought about splitting it off into a new route, but that seemed overly complex for the relatively simple problem I was trying to solve.</p>
+
+<p>Ultimately, my solution was a bit hacky. Following some solutions I found on StackOverflow, I created a form on the fly and submitted it when the button was clicked, which in turn triggered my <code class="language-plaintext highlighter-rouge">POST</code> request on the route:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="nx">$</span><span class="p">(</span><span class="dl">'</span><span class="s1">#submit-list</span><span class="dl">'</span><span class="p">).</span><span class="nx">click</span><span class="p">(</span><span class="kd">function</span><span class="p">(){</span>
+  <span class="c1">// create a small form and submit with empty post data, cleaning lines</span>
+  <span class="c1">// is handled server side</span>
+  <span class="kd">var</span> <span class="nx">form</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">&lt;form action='' method='post'&gt;&lt;/form&gt;</span><span class="dl">"</span><span class="p">)</span>
+  <span class="nx">$</span><span class="p">(</span><span class="dl">'</span><span class="s1">body</span><span class="dl">'</span><span class="p">).</span><span class="nx">append</span><span class="p">(</span><span class="nx">form</span><span class="p">)</span>
+  <span class="nx">form</span><span class="p">.</span><span class="nx">submit</span><span class="p">()</span>
+<span class="p">})</span></code></pre></figure>
+
+<p>Then, on my route, I modified the triggering condition from a <code class="language-plaintext highlighter-rouge">validate_on_submit()</code> function to a simple check to see what the method was:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">if</span> <span class="n">request</span><span class="p">.</span><span class="n">method</span> <span class="o">==</span> <span class="s">"POST"</span><span class="p">:</span>  <span class="c1"># we submitted the changes, time to create the cleaned lines
+</span><span class="p">...</span> <span class="c1"># do the code</span></code></pre></figure>
+
+<p>I tested it and the submit button successfully worked. Time to move on to the next area of improvement.</p>
+
+<h3 id="refactoring-the-rawline-code">Refactoring the <code class="language-plaintext highlighter-rouge">RawLine</code> Code</h3>
+
+<p>In order to prep for my next area, I needed to go through and rewrite some of the code. Particularly since I removed the <code class="language-plaintext highlighter-rouge">hex_name</code> from the recipe page, my ajax functions to clean the list were broken, because they relied on finding the <code class="language-plaintext highlighter-rouge">RawLine</code> through its associated <code class="language-plaintext highlighter-rouge">RecipeList</code>. No list, no line.</p>
+
+<p>Fortunately, this was something that I’d been meaning to change for a while anyway. I’d already rewritten the <code class="language-plaintext highlighter-rouge">CleanedLine</code> model to work with a <code class="language-plaintext highlighter-rouge">hex_id</code> attribute, and moved the function that generates that attribute out of the model so that other models could also use it. This made configuring the <code class="language-plaintext highlighter-rouge">RawLine</code> model to also make use of it a cinch:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">get_hex_id</span><span class="p">():</span>   <span class="c1"># helper function for generating hex identifiers
+</span>    <span class="k">return</span> <span class="n">secrets</span><span class="p">.</span><span class="n">token_urlsafe</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+
+<span class="p">...</span>
+
+<span class="k">class</span> <span class="nc">RawLine</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="c1"># TODO: refactor so there are less 'id' labels
+</span>    <span class="nb">id</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>  <span class="c1"># the primary key
+</span>    <span class="n">hex_id</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">String</span><span class="p">(</span><span class="mi">8</span><span class="p">),</span> <span class="n">default</span><span class="o">=</span><span class="n">get_hex_id</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">unique</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span> <span class="c1"># hex identifier for requests</span></code></pre></figure>
+
+<p>I then had to go through and change all the areas where the program tried to find the <code class="language-plaintext highlighter-rouge">RawLine</code> in the old way. This was really satisfying, however, because it <em>massively</em> simplified my code, turning a few spaghetti-like knots into essentially single lines. For example, here’s the code that I used to find the <code class="language-plaintext highlighter-rouge">RawLine</code> when changing the colors of various words:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># before the refactor
+</span>
+<span class="n">line_id</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">form</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'line_id'</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">line_id</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># if we have a line id
+</span>        <span class="k">print</span><span class="p">(</span><span class="s">'going by id'</span><span class="p">)</span>
+        <span class="n">cur_line</span> <span class="o">=</span> <span class="n">RawLine</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">line_id</span><span class="p">).</span><span class="n">first_or_404</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>  <span class="c1"># we're finding it from a recipe hex
+</span>        <span class="k">print</span><span class="p">(</span><span class="s">'going by hex'</span><span class="p">)</span>
+        <span class="n">recipe_hex</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">form</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'hex_name'</span><span class="p">,</span> <span class="s">''</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+        <span class="n">recipe_line</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">form</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'recipe_line'</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">recipe_hex</span><span class="p">,</span> <span class="n">recipe_line</span><span class="p">)</span>
+        <span class="n">recipe</span> <span class="o">=</span> <span class="n">RecipeList</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">hex_name</span><span class="o">=</span><span class="n">recipe_hex</span><span class="p">).</span><span class="n">first_or_404</span><span class="p">()</span>
+        <span class="n">cur_line</span> <span class="o">=</span> <span class="n">RawLine</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">rlist</span><span class="o">=</span><span class="n">recipe</span><span class="p">,</span> <span class="n">id_in_list</span><span class="o">=</span><span class="n">recipe_line</span><span class="p">).</span><span class="n">first_or_404</span><span class="p">()</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">cur_line</span><span class="p">)</span>
+
+
+<span class="c1"># after the refactor
+</span><span class="n">cur_line</span> <span class="o">=</span> <span class="n">RawLine</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">hex_id</span><span class="o">=</span><span class="n">request</span><span class="p">.</span><span class="n">form</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'hex_id'</span><span class="p">,</span> <span class="s">''</span><span class="p">,</span> <span class="nb">str</span><span class="p">)).</span><span class="n">first_or_404</span><span class="p">()</span></code></pre></figure>
+
+<p>So much better. Then all I had to do was modify my template so that it used the <code class="language-plaintext highlighter-rouge">hex_id</code> as the <code class="language-plaintext highlighter-rouge">id</code> attribute on each line in the Recipe Adder, and my program had all the information it needed to send requests.</p>
+
+<p>Which was a good thing, because it was time to move on to the main event: simplifying and streamlining the process of selecting ingredients.</p>
+
+<h3 id="the-new-ingredient-selector">The New Ingredient Selector</h3>
+
+<p>Before I get into what I actually changed, I want to take a moment to talk philosophy. When I first started this project, I envisioned it as a simple command line tool, then later as a one page web app. In that form, it seemed important to me to store as much information as possible from the recipe lines, so that a user could retrieve it if desired. Because of this, I included named entity recognition for amounts and measurements, figuring that I could add them together and provide additional information.</p>
+
+<p>However, the implementation of my user interface has made some of that redundant, and I think that I sort of lost sight of the original point of this app, which was to create and consolidate a grocery list when buying groceries for multiple recipes. You don’t really need to know the amounts or measurements for that, and besides, the toggleable interface that I had was difficult to use, especially on mobile.</p>
+
+<p>So I decided to strip it all out, and only use one entity, the <code class="language-plaintext highlighter-rouge">"INGREDIENT"</code>, for my app (at least for the first release). So far, I’m keeping the structure of the <code class="language-plaintext highlighter-rouge">"AMOUNT"</code> and <code class="language-plaintext highlighter-rouge">"MEASUREENT"</code> entities, because I might want to bring them back in in the future, but for now the main functionality will be in picking out the ingredient from the line.</p>
+
+<p>I went back through my code and altered it so that clicking now only toggled between two classes, and cut out part of the entity parser to do the same. All <code class="language-plaintext highlighter-rouge">CleanedLines</code> now just have “0” as the amount and <code class="language-plaintext highlighter-rouge">""</code> as the measurement. Maybe I’ll cut them out entirely later, we’ll see.</p>
+
+<p>The result of this gave a more simplified look to the recipe adder, but I wasn’t done yet. I wanted the words that were not an ingredient to look essentially normal (rather than surrounded by a gray button as can be seen in the picture above), and I wanted to be able to visually mark the edges of an ingredient, preferably with some sort of rounded border. I decided that the best way to do that would be to incorporate dynamic button groups, making use of Bootstrap’s <code class="language-plaintext highlighter-rouge">btn-group</code> class. But since <code class="language-plaintext highlighter-rouge">RawLine</code>s don’t have a natural grouping for any entity (only the indivdual words are marked), I decided to implement the grouping on the client side.</p>
+
+<p>First, I wrote a jQuery function that found all groupings in each ingredient line and wrapped them in a <code class="language-plaintext highlighter-rouge">btn-group</code> div:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">var</span> <span class="nx">button_group</span> <span class="o">=</span> <span class="dl">"</span><span class="s2">&lt;div class='btn-group ingredient-group d-inline align-baseline'&gt;&lt;/div&gt;</span><span class="dl">"</span>
+
+<span class="kd">function</span> <span class="nx">create_ingredient_groups</span><span class="p">(){</span>
+  <span class="nx">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">.raw-line</span><span class="dl">"</span><span class="p">).</span><span class="nx">each</span><span class="p">(</span><span class="kd">function</span><span class="p">(){</span>  <span class="c1">// iterate through each line</span>
+    <span class="nx">current_group</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span><span class="nx">button_group</span><span class="p">)</span> <span class="c1">// create button group div</span>
+    <span class="nx">current_line</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span><span class="k">this</span><span class="p">)</span>
+    <span class="nx">$</span><span class="p">(</span> <span class="k">this</span> <span class="p">).</span><span class="nx">children</span><span class="p">().</span><span class="nx">each</span><span class="p">(</span><span class="kd">function</span><span class="p">(){</span>
+      <span class="kd">var</span> <span class="nx">next</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span><span class="k">this</span><span class="p">).</span><span class="nx">next</span><span class="p">()</span>
+      <span class="k">if</span> <span class="p">(</span><span class="nx">$</span><span class="p">(</span> <span class="k">this</span> <span class="p">).</span><span class="nx">hasClass</span><span class="p">(</span><span class="dl">'</span><span class="s1">btn-ingredient</span><span class="dl">'</span><span class="p">)){</span>
+        <span class="nx">$</span><span class="p">(</span><span class="k">this</span><span class="p">).</span><span class="nx">appendTo</span><span class="p">(</span><span class="nx">current_group</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">next</span><span class="p">.</span><span class="nx">length</span> <span class="o">==</span> <span class="mi">0</span><span class="p">){</span>
+          <span class="nx">current_line</span><span class="p">.</span><span class="nx">append</span><span class="p">(</span><span class="nx">current_group</span><span class="p">)</span>
+        <span class="p">}</span>
+      <span class="p">}</span>
+      <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">current_group</span><span class="p">.</span><span class="nx">children</span><span class="p">().</span><span class="nx">length</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">){</span>
+        <span class="c1">// end of button group, insert into line</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">"</span><span class="s2">time to insert</span><span class="dl">"</span><span class="p">)</span>
+        <span class="nx">current_group</span><span class="p">.</span><span class="nx">insertBefore</span><span class="p">(</span><span class="nx">$</span><span class="p">(</span><span class="k">this</span><span class="p">))</span>
+        <span class="nx">current_group</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span><span class="nx">button_group</span><span class="p">)</span> <span class="c1">// reset group</span>
+      <span class="p">}</span>
+    <span class="p">})</span>
+  <span class="p">});</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>This code creates a new empty <code class="language-plaintext highlighter-rouge">button_group</code> div, and iterates along each line, adding buttons with the <code class="language-plaintext highlighter-rouge">.btn-ingredient</code> class to the group. If it finds another <code class="language-plaintext highlighter-rouge">.btn-base</code> group, it ends the current button group, and starts a new one if it finds a new <code class="language-plaintext highlighter-rouge">.btn-ingredient.</code> This way, there can be multiple button groups per line.</p>
+
+<p>So the button groups initialized when the page was loaded; now I needed to dynamically change them with the user’s actions. This required a bit more work, as there were a number of different cases that had to be considered. Was the button clicked:</p>
+
+<ol>
+  <li>Already inside a button group? If so, was it:
+    <ul>
+      <li>at the beginning,</li>
+      <li>at the end,</li>
+      <li>both (one-word group), or</li>
+      <li>neither (in the middle)?</li>
+    </ul>
+  </li>
+  <li>If it was outside a button group, was it:
+    <ul>
+      <li>adjacent to a button group in front of it,</li>
+      <li>adjacent to a button group after it,</li>
+      <li>both (surrounded by button groups), or</li>
+      <li>neither (no button groups around)?</li>
+    </ul>
+  </li>
+</ol>
+
+<p>In total, eight different possibilities, with each one requiring a different outcome. The code kept twisting in my head while I wrote this, so I ended up commenting on it pretty heavily:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">function</span> <span class="nx">update_ingredient_groups</span><span class="p">(</span><span class="nx">button</span><span class="p">){</span>
+  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">button</span><span class="p">.</span><span class="nx">text</span><span class="p">())</span>
+
+  <span class="c1">// check if button is in group</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">button</span><span class="p">.</span><span class="nx">parent</span><span class="p">().</span><span class="nx">hasClass</span><span class="p">(</span><span class="dl">'</span><span class="s1">btn-group</span><span class="dl">'</span><span class="p">)){</span>
+    <span class="c1">// if it's in a group, we need to remove it</span>
+    <span class="c1">// if it is in the middle of the group, we need to split the group</span>
+    <span class="nx">at_beginning</span> <span class="o">=</span> <span class="p">(</span><span class="nx">button</span><span class="p">.</span><span class="nx">prev</span><span class="p">().</span><span class="nx">length</span><span class="o">==</span><span class="mi">0</span><span class="p">)</span>
+    <span class="nx">at_end</span> <span class="o">=</span> <span class="p">(</span><span class="nx">button</span><span class="p">.</span><span class="nx">next</span><span class="p">().</span><span class="nx">length</span><span class="o">==</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="nx">at_beginning</span><span class="p">){</span>
+      <span class="k">if</span> <span class="p">(</span><span class="nx">at_end</span><span class="p">){</span>
+        <span class="c1">// one word group, just remove</span>
+        <span class="nx">button</span><span class="p">.</span><span class="nx">unwrap</span><span class="p">()</span>
+      <span class="p">}</span>
+      <span class="k">else</span> <span class="p">{</span>
+        <span class="c1">// drop from beginning</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">button</span><span class="p">.</span><span class="nx">parent</span><span class="p">().</span><span class="nx">prev</span><span class="p">())</span>
+        <span class="nx">button</span><span class="p">.</span><span class="nx">insertAfter</span><span class="p">(</span><span class="nx">button</span><span class="p">.</span><span class="nx">parent</span><span class="p">().</span><span class="nx">prev</span><span class="p">())</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">at_end</span><span class="p">){</span>
+      <span class="c1">// drop from end</span>
+      <span class="nx">button</span><span class="p">.</span><span class="nx">insertBefore</span><span class="p">(</span><span class="nx">button</span><span class="p">.</span><span class="nx">parent</span><span class="p">().</span><span class="nx">next</span><span class="p">())</span>
+    <span class="p">}</span>
+    <span class="k">else</span> <span class="p">{</span> <span class="c1">// split the group</span>
+      <span class="c1">// create new button group</span>
+      <span class="nx">new_group</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span><span class="nx">button_group</span><span class="p">)</span> <span class="c1">// create button group div</span>
+      <span class="c1">// move the second half of the group into the second group</span>
+      <span class="nx">new_group</span><span class="p">.</span><span class="nx">append</span><span class="p">(</span><span class="nx">button</span><span class="p">.</span><span class="nx">nextAll</span><span class="p">())</span>
+      <span class="c1">// move the button up one</span>
+      <span class="nx">button</span><span class="p">.</span><span class="nx">insertBefore</span><span class="p">(</span><span class="nx">button</span><span class="p">.</span><span class="nx">parent</span><span class="p">().</span><span class="nx">next</span><span class="p">())</span>
+      <span class="c1">// append group after button</span>
+      <span class="nx">new_group</span><span class="p">.</span><span class="nx">insertAfter</span><span class="p">(</span><span class="nx">button</span><span class="p">)</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+  <span class="k">else</span> <span class="p">{</span> <span class="c1">// button is not in a group</span>
+    <span class="nx">group_before</span> <span class="o">=</span> <span class="nx">button</span><span class="p">.</span><span class="nx">prev</span><span class="p">().</span><span class="nx">hasClass</span><span class="p">(</span><span class="dl">'</span><span class="s1">btn-group</span><span class="dl">'</span><span class="p">)</span>
+    <span class="nx">group_after</span> <span class="o">=</span> <span class="nx">button</span><span class="p">.</span><span class="nx">next</span><span class="p">().</span><span class="nx">hasClass</span><span class="p">(</span><span class="dl">'</span><span class="s1">btn-group</span><span class="dl">'</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">group_before</span><span class="p">){</span>
+      <span class="k">if</span> <span class="p">(</span><span class="nx">group_after</span><span class="p">){</span>
+        <span class="c1">// combine the two groups</span>
+        <span class="c1">// get the buttons in the next group</span>
+        <span class="nx">group_to_combine</span> <span class="o">=</span> <span class="nx">button</span><span class="p">.</span><span class="nx">next</span><span class="p">().</span><span class="nx">children</span><span class="p">()</span>
+        <span class="c1">// get rid of the group around them</span>
+        <span class="nx">group_to_combine</span><span class="p">.</span><span class="nx">unwrap</span><span class="p">()</span>
+        <span class="c1">// insert them into the group before</span>
+        <span class="nx">group_to_combine</span><span class="p">.</span><span class="nx">appendTo</span><span class="p">(</span><span class="nx">button</span><span class="p">.</span><span class="nx">prev</span><span class="p">())</span>
+        <span class="c1">// insert the button into the group before them</span>
+        <span class="nx">button</span><span class="p">.</span><span class="nx">insertBefore</span><span class="p">(</span><span class="nx">group_to_combine</span><span class="p">)</span>
+      <span class="p">}</span>
+      <span class="k">else</span> <span class="p">{</span>
+        <span class="c1">// insert button into the group before it</span>
+        <span class="nx">button</span><span class="p">.</span><span class="nx">appendTo</span><span class="p">(</span><span class="nx">button</span><span class="p">.</span><span class="nx">prev</span><span class="p">())</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="k">else</span> <span class="p">{</span>
+      <span class="k">if</span> <span class="p">(</span><span class="nx">group_after</span><span class="p">){</span>
+        <span class="c1">// insert button into the group after it</span>
+        <span class="nx">button</span><span class="p">.</span><span class="nx">prependTo</span><span class="p">(</span><span class="nx">button</span><span class="p">.</span><span class="nx">next</span><span class="p">())</span>
+      <span class="p">}</span>
+      <span class="k">else</span> <span class="p">{</span>
+        <span class="c1">// create a new group</span>
+        <span class="nx">button</span><span class="p">.</span><span class="nx">wrap</span><span class="p">(</span><span class="nx">button_group</span><span class="p">)</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>There are a lot of <code class="language-plaintext highlighter-rouge">if</code> statements here, and I think I might be better served with some sort of <code class="language-plaintext highlighter-rouge">switch</code>, but at the moment I’m just satisfied it works. You can see that I make extensive use of the <code class="language-plaintext highlighter-rouge">.hasClass()</code> funtion to determine where the button groups are in relation to the clicked button.</p>
+
+<p>One issue that I had to deal with was cases where the button group was at the beginning or end of the line, in which case there was not an additional element before or after to append it to. I solved this by inserting empty <code class="language-plaintext highlighter-rouge">&lt;span&gt;</code> objects at the beginning and end of the line, to provide an anchor point and eliminate additional cases. Ensuring that there would always be a previous object and a next object greatly simplified the code.</p>
+
+<p>But I wasn’t quite done. I added some simple css code to round the edges at the beginning and ending of the groups, with an additional case to check if the group only had one button:</p>
+
+<figure class="highlight"><pre><code class="language-css" data-lang="css"><span class="nc">.btn-ingredient</span> <span class="p">{</span>
+  <span class="nl">background-color</span><span class="p">:</span> <span class="no">coral</span><span class="p">;</span>
+  <span class="nl">color</span><span class="p">:</span> <span class="no">white</span><span class="p">;</span>
+  <span class="nl">font-style</span><span class="p">:</span> <span class="nb">normal</span><span class="p">;</span>
+  <span class="nl">cursor</span><span class="p">:</span> <span class="nb">pointer</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="nc">.btn-ingredient</span><span class="nd">:first-child</span><span class="p">{</span>
+  <span class="nl">border-radius</span><span class="p">:</span> <span class="m">10px</span> <span class="m">0px</span> <span class="m">0px</span> <span class="m">10px</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="nc">.btn-ingredient</span><span class="nd">:last-child</span><span class="p">{</span>
+  <span class="nl">border-radius</span><span class="p">:</span> <span class="m">0px</span> <span class="m">10px</span> <span class="m">10px</span> <span class="m">0px</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="nc">.btn-ingredient</span><span class="nd">:only-child</span><span class="p">{</span>
+  <span class="nl">border-radius</span><span class="p">:</span> <span class="m">10px</span><span class="p">;</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>I then modified some of the color schemes and tried to give the overall page a more modern look, and here’s what I came up with:</p>
+
+<p><img src="/assets/img/posts/new-adder/new-recipe-lines.png" alt="alt text" /></p>
+
+<p>Much nicer, although I’m still not entirely done. Something about the current look feels too “educational” to me. But I think that’s mostly a color scheme choice, and after I develop a more comprehensive sense of the style of the website, I’ll go back and give this a fresh coat of paint.</p>
+
+<p>Now, I had one final thing to add before I needed to take a break to write this blog post. The new support for more than one button group on a line implied support for more than one <em>ingredient</em> on a line, which meant more than one <code class="language-plaintext highlighter-rouge">CleanedLine</code> per <code class="language-plaintext highlighter-rouge">RawLine</code>. Previously, this wasn’t possible, as There was a “many-to-one” relationship between <code class="language-plaintext highlighter-rouge">CleanedLine</code>s and <code class="language-plaintext highlighter-rouge">RawLine</code>s; multiple <code class="language-plaintext highlighter-rouge">RawLine</code>s could point to one <code class="language-plaintext highlighter-rouge">CleanedLine</code>, but the reverse wasn’t true. So I needed to change that, too.</p>
+
+<h3 id="a-many-to-many-relationship-between-lines">A Many-To-Many Relationship Between Lines</h3>
+
+<p>To implement this, I had to go back to YouTube for some tutorials. I found <a href="https://www.youtube.com/watch?v=OvhoYbjtiKc">this</a> one to be particularly useful, and was able to set up a relationship table between the <code class="language-plaintext highlighter-rouge">CleanedLine</code> and the <code class="language-plaintext highlighter-rouge">RawLine</code> models. Here’s the current code for those models and the table:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">line_assocs</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Table</span><span class="p">(</span><span class="s">'line_assocs'</span><span class="p">,</span>
+                       <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="s">'rawline_id'</span><span class="p">,</span> <span class="n">db</span><span class="p">.</span><span class="n">Integer</span><span class="p">,</span> <span class="n">db</span><span class="p">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="s">'raw_line.id'</span><span class="p">)),</span>
+                       <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="s">'cleanedline_id'</span><span class="p">,</span> <span class="n">db</span><span class="p">.</span><span class="n">Integer</span><span class="p">,</span> <span class="n">db</span><span class="p">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="s">'cleaned_line.id'</span><span class="p">))</span>
+                       <span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">RawLine</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="c1"># TODO: refactor so there are less 'id' labels
+</span>    <span class="nb">id</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>  <span class="c1"># the primary key
+</span>    <span class="n">hex_id</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">String</span><span class="p">(</span><span class="mi">8</span><span class="p">),</span> <span class="n">default</span><span class="o">=</span><span class="n">get_hex_id</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">unique</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span> <span class="c1"># hex identifier for requests
+</span>    <span class="n">full_text</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">String</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>  <span class="c1"># the text of the line
+</span>    <span class="n">list_id</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Integer</span><span class="p">,</span> <span class="n">db</span><span class="p">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="s">'recipe_list.id'</span><span class="p">))</span>  <span class="c1"># the id of the list for the line
+</span>    <span class="n">text_to_colors</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">String</span><span class="p">)</span>
+    <span class="n">cleaned_lines</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">relationship</span><span class="p">(</span><span class="s">'CleanedLine'</span><span class="p">,</span> <span class="n">secondary</span><span class="o">=</span><span class="n">line_assocs</span><span class="p">,</span> <span class="n">backref</span><span class="o">=</span><span class="n">db</span><span class="p">.</span><span class="n">backref</span><span class="p">(</span><span class="s">'raw_lines'</span><span class="p">,</span> <span class="n">lazy</span><span class="o">=</span><span class="s">'dynamic'</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">f"</span><span class="si">{</span><span class="bp">self</span><span class="p">.</span><span class="n">full_text</span><span class="si">}</span><span class="s">"</span>
+
+
+<span class="k">class</span> <span class="nc">CleanedLine</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>   <span class="c1"># the primary key
+</span>    <span class="n">index_in_list</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Integer</span><span class="p">)</span>  <span class="c1"># index in the grocery list (for requests) TODO: create this automatically
+</span>    <span class="n">hex_id</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">String</span><span class="p">(</span><span class="mi">8</span><span class="p">),</span> <span class="n">default</span><span class="o">=</span><span class="n">get_hex_id</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">unique</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span> <span class="c1"># hex identifier for requests
+</span>    <span class="n">amount</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Float</span><span class="p">)</span>    <span class="c1"># the amount of ingredient (optional)
+</span>    <span class="n">measurement</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">String</span><span class="p">(</span><span class="mi">20</span><span class="p">))</span>  <span class="c1"># the measurement of the amount (optional)
+</span>    <span class="n">ingredient</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">String</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>  <span class="c1"># the ingredient (required)
+</span>    <span class="n">checked</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Boolean</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>  <span class="c1"># whether or not the item is checked off the list
+</span>    <span class="n">comp_list</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Integer</span><span class="p">,</span> <span class="n">db</span><span class="p">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="s">'compiled_list.id'</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">f"</span><span class="si">{</span><span class="bp">self</span><span class="p">.</span><span class="n">ingredient</span><span class="si">}</span><span class="s"> in list </span><span class="si">{</span><span class="bp">self</span><span class="p">.</span><span class="n">comp_list</span><span class="si">}</span><span class="s">"</span></code></pre></figure>
+
+<p>None of this is particularly complex, but it was my first time implementing a many-to-many relationship, and I’m pleased it worked out. I did have to make some minor modifications to how the program created the new lines, but most of it was quite straightforward. And, as a consequence, I can now have two ingredients from the same recipe line:</p>
+
+<p><img src="/assets/img/posts/new-adder/two-ingredients-one-line.png" alt="alt text" /></p>
+
+<p>In this example, it’s just salt and pepper, but it works as proof of concept. There are a few more cases that I’m going to need to handle for this, however, such as what happens when a user edits an ingredient to combine them later on the list page. But seeing as this post is focused on the recipe adder, I decided to put that off until next time.</p>
+
+<p>And that’s it! It’s been quite a bit of work done since my last post, and I think this is my longest post yet. Even so, there are still a few areas that I would like to change on the recipe adder. Most notably, I think it would be better for punctuation marks like commas and parentheses to not have their own buttons, as it’s sort of counterintuitive and clunky. That will get smoothed out when I go through another pass. But for now, I’m turning my attention to the main list page, so expect a new post about that by the end of the week!</p>
+
+</div>
+
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
+    </div>
+    </div>
+  </body>
+</html>

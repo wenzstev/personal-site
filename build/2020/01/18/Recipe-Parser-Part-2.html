@@ -1,0 +1,141 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Building a Recipe Parser -- Part 2</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-container">
+  <div class="blog-header">
+      <h2>Building a Recipe Parser -- Part 2</h2>
+      <small>18 Jan 2020</small>
+  </div>
+  </div>
+</header>
+
+
+<div class="post">
+<p>When last we left our fledgling program, we had <a href="/2020/01/17/Recipe-Parser-Part-1.html">planned our features and set up the basic scaffold</a>. Now, we turn our attention to the meat and potatoes of the program: getting the recipe, and parsing it out.</p>
+
+<p>The first part proved to be the far easier of the two. I’d already decided to use a <code class="language-plaintext highlighter-rouge">beautifulsoup</code> module, and it was a cinch to go to a random recipe on <a href="allrecipes.com">AllRecipes</a>, and inspect the source to find out how ingredients were labelled. They use the name <code class="language-plaintext highlighter-rouge">recipeIngredient</code>, and in a couple lines of code my work was done:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">parse_recipe</span><span class="p">(</span><span class="n">url</span><span class="p">):</span>
+  <span class="c1"># capture webpage and open
+</span>  <span class="n">res</span> <span class="o">=</span> <span class="n">requests</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+  <span class="n">soup</span> <span class="o">=</span> <span class="n">BeautifulSoup</span><span class="p">(</span><span class="n">res</span><span class="p">.</span><span class="n">text</span><span class="p">,</span> <span class="s">'lxml'</span><span class="p">)</span>
+
+  <span class="c1"># scan webpage for ingredients
+</span>  <span class="n">ingredient_lines</span> <span class="o">=</span> <span class="n">soup</span><span class="p">.</span><span class="n">find_all</span><span class="p">(</span><span class="s">'span'</span><span class="p">,</span> <span class="n">itemprop</span><span class="o">=</span><span class="s">'recipeIngredient'</span><span class="p">)</span>
+
+  <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">ingredient_lines</span><span class="p">:</span>
+    <span class="c1"># TODO: parse the line
+</span>
+    <span class="c1"># TODO: add the item/amount to the list
+</span>
+    <span class="k">pass</span></code></pre></figure>
+
+<p>Easy. Since <code class="language-plaintext highlighter-rouge">soup.find_all()</code> returns a list, I added a quick iterator and a few more <code class="language-plaintext highlighter-rouge">TODO</code>s. All was smooth sailing on the high seas, and I was feeling rather proud of myself. Which just goes to show, dear reader, that pride truly cometh before the fall.</p>
+
+<h4 id="parsing-attempt-1-the-regex-debacle">Parsing Attempt 1: The Regex Debacle</h4>
+
+<p>My first attempt at parsing the lines involved a regex. It made sense to me at the time; regexes are good for capturing data when you know what the format is, and in general an ingredient line in a recipe follows a pretty standard pattern, something like:</p>
+
+<ul>
+  <li>1 cup flour</li>
+  <li>2 tablespoons salt</li>
+  <li>1 can tomatoes</li>
+</ul>
+
+<p>With this format in mind, my first regex looked something like this:</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>(\d\/?\d?) ([\w]+) ([\w]+)
+</code></pre></div></div>
+<p>Which seemed to me a pretty simple way to capture all of the necessary information, and while I knew it wasn’t going to be complicated enough to capture <em>everything</em>, I felt that it would be enough to get the majority of cases.</p>
+
+<p>So I ran it through a couple of recipes and it pretty much immediately failed. This one can capture very simple ingredients like the ones above, but what about a two-word ingredient name?</p>
+
+<ul>
+  <li>1 tablespoon olive oil</li>
+  <li>1/2 teaspoon baking powder</li>
+</ul>
+
+<p><em>Okay,</em> I thought, <em>easy enough to fix. Just add a \s to the last capture group to catch everything after the measurement, like so:</em></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>(\d\/?\d?) ([\w]+) ([\w\s]+)
+</code></pre></div></div>
+
+<p>This worked for the above, but what if there were extra words at the end of the line:</p>
+
+<ul>
+  <li>2 cups onions, chopped</li>
+  <li>1 can tomatoes, drained and cut into quarters</li>
+</ul>
+
+<p>And what if there was no measurement amount:</p>
+
+<ul>
+  <li>1 egg</li>
+  <li>8 granny smith apples</li>
+</ul>
+
+<p>And what if there were additional qualifying adjectives at play:</p>
+
+<ul>
+  <li>1 rounded tablespoon paprika</li>
+  <li>1 bunch Tuscan kale</li>
+</ul>
+
+<p>And what if… and what if… and what if…….</p>
+
+<p>And so played out the next two days of my life: working and reworking my little regex to make it impossibly flexible and intelligent. Looking at it now it’s pretty obvious to me why it failed, and I attribute my initial belief that it would work to two things: the fact that I’m pretty new to regexes still, and the fact that I have a tendency to lose the forest for the trees, this one tree in particular. I’m a bit stubborn, and I don’t like to admit when I’m beaten.</p>
+
+<p>But beaten I was, and I finally had to turn to the internet for help. I made a <a href="https://stackoverflow.com/questions/59686313/regex-for-recipe-ingredients-ignoring-adjectives-and-extraneous-words?noredirect=1#comment105544891_59686313">post</a> on Stack Overflow, describing my predicament and imploring the Old Masters there to teach me. I think it’s telling that, at that point, I still thought that a regex would be the solution: I simply needed to find the right one.</p>
+
+<p>They set me straight pretty quick.</p>
+
+<h4 id="nlp">Parsing Attempt 2: NLP to the Rescue</h4>
+<p>I was pretty much instantly advised to check out a natural language API. Natural language processing is something I’d heard about before, and was definitely on my list of things I wanted to learn, but it had always seemed extremely complicated, like magic, and frankly I was rather intimidated.</p>
+
+<p>But I shouldn’t have been, because the basics of NLP are actually fairly simple, and I am eternally grateful to the good folks at Stack Exchange for helping me see that, because wow, this stuff is so fascinating. The idea that you can write a program that can parse parts of speech, dependencies, tense, and so much more, and that you can use those things to effectively analyze data and extract information….</p>
+
+<p>It’s really cool.</p>
+
+<p>I’ll spare y’all the exact thought and learning process it took me to familiarize myself with the basics of NLP, but I want to give a shoutout to the tutorials and references I used:</p>
+
+<ul>
+  <li>
+    <p><a href="https://towardsdatascience.com/a-practitioners-guide-to-natural-language-processing-part-i-processing-understanding-text-9f4abfd13e72">A Practitioner’s Guide to Natural Language Processing</a> from Dipanjan Sarkar, which I tried to read first, bounced off of, then came back to later with a much better understanding of what was going on.</p>
+  </li>
+  <li>
+    <p><a href="https://www.youtube.com/watch?v=FLZvOKSCkxY&amp;list=PLQVvvaa0QuDf2JswnfiGkliBInZnIC4HL">NLTK with Python 3 for Natural Language Processing</a> from user sentdex was the most comprehensive one I could find, and was crucial in helping me understand most of the basic concepts (i.e., tokenizing, POS tagging, etc.). Even though it’s for NLTK and I eventually went with spaCy, most of the concepts are the same and the theoretical background it provided was very useful.</p>
+  </li>
+  <li>
+    <p><a href="https://www.youtube.com/watch?v=WnGPv6HnBok&amp;">Intro to NLP with spaCy</a> from user Explosion taught me the basics of spaCy (including why it’s a much better choice for someone like me who doesn’t have as much theoretical background and isn’t a researcher), and I was able to use a lot of the basic way he set up his program for my parser.</p>
+  </li>
+</ul>
+
+<p>These three resources in particular gave me a crash course in the vocabulary and techniques of Natural Language Processing, and I’m very grateful to them for putting out this content. Without it, I wouldn’t have been able to continue the recipe parser. I’m still extremely new at NLP, but I find the field fascinating and cannot wait to learn more. In my next post, I’ll run through the model that I’ve constructed for parsing the recipe, and talk about how I could improve it for the future.</p>
+
+</div>
+
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
+    </div>
+    </div>
+  </body>
+</html>

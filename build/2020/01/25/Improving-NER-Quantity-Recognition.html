@@ -1,0 +1,139 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Working out the Kinks in NER "Quantity" Improvement</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-container">
+  <div class="blog-header">
+      <h2>Working out the Kinks in NER "Quantity" Improvement</h2>
+      <small>25 Jan 2020</small>
+  </div>
+  </div>
+</header>
+
+
+<div class="post">
+<p>After having successfully shown that I could train the spaCy model to a wider definition of <code class="language-plaintext highlighter-rouge">'QUANTITY'</code>, I still had to iron out some details. The most pressing of which was the fact that spaCy’s model seemed to have learned that any number/word combination equated to a <code class="language-plaintext highlighter-rouge">'QUANTITY'</code> entity. This was fine for something like <code class="language-plaintext highlighter-rouge">'1 cup'</code> but it was also reading <code class="language-plaintext highlighter-rouge">'6 carrots'</code> or <code class="language-plaintext highlighter-rouge">'1 egg'</code> as a <code class="language-plaintext highlighter-rouge">'QUANTITY'</code>, which I did not want. In order to better define the difference between a quantity and a base number, I added some additional training data to my set, specifically involving instances where a number/word pair was <em>not</em> a <code class="language-plaintext highlighter-rouge">'QUANTITY'</code> positive:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python">  <span class="p">(</span><span class="s">'12 egg whites'</span><span class="p">,</span> <span class="p">{</span><span class="s">"entities"</span><span class="p">:</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="s">"CARDINAL"</span><span class="p">)]}),</span>
+  <span class="p">(</span><span class="s">'12 egg yolks'</span><span class="p">,</span> <span class="p">{</span><span class="s">"entities"</span><span class="p">:</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="s">"CARDINAL"</span><span class="p">)]}),</span>
+  <span class="p">(</span><span class="s">'Garnish: ground nutmeg'</span><span class="p">,</span> <span class="p">{</span><span class="s">"entities"</span><span class="p">:</span> <span class="p">[]}),</span>
+  <span class="p">(</span><span class="s">'18 fresh chestnuts'</span><span class="p">,</span> <span class="p">{</span><span class="s">"entities"</span><span class="p">:</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="s">"CARDINAL"</span><span class="p">)]}),</span>
+  <span class="p">(</span><span class="s">'1 bay leaf'</span><span class="p">,</span> <span class="p">{</span><span class="s">"entities"</span><span class="p">:</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="s">"CARDINAL"</span><span class="p">)]}),</span>
+  <span class="p">(</span><span class="s">'6 medium carrots, peeled, cut into 1-inch pieces'</span><span class="p">,</span>    <span class="p">{</span><span class="s">"entities"</span><span class="p">:</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="s">"CARDINAL"</span><span class="p">),</span> <span class="p">(</span><span class="mi">35</span><span class="p">,</span> <span class="mi">48</span><span class="p">,</span> <span class="s">"QUANTITY"</span><span class="p">)]}),</span>
+  <span class="p">(</span><span class="s">'4 or 5 slices brioche, or good quality white bread (I like Pepperidge Farm), 1/4 inch thick, crusts removed'</span><span class="p">,</span>
+     <span class="p">{</span><span class="s">"entities"</span><span class="p">:</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">13</span><span class="p">,</span> <span class="s">"QUANTITY"</span><span class="p">),</span> <span class="p">(</span><span class="mi">77</span><span class="p">,</span> <span class="mi">85</span><span class="p">,</span> <span class="s">"QUANTITY"</span><span class="p">)]}),</span>
+  <span class="p">(</span><span class="s">'3 extra-large eggs'</span><span class="p">,</span> <span class="p">{</span><span class="s">"entities"</span><span class="p">:</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="s">"CARDINAL"</span><span class="p">)]}),</span>
+  <span class="p">(</span><span class="s">'2 extra-large egg yolks'</span><span class="p">,</span> <span class="p">{</span><span class="s">"entities"</span><span class="p">:</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="s">"CARDINAL"</span><span class="p">)]})</span></code></pre></figure>
+
+<p>I fed this information into the program (along with my original data), and…</p>
+
+<p><img src="/assets/img/posts/ner_part_2/improved_quantity_measurement.png" alt="alt text" /></p>
+
+<p>Success! Three important examples to note here.</p>
+<ul>
+  <li>The model successfully recognizes “cups” as quantity (see the first line).</li>
+  <li>The model successfully recognizes examples without measurements as <code class="language-plaintext highlighter-rouge">'CARDINAL'</code> rather than <code class="language-plaintext highlighter-rouge">'QUANTITY'</code>, as you can see on line 5.</li>
+  <li>The model no longer recognizes “Garnish” as an <code class="language-plaintext highlighter-rouge">'NORP'</code> entity. While on one hand, this is good because that was a wrong read in the first place, on another, broader note, this is bad because it indicates that the model is forgetting other examples. That’s something that we need to fix.</li>
+</ul>
+
+<p>I subsequently ran it through the entire 100 line set I’ve been working with, and everything seemed to be working well.</p>
+
+<p>At this point, there are several things that I need to do:</p>
+<ol>
+  <li>I need to create a much larger test set, and, more broadly, figure out how to  annotate data as efficiently as possible.</li>
+  <li>I need to add in the “ingredient” entity for recognition</li>
+</ol>
+
+<p>Both of these are going to require an easier way to generate large amounts of test data. After all, while spaCy notes that you only need a “handful” of examples to adjust or improve the accuracy of an existing entity category, in order to create a new one, it recommends at least a “few hundred” examples. Writing out all the code and boilerplate for that many examples is tiring. My solution? Make spaCy do most of the heavy lifting for us.</p>
+
+<h3 id="using-spacy-to-help-make-our-training-data">Using spaCy to Help Make our Training Data</h3>
+
+<p>Because spaCy’s NER saves the beginning, ending, and label for all the entities it finds, I figured it woudl be fairly easy to reverse engineer that into auto-generating the scaffolding for a much larger training set. To be clear, having spaCy generate a training set and then feeding that set back again wouldn’t do anything. However, it would come in handy if we want to create a list of partially annotated examples that we can then add our own annotations to. That way, we can ensure that spaCy doesn’t forget what we’ve already taught it.</p>
+
+<p>I feel like this still sounds a bit circular when I write it out, so here’s some code:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">nlp</span> <span class="o">=</span> <span class="n">spacy</span><span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="s">"en_core_web_sm"</span><span class="p">)</span>  <span class="c1"># or any model we want
+</span>   <span class="n">AUTO_TRAIN_DATA</span> <span class="o">=</span> <span class="p">[]</span>
+
+   <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">ingredient_dataset</span><span class="p">:</span>
+       <span class="n">doc</span> <span class="o">=</span> <span class="n">nlp</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+       <span class="n">AUTO_TRAIN_DATA</span><span class="p">.</span><span class="n">append</span><span class="p">((</span><span class="n">line</span><span class="p">,</span> <span class="p">{</span><span class="s">"entities"</span><span class="p">:</span> <span class="p">[(</span><span class="n">ent</span><span class="p">.</span><span class="n">start_char</span><span class="p">,</span> <span class="n">ent</span><span class="p">.</span><span class="n">end_char</span><span class="p">,</span> <span class="n">ent</span><span class="p">.</span><span class="n">label_</span><span class="p">)</span> <span class="k">for</span> <span class="n">ent</span> <span class="ow">in</span> <span class="n">doc</span><span class="p">.</span><span class="n">ents</span><span class="p">]}))</span></code></pre></figure>
+
+<p>This creates training data in the same format as spaCy accepts, and in a fraction of the time it would take to do it by hand. I ran this code twice: first with the original <code class="language-plaintext highlighter-rouge">'en_core_web_sm'</code> model, and second with my trained model. This produced two similar, but not exactly the same, training sets:</p>
+
+<p><img src="/assets/img/posts/ner_part_2/train_set_base_model.png" alt="alt text" /></p>
+
+<p><img src="/assets/img/posts/ner_part_2/train_set_measurement_model.png" alt="alt text" /></p>
+
+<p>The top is the original spaCy model, and the bottom is the trained model. Note the differences between them. For example, the trained model reads the third line correctly as a <code class="language-plaintext highlighter-rouge">'QUANTITY'</code>, while the original model simply records a <code class="language-plaintext highlighter-rouge">'CARDINAL'</code>. Likewise, the orginal model once again reads <code class="language-plaintext highlighter-rouge">'Garnish'</code> as <code class="language-plaintext highlighter-rouge">'NORP'</code>. The great nation of Garn has returned.</p>
+
+<p>The next step was the combine these two models together in such a way as to preserve the knowledge lost from the original model, while also keeping what the trained model has learned. Honestly, I think I made this process much more challenging than I should have; there was a lot of headscratching and 4x nested lists and a bunch of stuff that didn’t work. But eventually I took a step back and realized that the solution was actually pretty simple. Essentially, all I wanted to do was create a model that understood the modified <code class="language-plaintext highlighter-rouge">'QUANTITY'</code> and <code class="language-plaintext highlighter-rouge">'CARDINAL'</code> classes, without changing anything else. In order to do that, I just had to combine the <code class="language-plaintext highlighter-rouge">'CARDINAL'</code> and <code class="language-plaintext highlighter-rouge">'QUANTITY'</code> entities from the trained set with the rest of the entities from the original set.</p>
+
+<p>Here’s what I came up with:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">mapped</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="n">train_set_base_model</span><span class="p">,</span> <span class="n">train_set_measurement_model</span><span class="p">)</span>
+
+<span class="n">train_set_final_model</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="k">for</span> <span class="n">pair</span> <span class="ow">in</span> <span class="n">mapped</span><span class="p">:</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">pair</span><span class="p">)</span>
+    <span class="n">recipe_line</span> <span class="o">=</span> <span class="n">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">pair</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">new_entity_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s">"entities"</span><span class="p">:</span> <span class="n">pair</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">][</span><span class="s">"entities"</span><span class="p">]}</span>
+
+    <span class="n">do_not_copy</span> <span class="o">=</span> <span class="p">[</span><span class="s">"CARDINAL"</span><span class="p">,</span> <span class="s">"QUANTITY"</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">entity</span><span class="p">,</span> <span class="n">annotation_list</span> <span class="ow">in</span> <span class="n">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">].</span><span class="n">items</span><span class="p">():</span> <span class="c1"># loop through the original model's list
+</span>        <span class="k">for</span> <span class="n">annotation</span> <span class="ow">in</span> <span class="n">annotation_list</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">annotation</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">do_not_copy</span><span class="p">:</span>
+                <span class="k">print</span><span class="p">(</span><span class="n">annotation</span><span class="p">)</span>
+                <span class="n">new_entity_dict</span><span class="p">[</span><span class="s">"entities"</span><span class="p">].</span><span class="n">append</span><span class="p">(</span><span class="n">annotation</span><span class="p">)</span>
+
+    <span class="n">train_set_final_model</span><span class="p">.</span><span class="n">append</span><span class="p">((</span><span class="n">recipe_line</span><span class="p">,</span> <span class="n">new_entity_dict</span><span class="p">))</span>
+
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s">'combined_data.py'</span><span class="p">,</span> <span class="s">'w'</span><span class="p">)</span> <span class="k">as</span> <span class="n">combined_data</span><span class="p">:</span>
+    <span class="n">pp</span> <span class="o">=</span> <span class="n">pprint</span><span class="p">.</span><span class="n">PrettyPrinter</span><span class="p">()</span>
+    <span class="n">combined_data</span><span class="p">.</span><span class="n">write</span><span class="p">(</span><span class="n">pp</span><span class="p">.</span><span class="n">pformat</span><span class="p">(</span><span class="n">train_set_final_model</span><span class="p">))</span></code></pre></figure>
+
+<p>This loops through all of the dictionary entries and takes all of the entities that are not <code class="language-plaintext highlighter-rouge">'CARDINAL'</code> or <code class="language-plaintext highlighter-rouge">'QUANTITY'</code> (i.e., all entities that our improved model didn’t touch/forgot about) and adds them to the second model, creating a combined set of data that hopefully has the best of both worlds. This is the model that we will annotate for our new <code class="language-plaintext highlighter-rouge">'INGREDIENT'</code> category.</p>
+
+<p>But first, it needs to be tested to see if it works. Scanning through the data to make sure that everything is okay…</p>
+
+<p><img src="/assets/img/posts/ner_part_2/working_and_not_working.png" alt="alt text" /></p>
+
+<p>A few small issues here and there. The model can’t tell if entities are overlapping, and I had to go through and remove some of them by hand. But overall, it worked pretty well. I ran the first 20 lines through as training, and then ran the rest through as a test.</p>
+
+<p><img src="/assets/img/posts/ner_part_2/combined_working.png" alt="alt text" /></p>
+
+<p>Success! You can see here that it’s correctly still reading “Spanish,” while also taking the corrected “QUANTITY” measurements in.</p>
+
+<p>Although I am starting to wonder about how necessary this all was; in fact I’m starting to doubt the need at all. Looking through the text, many of the additional entities that spaCy found are just items that I’m going to make the INGREDIENT entity anyway; the model is likely to forget what they are regardless. Plus, I’m not sure that a recipe recognizer really needs to know that London is a city.</p>
+
+<p>However, this work was still pretty useful, as I created a much longer training set and wrote code that partially automated the annotation process. The next step will be to go through this and annotate by hand the ingredient entity. Which, I don’t think there’s really any way around that, but with the scaffolding in place, it shouldn’t be that bad.</p>
+
+</div>
+
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
+    </div>
+    </div>
+  </body>
+</html>

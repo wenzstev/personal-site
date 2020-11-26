@@ -1,0 +1,100 @@
+I"�:<p>This is just a quick blog post I wanted to get out as an update to how I’ve implemented modals, as I feel that my old implementation was a bit of an antipattern.</p>
+
+<h3 id="old-method">Old Method</h3>
+
+<p>Previously, I had implemented the modal component in the <code class="language-plaintext highlighter-rouge">SearchBar</code> component, because it was activated by the <code class="language-plaintext highlighter-rouge">NavMenu</code> component that was nested within. The actual contents of the modal were passed as state. You can read <a href="/2020/08/06/Adding-Recipes-and-Lists.html">this post</a> for more details of how I implemented it.</p>
+
+<p>This method worked, so long as modals only needed to be accessed from the searchbar. The problem came when I didn’t want to do that anymore. In trying to figure out how to open the modal from the contents of the main page, I realized that I had been implementing my templates somewhat backwards. Essentially, I was rendering my <code class="language-plaintext highlighter-rouge">MainTemplatePage</code> component as a <em>child</em> of the various other pages, rather than vice versa. This meant that, if I wanted to activate the modal through the pages, I would need to store the state of the modal in the page, rather than the template. As you might imagine, this sort of defeated the purpose of the template.</p>
+
+<h3 id="new-method">New Method</h3>
+
+<p>First, I rearranged the nesting of my pages. Rather than storing the <code class="language-plaintext highlighter-rouge">MainTemplatePage</code> in each other page, I routed the pages <em>through</em> <code class="language-plaintext highlighter-rouge">MainTemplatePage</code> on my top level route. To make everything a bit cleaner, I combined the <code class="language-plaintext highlighter-rouge">Route</code> component with the <code class="language-plaintext highlighter-rouge">MainTemplatePage</code> component.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">PageRoute</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">"</span><span class="s2">in page route</span><span class="dl">"</span><span class="p">)</span>
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">Route</span> <span class="nx">path</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">path</span><span class="p">}</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">MainTemplatePage</span><span class="o">&gt;</span>
+        <span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">children</span><span class="p">}</span>
+      <span class="o">&lt;</span><span class="sr">/MainTemplatePage</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/Route</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>I then used this component for my actual routes, like so.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">AuthenticatedApp</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="p">(</span>
+      <span class="o">&lt;</span><span class="nx">Switch</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">PageRoute</span> <span class="nx">path</span><span class="o">=</span><span class="dl">"</span><span class="s2">/recipes</span><span class="dl">"</span><span class="o">&gt;</span>
+          <span class="o">&lt;</span><span class="nx">RecipePage</span> <span class="o">/&gt;</span>
+        <span class="o">&lt;</span><span class="sr">/PageRoute</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="nx">PageRoute</span> <span class="nx">path</span><span class="o">=</span><span class="dl">"</span><span class="s2">/lists</span><span class="dl">"</span><span class="o">&gt;</span>
+          <span class="o">&lt;</span><span class="nx">ListPage</span> <span class="o">/&gt;</span>
+        <span class="o">&lt;</span><span class="sr">/PageRoute</span><span class="err">&gt;
+</span>        <span class="c1">// ...and so on</span></code></pre></figure>
+
+<p>Now that the <code class="language-plaintext highlighter-rouge">MainTemplatePage</code> was the parent of the individual pages, I could then pass down necessary modal information. I moved the modal to the <code class="language-plaintext highlighter-rouge">MainTemplatePage</code> and created a new component, <code class="language-plaintext highlighter-rouge">BaseModal</code>, that rendered the modal outside the main DOM structure as a portal.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">BaseModal</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span><span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">classes</span> <span class="o">=</span> <span class="nx">useStyles</span><span class="p">(</span><span class="nx">props</span><span class="p">)</span>
+  <span class="kd">const</span> <span class="p">[</span><span class="nx">modalStyle</span><span class="p">]</span> <span class="o">=</span> <span class="nx">useState</span><span class="p">(</span><span class="nx">modalStyles</span><span class="p">)</span>
+
+
+  <span class="kd">const</span> <span class="nx">modal</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">Modal</span> <span class="nx">style</span><span class="o">=</span><span class="p">{</span><span class="nx">modalStyle</span><span class="p">}</span> <span class="nx">open</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">open</span><span class="p">}</span> <span class="nx">onClose</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">handleClose</span><span class="p">}</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">Paper</span> <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">modalPaper</span><span class="p">}</span><span class="o">&gt;</span>
+      <span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">children</span><span class="p">}</span>
+      <span class="o">&lt;</span><span class="sr">/Paper</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/Modal</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+
+  <span class="k">return</span> <span class="nx">ReactDOM</span><span class="p">.</span><span class="nx">createPortal</span><span class="p">(</span><span class="nx">modal</span><span class="p">,</span> <span class="nb">document</span><span class="p">.</span><span class="nx">querySelector</span><span class="p">(</span><span class="dl">"</span><span class="s2">#modal</span><span class="dl">"</span><span class="p">))</span>
+<span class="p">}</span>
+
+<span class="c1">// in MainTemplatePage</span>
+<span class="k">return</span> <span class="p">(</span>
+  <span class="o">&lt;</span><span class="nx">div</span> <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">root</span><span class="p">}</span><span class="o">&gt;</span>
+    <span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">noSearchbar</span> <span class="p">?</span> <span class="kc">null</span> <span class="p">:</span> <span class="o">&lt;</span><span class="nx">SearchBar</span> <span class="nx">openModal</span><span class="o">=</span><span class="p">{</span><span class="nx">openModal</span><span class="p">}</span><span class="sr">/&gt;</span><span class="err">}
+</span>    <span class="o">&lt;</span><span class="nx">Container</span><span class="o">&gt;</span>
+        <span class="p">{</span><span class="nx">childrenWithProps</span><span class="p">}</span>
+    <span class="o">&lt;</span><span class="sr">/Container</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="nx">BaseModal</span> <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">modal</span><span class="p">}</span> <span class="nx">open</span><span class="o">=</span><span class="p">{</span><span class="nx">modalOpen</span><span class="p">}</span> <span class="nx">handleClose</span><span class="o">=</span><span class="p">{</span><span class="nx">closeModal</span><span class="p">}</span><span class="o">&gt;</span>
+      <span class="p">{</span><span class="nx">modal</span><span class="p">}</span>
+    <span class="o">&lt;</span><span class="sr">/BaseModal</span><span class="err">&gt;
+</span>  <span class="o">&lt;</span><span class="sr">/div</span><span class="err">&gt;
+</span><span class="p">)</span></code></pre></figure>
+
+<p>To be honest, I’m not entirely sure this is necessary, as I suspect Material-UI does something similar under the hood. But it seems to be best practices for modals in general, so I’m going to keep it for now.</p>
+
+<p>I still had one more issue, however. While I could pass down the necessary modal information to the children, I couldn’t do so statically, as <code class="language-plaintext highlighter-rouge">MainTemplatePage</code> didn’t actually know what its children would be. My solution (which comes from <a href="https://stackoverflow.com/questions/32370994/how-to-pass-props-to-this-props-children">this</a> StackOverflow question) was to map the children and clone them with the props added.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">openModal</span> <span class="o">=</span> <span class="p">(</span><span class="nx">modal</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="nx">setModalOpen</span><span class="p">(</span><span class="kc">true</span><span class="p">)</span>
+  <span class="nx">setModal</span><span class="p">(</span><span class="nx">modal</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="c1">// ...</span>
+
+<span class="kd">const</span> <span class="nx">childrenWithProps</span> <span class="o">=</span> <span class="nx">React</span><span class="p">.</span><span class="nx">Children</span><span class="p">.</span><span class="nx">map</span><span class="p">(</span><span class="nx">props</span><span class="p">.</span><span class="nx">children</span><span class="p">,</span> <span class="nx">child</span> <span class="o">=&gt;</span><span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">props</span> <span class="o">=</span> <span class="p">{</span><span class="nx">openModal</span><span class="p">}</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">React</span><span class="p">.</span><span class="nx">isValidElement</span><span class="p">(</span><span class="nx">child</span><span class="p">)){</span>
+    <span class="k">return</span> <span class="nx">React</span><span class="p">.</span><span class="nx">cloneElement</span><span class="p">(</span><span class="nx">child</span><span class="p">,</span> <span class="nx">props</span><span class="p">)</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="nx">child</span>
+<span class="p">})</span></code></pre></figure>
+
+<p>This is why I render the <code class="language-plaintext highlighter-rouge">childrenWithProps</code> variable rather than the <code class="language-plaintext highlighter-rouge">props.children</code> variable in the return statement of my <code class="language-plaintext highlighter-rouge">MainTemplatePage</code> component.
+With this implemented, I can now access the necessary modal information in any component that is a direct child of the <code class="language-plaintext highlighter-rouge">MainTemplatePage</code>. For example, in my <code class="language-plaintext highlighter-rouge">ListPage</code> component, I can return:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="k">return</span> <span class="p">(</span>
+  <span class="o">&lt;</span><span class="nx">Grid</span> <span class="nx">container</span><span class="o">&gt;</span>
+    <span class="o">&lt;</span><span class="nx">CreateNewCard</span> <span class="nx">type</span><span class="o">=</span><span class="dl">"</span><span class="s2">List</span><span class="dl">"</span> <span class="nx">clickHandler</span><span class="o">=</span><span class="p">{()</span><span class="o">=&gt;</span><span class="nx">props</span><span class="p">.</span><span class="nx">openModal</span><span class="p">(</span><span class="o">&lt;</span><span class="nx">AddListModal</span> <span class="o">/&gt;</span><span class="p">)}</span><span class="sr">/</span><span class="err">&gt;
+</span>    <span class="p">{</span><span class="nx">lists</span> <span class="p">?</span> <span class="nx">lists</span><span class="p">.</span><span class="nx">map</span><span class="p">((</span><span class="nx">value</span><span class="p">,</span> <span class="nx">index</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="o">&lt;</span><span class="nx">ListCard</span> <span class="nx">key</span><span class="o">=</span><span class="p">{</span><span class="nx">index</span><span class="p">}</span> <span class="nx">list</span><span class="o">=</span><span class="p">{</span><span class="nx">value</span><span class="p">}</span> <span class="sr">/&gt;</span><span class="se">)</span><span class="sr"> : null</span><span class="err">}
+</span>  <span class="o">&lt;</span><span class="sr">/Grid</span><span class="err">&gt;
+</span><span class="p">)</span></code></pre></figure>
+
+<h1 id="conclusion">Conclusion</h1>
+
+<p>While it’s still not a perfect system, this change keeps the actual modal component dumb, since I can pass any modal I want into it. It also adds a great deal more flexibility in where I can access modals. It’s not a huge change, but I wanted to make note of it before I moved on to adding List functions.</p>
+:ET

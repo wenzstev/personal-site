@@ -1,0 +1,427 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Cleaning Up the List Page</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-container">
+  <div class="blog-header">
+      <h2>Cleaning Up the List Page</h2>
+      <small>02 Sep 2020</small>
+  </div>
+  </div>
+</header>
+
+
+<div class="post">
+<p>This is just going to be a quick post where I cover some of the changes I made to the List Page in preparation for first release.</p>
+
+<h3 id="creating-a-recipe-panel">Creating a Recipe Panel</h3>
+
+<p>I wanted to provide additional information about the recipes that were in a given grocery list, as well as provide links to the editing pages and the original source of the recipe. I wanted this to function similarly to the panel as it worked in my first version of this project.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">RecipePanel</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="p">[</span><span class="nx">recipes</span><span class="p">,</span> <span class="nx">setRecipes</span><span class="p">]</span> <span class="o">=</span> <span class="nx">useState</span><span class="p">([])</span>
+  <span class="kd">const</span> <span class="p">{</span><span class="nx">resourceId</span><span class="p">}</span> <span class="o">=</span> <span class="nx">useParams</span><span class="p">()</span>
+
+  <span class="kd">const</span> <span class="nx">classes</span> <span class="o">=</span> <span class="nx">useStyles</span><span class="p">()</span>
+
+  <span class="kd">const</span> <span class="nx">getRecipes</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="nx">axios</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="s2">`/recipes?list=</span><span class="p">${</span><span class="nx">resourceId</span><span class="p">}</span><span class="s2">`</span><span class="p">)</span>
+    <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">resp</span><span class="o">=&gt;</span><span class="nx">setRecipes</span><span class="p">(</span><span class="nx">resp</span><span class="p">.</span><span class="nx">data</span><span class="p">))</span>
+  <span class="p">}</span>
+
+  <span class="nx">useEffect</span><span class="p">(()</span><span class="o">=&gt;</span><span class="p">{</span>
+    <span class="nx">getRecipes</span><span class="p">()</span>
+  <span class="p">},</span> <span class="p">[</span><span class="nx">props</span><span class="p">.</span><span class="nx">drawerOpen</span><span class="p">]);</span>
+
+  <span class="kd">const</span> <span class="nx">refreshPanels</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="nx">props</span><span class="p">.</span><span class="nx">getIngredients</span><span class="p">()</span>
+    <span class="nx">getRecipes</span><span class="p">()</span>
+  <span class="p">}</span>
+
+  <span class="kd">const</span> <span class="nx">mappedRecipes</span> <span class="o">=</span> <span class="nx">recipes</span>
+  <span class="p">.</span><span class="nx">filter</span><span class="p">((</span><span class="nx">element</span><span class="p">)</span><span class="o">=&gt;</span><span class="nx">element</span><span class="p">.</span><span class="nx">name</span> <span class="o">!=</span> <span class="dl">"</span><span class="s2">Additional Ingredients</span><span class="dl">"</span><span class="p">)</span>
+  <span class="p">.</span><span class="nx">map</span><span class="p">((</span><span class="nx">element</span><span class="p">,</span> <span class="nx">index</span><span class="p">)</span><span class="o">=&gt;</span><span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">RecipeButton</span>
+      <span class="nx">recipe</span><span class="o">=</span><span class="p">{</span><span class="nx">element</span><span class="p">}</span>
+      <span class="nx">key</span><span class="o">=</span><span class="p">{</span><span class="nx">index</span><span class="p">}</span>
+      <span class="nx">refreshPanels</span><span class="o">=</span><span class="p">{</span><span class="nx">refreshPanels</span><span class="p">}</span><span class="sr">/&gt;</span><span class="err">)
+</span>  <span class="p">)</span>
+
+  <span class="kd">const</span> <span class="nx">component</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">Grid</span> <span class="nx">item</span> <span class="nx">xs</span><span class="o">=</span><span class="p">{</span><span class="mi">12</span><span class="p">}</span> <span class="nx">md</span><span class="o">=</span><span class="p">{</span><span class="mi">6</span><span class="p">}</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">m</span><span class="o">=</span><span class="p">{</span><span class="mi">1</span><span class="p">}</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">Paper</span> <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">root</span><span class="p">}</span><span class="o">&gt;</span>
+          <span class="o">&lt;</span><span class="nx">List</span><span class="o">&gt;</span>
+            <span class="p">{</span><span class="nx">mappedRecipes</span><span class="p">}</span>
+          <span class="o">&lt;</span><span class="sr">/List</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="sr">/Paper</span><span class="err">&gt;
+</span>      <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/Grid</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;&gt;</span>
+    <span class="p">{</span><span class="nx">mappedRecipes</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="p">?</span> <span class="nx">component</span> <span class="p">:</span> <span class="kc">null</span><span class="p">}</span>
+    <span class="o">&lt;</span><span class="sr">/</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span>
+
+<span class="k">export</span> <span class="k">default</span> <span class="nx">RecipePanel</span></code></pre></figure>
+
+<p>The <code class="language-plaintext highlighter-rouge">RecipePanel</code> component uses an Axios call to get all recipes in the list, filters out the “Additional Ingredients” recipe, and then maps them to another new component, the <code class="language-plaintext highlighter-rouge">RecipeButton</code> component. I also added a check to see if there were any recipes in the list. If not, then the panel does not display at all.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">RecipeButton</code> component displays the name of the recipe as well as a small panel that appears when hovered over the line. This panel provides the option to edit the recipe, gives a link to the source of the recipe, and gives the option to delete the recipe. While I wrote these as different components, I stored them all in the same file, since there wasn’t going to be any reusing of the components.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">RecipeButton</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="p">[</span><span class="nx">hovering</span><span class="p">,</span> <span class="nx">setHovering</span><span class="p">]</span> <span class="o">=</span> <span class="nx">useState</span><span class="p">(</span><span class="kc">false</span><span class="p">)</span>
+  <span class="kd">const</span> <span class="nx">classes</span> <span class="o">=</span> <span class="nx">useStyles</span><span class="p">(</span><span class="nx">props</span><span class="p">)</span>
+
+  <span class="kd">const</span> <span class="nx">panel</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">Paper</span> <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">panel</span><span class="p">}</span><span class="o">&gt;</span>
+      <span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">recipe</span><span class="p">.</span><span class="nx">url</span> <span class="p">?</span>
+        <span class="o">&lt;</span><span class="nx">RecipeSourceButton</span> <span class="nx">source</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">recipe</span><span class="p">.</span><span class="nx">url</span><span class="p">}</span> <span class="sr">/</span><span class="err">&gt;
+</span>        <span class="p">:</span> <span class="kc">null</span><span class="p">}</span>
+      <span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">recipe</span><span class="p">.</span><span class="nx">name</span> <span class="o">==</span> <span class="dl">"</span><span class="s2">Additional Ingredients</span><span class="dl">"</span> <span class="p">?</span>
+        <span class="kc">null</span>
+        <span class="p">:</span> <span class="p">(</span> <span class="o">&lt;&gt;</span>
+              <span class="o">&lt;</span><span class="nx">RecipeEditButton</span> <span class="nx">id</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">recipe</span><span class="p">.</span><span class="nx">id</span><span class="p">}</span><span class="sr">/</span><span class="err">&gt;
+</span>              <span class="o">&lt;</span><span class="nx">RecipeDeleteButton</span> <span class="nx">id</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">recipe</span><span class="p">.</span><span class="nx">id</span><span class="p">}</span> <span class="nx">refreshPanels</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">refreshPanels</span><span class="p">}</span> <span class="sr">/</span><span class="err">&gt;
+</span>            <span class="o">&lt;</span><span class="sr">/&gt;</span><span class="se">)</span><span class="err">}
+</span>        <span class="o">&lt;</span><span class="sr">/Paper</span><span class="err">&gt;
+</span>      <span class="p">)</span>
+
+
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">ListItem</span>
+      <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">root</span><span class="p">}</span>
+      <span class="nx">onMouseEnter</span><span class="o">=</span><span class="p">{()</span><span class="o">=&gt;</span><span class="nx">setHovering</span><span class="p">(</span><span class="kc">true</span><span class="p">)}</span>
+      <span class="nx">onMouseLeave</span><span class="o">=</span><span class="p">{()</span><span class="o">=&gt;</span><span class="nx">setHovering</span><span class="p">(</span><span class="kc">false</span><span class="p">)}</span><span class="o">&gt;</span>
+    <span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">recipe</span><span class="p">.</span><span class="nx">name</span><span class="p">}</span>
+    <span class="p">{</span><span class="nx">hovering</span> <span class="p">?</span> <span class="nx">panel</span> <span class="p">:</span> <span class="kc">null</span><span class="p">}</span>
+
+    <span class="o">&lt;</span><span class="sr">/ListItem</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">const</span> <span class="nx">RecipeSourceButton</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">ButtonBase</span> <span class="nx">href</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">source</span><span class="p">}</span> <span class="nx">target</span><span class="o">=</span><span class="dl">"</span><span class="s2">_blank</span><span class="dl">"</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">LinkIcon</span> <span class="o">/&gt;</span>
+    <span class="o">&lt;</span><span class="sr">/ButtonBase</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">const</span> <span class="nx">RecipeEditButton</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">ButtonBase</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">Link</span> <span class="nx">to</span><span class="o">=</span><span class="p">{</span><span class="s2">`/recipe/</span><span class="p">${</span><span class="nx">props</span><span class="p">.</span><span class="nx">id</span><span class="p">}</span><span class="s2">`</span><span class="p">}</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">EditIcon</span> <span class="o">/&gt;</span>
+      <span class="o">&lt;</span><span class="sr">/Link</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/ButtonBase</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">const</span> <span class="nx">RecipeDeleteButton</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="p">{</span><span class="nx">resourceId</span><span class="p">}</span> <span class="o">=</span> <span class="nx">useParams</span><span class="p">()</span>
+  <span class="kd">const</span> <span class="nx">clickHandler</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="c1">// call the adjusted endpoint for list recipe associations</span>
+    <span class="nx">axios</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="s2">`/list-recipe-associations`</span><span class="p">,{</span>
+      <span class="na">params</span><span class="p">:</span> <span class="p">{</span>
+        <span class="na">recipe</span><span class="p">:</span> <span class="nx">props</span><span class="p">.</span><span class="nx">id</span><span class="p">,</span>
+        <span class="na">list</span><span class="p">:</span> <span class="nx">resourceId</span>
+      <span class="p">}</span>
+    <span class="p">})</span>
+    <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">resp</span><span class="o">=&gt;</span><span class="p">{</span>
+      <span class="k">return</span> <span class="nx">axios</span><span class="p">.</span><span class="k">delete</span><span class="p">(</span><span class="s2">`/list-recipe-associations/</span><span class="p">${</span><span class="nx">resp</span><span class="p">.</span><span class="nx">data</span><span class="p">.</span><span class="nx">id</span><span class="p">}</span><span class="s2">`</span><span class="p">)</span>
+    <span class="p">})</span>
+    <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">resp</span><span class="o">=&gt;</span><span class="nx">props</span><span class="p">.</span><span class="nx">refreshPanels</span><span class="p">())</span>
+    <span class="p">.</span><span class="k">catch</span><span class="p">(</span><span class="nx">err</span><span class="o">=&gt;</span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">err</span><span class="p">))</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">ButtonBase</span> <span class="nx">onClick</span><span class="o">=</span><span class="p">{</span><span class="nx">clickHandler</span><span class="p">}</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">RemoveCircleIcon</span> <span class="o">/&gt;</span>
+    <span class="o">&lt;</span><span class="sr">/ButtonBase</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span>
+
+<span class="k">export</span> <span class="k">default</span> <span class="nx">RecipeButton</span></code></pre></figure>
+
+<h3 id="modifying-the-recipe-side-panel">Modifying the Recipe Side Panel</h3>
+
+<p>Next, I created a few modifications to the Recipe Side Panel. Because the new <code class="language-plaintext highlighter-rouge">RecipePanel</code> component allows for deleting recipes, I decided to forgo that option, only show recipes that weren’t added to the list, and turn the whole card into a button.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">QuickRecipeAdd</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">user</span> <span class="o">=</span> <span class="nx">useSelector</span><span class="p">(</span><span class="nx">store</span><span class="o">=&gt;</span><span class="nx">store</span><span class="p">.</span><span class="nx">user</span><span class="p">)</span>
+  <span class="kd">const</span> <span class="nx">token</span> <span class="o">=</span> <span class="nx">useSelector</span><span class="p">(</span><span class="nx">store</span><span class="o">=&gt;</span><span class="nx">store</span><span class="p">.</span><span class="nx">token</span><span class="p">)</span>
+  <span class="kd">const</span> <span class="p">[</span><span class="nx">recipes</span><span class="p">,</span> <span class="nx">setRecipes</span><span class="p">]</span> <span class="o">=</span> <span class="nx">useState</span><span class="p">([])</span>
+  <span class="kd">const</span> <span class="p">[</span><span class="nx">associations</span><span class="p">,</span> <span class="nx">setAssociations</span><span class="p">]</span> <span class="o">=</span> <span class="nx">useState</span><span class="p">([])</span>
+
+  <span class="nx">useEffect</span><span class="p">(()</span><span class="o">=&gt;</span><span class="p">{</span>
+    <span class="nx">getAssociationsAndRecipes</span><span class="p">()</span>
+  <span class="p">},</span> <span class="p">[</span><span class="nx">props</span><span class="p">.</span><span class="nx">open</span><span class="p">])</span>
+
+
+  <span class="kd">const</span> <span class="nx">updateList</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="nx">props</span><span class="p">.</span><span class="nx">getIngredients</span><span class="p">()</span>
+    <span class="nx">getAssociationsAndRecipes</span><span class="p">()</span>
+  <span class="p">}</span>
+
+  <span class="kd">const</span> <span class="nx">getAssociationsAndRecipes</span> <span class="o">=</span> <span class="k">async</span><span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="k">try</span> <span class="p">{</span>
+      <span class="kd">var</span> <span class="nx">assocResponse</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">axios</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="s2">`/list-recipe-associations?list=</span><span class="p">${</span><span class="nx">props</span><span class="p">.</span><span class="nx">listId</span><span class="p">}</span><span class="s2">`</span><span class="p">)</span>
+      <span class="kd">var</span> <span class="nx">recipeResponse</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">axios</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="s2">`/recipes?user=</span><span class="p">${</span><span class="nx">user</span><span class="p">.</span><span class="nx">id</span><span class="p">}</span><span class="s2">`</span><span class="p">)</span>
+    <span class="p">}</span> <span class="k">catch</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+    <span class="p">}</span>
+
+    <span class="kd">let</span> <span class="nx">assoc</span> <span class="o">=</span> <span class="nx">assocResponse</span><span class="p">.</span><span class="nx">data</span>
+    <span class="kd">let</span> <span class="nx">allRecipes</span> <span class="o">=</span> <span class="nx">recipeResponse</span><span class="p">.</span><span class="nx">data</span>
+
+    <span class="kd">const</span> <span class="nx">associationSet</span> <span class="o">=</span> <span class="k">new</span> <span class="nb">Set</span><span class="p">(</span><span class="nx">assoc</span><span class="p">.</span><span class="nx">map</span><span class="p">(</span><span class="nx">element</span><span class="o">=&gt;</span><span class="nx">element</span><span class="p">.</span><span class="nx">recipe_id</span><span class="p">))</span>
+
+    <span class="kd">const</span> <span class="nx">filteredRecipes</span> <span class="o">=</span> <span class="nx">allRecipes</span><span class="p">.</span><span class="nx">filter</span><span class="p">((</span><span class="nx">element</span><span class="p">)</span><span class="o">=&gt;</span><span class="p">{</span>
+      <span class="k">if</span> <span class="p">(</span><span class="nx">associationSet</span><span class="p">.</span><span class="nx">has</span><span class="p">(</span><span class="nx">element</span><span class="p">.</span><span class="nx">id</span><span class="p">)){</span>
+        <span class="k">return</span> <span class="kc">false</span>
+      <span class="p">}</span>
+      <span class="k">return</span> <span class="kc">true</span>
+    <span class="p">})</span>
+
+    <span class="nx">setRecipes</span><span class="p">(</span><span class="nx">filteredRecipes</span><span class="p">)</span>
+    <span class="nx">setAssociations</span><span class="p">(</span><span class="nx">assoc</span><span class="p">)</span>
+  <span class="p">}</span>
+
+
+
+
+
+  <span class="kd">const</span> <span class="nx">recipeIsAssociated</span> <span class="o">=</span> <span class="p">(</span><span class="nx">recipe</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">associations</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">){</span>
+      <span class="k">if</span> <span class="p">(</span><span class="nx">associations</span><span class="p">[</span><span class="nx">i</span><span class="p">].</span><span class="nx">recipe_id</span> <span class="o">==</span> <span class="nx">recipe</span><span class="p">.</span><span class="nx">id</span><span class="p">){</span>
+        <span class="k">return</span> <span class="nx">associations</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="kc">null</span>
+
+  <span class="p">}</span>
+
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">Drawer</span> <span class="nx">anchor</span><span class="o">=</span><span class="dl">"</span><span class="s2">left</span><span class="dl">"</span> <span class="nx">open</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">open</span><span class="p">}</span> <span class="nx">onClose</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">onClose</span><span class="p">}</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">Typography</span> <span class="nx">variant</span><span class="o">=</span><span class="dl">"</span><span class="s2">h5</span><span class="dl">"</span> <span class="nx">align</span><span class="o">=</span><span class="dl">"</span><span class="s2">center</span><span class="dl">"</span><span class="o">&gt;</span><span class="nx">Your</span> <span class="nx">Recipes</span><span class="o">&lt;</span><span class="sr">/Typography</span><span class="err">&gt;
+</span>      <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">m</span><span class="o">=</span><span class="p">{</span><span class="mi">2</span><span class="p">}</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">Divider</span> <span class="o">/&gt;</span>
+      <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span>    <span class="p">{</span><span class="nx">recipes</span><span class="p">.</span><span class="nx">map</span><span class="p">((</span><span class="nx">recipe</span><span class="p">,</span> <span class="nx">index</span><span class="p">)</span><span class="o">=&gt;</span><span class="p">{</span>
+        <span class="k">return</span> <span class="p">(</span>
+          <span class="o">&lt;</span><span class="nx">RecipeSideSelector</span>
+            <span class="nx">key</span><span class="o">=</span><span class="p">{</span><span class="nx">index</span><span class="p">}</span>
+            <span class="nx">recipe</span><span class="o">=</span><span class="p">{</span><span class="nx">recipe</span><span class="p">}</span>
+            <span class="nx">listId</span> <span class="o">=</span> <span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">listId</span><span class="p">}</span>
+            <span class="nx">updateList</span><span class="o">=</span><span class="p">{</span><span class="nx">updateList</span><span class="p">}</span><span class="sr">/</span><span class="err">&gt;
+</span>      <span class="p">)}</span>
+    <span class="p">)}</span>
+    <span class="o">&lt;</span><span class="sr">/Drawer</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>Also note here that I’ve begun experimenting with <code class="language-plaintext highlighter-rouge">async</code> and <code class="language-plaintext highlighter-rouge">await</code> commands. I still feel a bit hesitant about them (I’m used to my good old fashioned promise chains), but I do like the increased cleanliness of the syntax and making a full transition to these is something I would consider in the future.</p>
+
+<p>Note also that I used a classic “insert everything into a set and then check if the item is in the set” solution to countless programming problems for determining if any given recipe was already in the list. This was faster than my previous method and significantly more elegant.</p>
+
+<h1 id="changes-to-the-ingredient-panel">Changes to the Ingredient Panel</h1>
+
+<p>Finally, I made some changes to the ingredient panel that hopefully create a much cleaner interface.</p>
+
+<p>For the <code class="language-plaintext highlighter-rouge">IngredientButton</code>, I removed the old and needlessly complicated system of “superimposing a button on top of text” in favor of simply keeping it a button the whole time, and changing the text when highlighted.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">useStyles</span> <span class="o">=</span> <span class="nx">makeStyles</span><span class="p">({</span>
+  <span class="na">root</span><span class="p">:</span> <span class="p">{</span>
+    <span class="na">fontFamily</span><span class="p">:</span> <span class="dl">"</span><span class="s2">Acari Sans, Verdana</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">fontSize</span><span class="p">:</span> <span class="dl">"</span><span class="s2">20px</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">color</span><span class="p">:</span> <span class="dl">"</span><span class="s2">white</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">padding</span><span class="p">:</span> <span class="dl">"</span><span class="s2">5px</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">width</span><span class="p">:</span> <span class="dl">"</span><span class="s2">95%</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">margin</span><span class="p">:</span><span class="dl">"</span><span class="s2">5px auto</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">display</span><span class="p">:</span><span class="dl">"</span><span class="s2">block</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">borderRadius</span><span class="p">:</span> <span class="dl">"</span><span class="s2">25px</span><span class="dl">"</span><span class="p">,</span>
+    <span class="dl">"</span><span class="s2">&amp;:hover</span><span class="dl">"</span><span class="p">:{</span>
+      <span class="na">backgroundColor</span><span class="p">:</span> <span class="dl">"</span><span class="s2">white</span><span class="dl">"</span><span class="p">,</span>
+      <span class="na">color</span><span class="p">:</span> <span class="dl">"</span><span class="s2">black</span><span class="dl">"</span><span class="p">,</span>
+    <span class="p">}</span>
+  <span class="p">},</span>
+  <span class="na">textBox</span><span class="p">:</span> <span class="p">{</span>
+    <span class="na">textOverflow</span><span class="p">:</span> <span class="dl">"</span><span class="s2">ellipsis</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">whiteSpace</span><span class="p">:</span> <span class="dl">"</span><span class="s2">nowrap</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">overflow</span><span class="p">:</span> <span class="dl">"</span><span class="s2">hidden</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">width</span><span class="p">:</span> <span class="dl">"</span><span class="s2">100%</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">display</span><span class="p">:</span> <span class="dl">"</span><span class="s2">inline-block</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">textAlign</span><span class="p">:</span> <span class="dl">"</span><span class="s2">left</span><span class="dl">"</span>
+  <span class="p">}</span>
+<span class="p">})</span>
+
+<span class="kd">const</span> <span class="nx">IngredientButton</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span><span class="p">{</span>
+  <span class="kd">const</span> <span class="p">[</span><span class="nx">hovering</span><span class="p">,</span> <span class="nx">setHovering</span><span class="p">]</span> <span class="o">=</span> <span class="nx">useState</span><span class="p">(</span><span class="kc">false</span><span class="p">)</span>
+  <span class="kd">const</span> <span class="p">[</span><span class="nx">displayLines</span><span class="p">,</span> <span class="nx">setDisplayLines</span><span class="p">]</span> <span class="o">=</span> <span class="nx">useState</span><span class="p">(</span><span class="kc">false</span><span class="p">)</span>
+  <span class="kd">const</span> <span class="nx">classes</span> <span class="o">=</span> <span class="nx">useStyles</span><span class="p">()</span>
+
+  <span class="k">return</span><span class="p">(</span>
+    <span class="o">&lt;&gt;</span>
+    <span class="o">&lt;</span><span class="nx">ButtonBase</span>
+      <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">root</span><span class="p">}</span>
+      <span class="nx">onClick</span><span class="o">=</span><span class="p">{()</span><span class="o">=&gt;</span><span class="nx">setDisplayLines</span><span class="p">(</span><span class="nx">prev</span><span class="o">=&gt;!</span><span class="nx">prev</span><span class="p">)}</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">Box</span>
+          <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">textBox</span><span class="p">}</span>
+          <span class="nx">onMouseEnter</span><span class="o">=</span><span class="p">{()</span><span class="o">=&gt;</span><span class="nx">setHovering</span><span class="p">(</span><span class="kc">true</span><span class="p">)}</span><span class="o">&gt;</span>
+            <span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">ingredient</span><span class="p">}</span>
+        <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/ButtonBase</span><span class="err">&gt;
+</span>    <span class="p">{</span><span class="nx">displayLines</span> <span class="p">?</span>
+      <span class="o">&lt;</span><span class="nx">RecipeLineDisplay</span>
+        <span class="nx">ingredient</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">ingredient</span><span class="p">}</span><span class="sr">/</span><span class="err">&gt;
+</span>      <span class="p">:</span> <span class="kc">null</span><span class="p">}</span>
+    <span class="o">&lt;</span><span class="sr">/</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>I also brought in a new component, <code class="language-plaintext highlighter-rouge">RecipeLineDisplay</code>, that showed the lines that the ingredient came from. This component again had more than one component in its file: one to hold all of the lines, and a separate component to actually make the calls and display each individual line.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">RecipeLineDisplayPanel</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="p">[</span><span class="nx">lines</span><span class="p">,</span> <span class="nx">setLines</span><span class="p">]</span> <span class="o">=</span> <span class="nx">useState</span><span class="p">([])</span>
+  <span class="kd">const</span> <span class="nx">classes</span> <span class="o">=</span> <span class="nx">useStyles</span><span class="p">(</span><span class="nx">props</span><span class="p">)</span>
+  <span class="kd">const</span> <span class="p">{</span><span class="nx">resourceId</span><span class="p">}</span> <span class="o">=</span> <span class="nx">useParams</span><span class="p">()</span>
+
+  <span class="kd">const</span> <span class="nx">getLines</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="nx">axios</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="s2">`/lines`</span><span class="p">,{</span>
+      <span class="na">params</span><span class="p">:</span> <span class="p">{</span>
+        <span class="na">list</span><span class="p">:</span> <span class="nx">resourceId</span><span class="p">,</span>
+        <span class="na">ingredient</span><span class="p">:</span> <span class="nx">props</span><span class="p">.</span><span class="nx">ingredient</span>
+      <span class="p">}</span>
+    <span class="p">})</span>
+    <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">resp</span><span class="o">=&gt;</span><span class="p">{</span>
+      <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">resp</span><span class="p">)</span>
+      <span class="nx">setLines</span><span class="p">(</span><span class="nx">resp</span><span class="p">.</span><span class="nx">data</span><span class="p">)</span>
+    <span class="p">})</span>
+  <span class="p">}</span>
+
+  <span class="nx">useEffect</span><span class="p">(()</span><span class="o">=&gt;</span><span class="p">{</span>
+    <span class="nx">getLines</span><span class="p">()</span>
+  <span class="p">},[])</span>
+
+  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">lines</span><span class="p">)</span>
+
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">Paper</span> <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">root</span><span class="p">}</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">List</span><span class="o">&gt;</span>
+      <span class="p">{</span><span class="nx">lines</span><span class="p">.</span><span class="nx">map</span><span class="p">((</span><span class="nx">element</span><span class="p">,</span> <span class="nx">index</span><span class="p">)</span><span class="o">=&gt;</span><span class="p">(</span>
+        <span class="o">&lt;</span><span class="nx">RecipeLineDisplayLine</span> <span class="nx">key</span><span class="o">=</span><span class="p">{</span><span class="nx">index</span><span class="p">}</span> <span class="nx">line</span><span class="o">=</span><span class="p">{</span><span class="nx">element</span><span class="p">}</span> <span class="sr">/</span><span class="err">&gt;
+</span>      <span class="p">))}</span>
+      <span class="o">&lt;</span><span class="sr">/List</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/Paper</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">const</span> <span class="nx">RecipeLineDisplayLine</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="p">{</span><span class="nx">line</span><span class="p">}</span> <span class="o">=</span> <span class="nx">props</span>
+  <span class="kd">const</span> <span class="p">[</span><span class="nx">recipe</span><span class="p">,</span> <span class="nx">setRecipe</span><span class="p">]</span> <span class="o">=</span> <span class="nx">useState</span><span class="p">({})</span>
+  <span class="kd">const</span> <span class="nx">classes</span> <span class="o">=</span> <span class="nx">useStyles</span><span class="p">()</span>
+
+  <span class="kd">const</span> <span class="nx">getRecipe</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="nx">axios</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="s2">`/recipes/</span><span class="p">${</span><span class="nx">line</span><span class="p">.</span><span class="nx">recipe_id</span><span class="p">}</span><span class="s2">`</span><span class="p">)</span>
+    <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">resp</span><span class="o">=&gt;</span><span class="nx">setRecipe</span><span class="p">(</span><span class="nx">resp</span><span class="p">.</span><span class="nx">data</span><span class="p">))</span>
+  <span class="p">}</span>
+
+  <span class="nx">useEffect</span><span class="p">(()</span><span class="o">=&gt;</span><span class="p">{</span>
+    <span class="nx">getRecipe</span><span class="p">()</span>
+  <span class="p">},[])</span>
+
+  <span class="k">return</span><span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">ListItem</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">span</span> <span class="nx">style</span><span class="o">=&gt;</span>
+        <span class="dl">"</span><span class="s2">{line.text.join(' ')}</span><span class="dl">"</span>
+      <span class="o">&lt;</span><span class="sr">/span</span><span class="err">&gt;
+</span>      <span class="o">&lt;</span><span class="nx">span</span> <span class="nx">style</span><span class="o">=&gt;</span>
+        <span class="o">-</span> <span class="p">{</span><span class="nx">recipe</span><span class="p">.</span><span class="nx">name</span><span class="p">}</span>
+      <span class="o">&lt;</span><span class="sr">/span</span><span class="err">&gt;
+</span>      <span class="o">&lt;</span><span class="nx">ButtonBase</span> <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">editButton</span><span class="p">}</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">Link</span> <span class="nx">to</span><span class="o">=</span><span class="p">{</span><span class="s2">`/recipe/</span><span class="p">${</span><span class="nx">line</span><span class="p">.</span><span class="nx">recipe_id</span><span class="p">}</span><span class="s2">`</span><span class="p">}</span><span class="o">&gt;</span>
+          <span class="o">&lt;</span><span class="nx">EditIcon</span> <span class="o">/&gt;</span>
+        <span class="o">&lt;</span><span class="sr">/Link</span><span class="err">&gt;
+</span>      <span class="o">&lt;</span><span class="sr">/ButtonBase</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/ListItem</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span>
+
+<span class="k">export</span> <span class="k">default</span> <span class="nx">RecipeLineDisplayPanel</span></code></pre></figure>
+
+<p>In order to find Recipe Lines this way, I needed to adjust my backend with some new paramaters. You can now search for a recipe line by ingredient or grocery list.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">get_line_by_params</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+    <span class="n">ingredient</span> <span class="o">=</span> <span class="n">params</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"ingredient"</span><span class="p">)</span>
+    <span class="n">grocery_list</span> <span class="o">=</span> <span class="n">params</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"list"</span><span class="p">)</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">query</span><span class="p">(</span><span class="n">RecipeLine</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">ingredient</span><span class="p">:</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="n">lines</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">LineIngredientAssociations</span><span class="p">,</span> <span class="s">"ingredients"</span><span class="p">)</span>\
+                <span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">Ingredient</span><span class="p">)</span>\
+                <span class="p">.</span><span class="nb">filter</span><span class="p">(</span><span class="n">Ingredient</span><span class="p">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">ingredient</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">grocery_list</span><span class="p">:</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="n">lines</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">Recipe</span><span class="p">)</span>\
+                <span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">GroceryList</span><span class="p">,</span> <span class="n">Recipe</span><span class="p">.</span><span class="n">grocery_lists</span><span class="p">)</span>\
+                <span class="p">.</span><span class="nb">filter</span><span class="p">(</span><span class="n">GroceryList</span><span class="p">.</span><span class="nb">id</span> <span class="o">==</span> <span class="n">grocery_list</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">lines</span><span class="p">.</span><span class="nb">all</span><span class="p">()</span></code></pre></figure>
+
+<p>Each time I work with SQLAlchemy, I understand it a bit better. This is probably my best querying attempt yet, and another thing that I am planning to do “at some point” is go back and rewrite all of my queries to be this modular.</p>
+
+<p>Finally, in the actual <code class="language-plaintext highlighter-rouge">IngredientPanel</code> component (formerly known as <code class="language-plaintext highlighter-rouge">ListPanel</code>), I removed the chunking code, displaying all ingredients as a single list instead.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="k">return</span> <span class="p">(</span>
+  <span class="o">&lt;</span><span class="nx">Paper</span> <span class="nx">variant</span><span class="o">=</span><span class="dl">"</span><span class="s2">outlined</span><span class="dl">"</span> <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">root</span><span class="p">}</span><span class="o">&gt;</span>
+    <span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">listItems</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="p">?</span> <span class="p">(</span>
+      <span class="nx">props</span><span class="p">.</span><span class="nx">listItems</span><span class="p">.</span><span class="nx">map</span><span class="p">((</span><span class="nx">element</span><span class="p">,</span> <span class="nx">index</span><span class="p">)</span><span class="o">=&gt;</span><span class="p">{</span>
+        <span class="k">return</span> <span class="o">&lt;</span><span class="nx">IngredientButton</span> <span class="nx">key</span><span class="o">=</span><span class="p">{</span><span class="nx">index</span><span class="p">}</span> <span class="nx">ingredient</span><span class="o">=</span><span class="p">{</span><span class="nx">element</span><span class="p">}</span><span class="sr">/</span><span class="err">&gt;
+</span>      <span class="p">})</span>
+    <span class="p">)</span> <span class="p">:</span> <span class="nx">emptyList</span><span class="p">}</span>
+
+  <span class="o">&lt;</span><span class="sr">/Paper</span><span class="err">&gt;
+</span><span class="p">)</span></code></pre></figure>
+
+<p>This just seemed a bit cleaner and more elegant, and to be honest I didn’t want to spend a lot of time calibrating the chunk settings to look good on a variety of different screen sizes.</p>
+
+<h3 id="conclusions">Conclusions</h3>
+
+<p>This is most of what will be on the List Page for the first release of this thing. Honestly, I could keep tweaking and tweaking forever (and that’s kind of what I’ve been doing), but to be honest I’m beginning to get sick of looking at this code. I want to work on something else for a while, so I’d like to release what I’ve got (with a bit more polish) and turn my attention elsewhere.</p>
+
+<p>Still not quite done here, though. I still need to add some better landing pages and more information about the app for people who aren’t signed in. Then I need documentation.</p>
+
+<p><em>Sigh</em></p>
+
+<p>Well, stay tuned. We’re coming up to the end.</p>
+
+</div>
+
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
+    </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,164 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>First Patch, with Notes on Scraping</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-container">
+  <div class="blog-header">
+      <h2>First Patch, with Notes on Scraping</h2>
+      <small>25 Apr 2020</small>
+  </div>
+  </div>
+</header>
+
+
+<div class="post">
+<p>So I’ve just released my first patch for the recipe parser, which took care of a few of the more glaring issues that the program still needed. Most notable was a bug that prevented a number of screens from being showed due to an errant variable in my <code class="language-plaintext highlighter-rouge">layout.html</code> file. I removed the offending variable and set the guest users to be automatically redirected to their list when they click the “home” button instead.</p>
+
+<p>More importantly, however, I added support for a number of additional recipes, and worked on the architecture for my web scraper. This has been a fun bit of coding; because there are so many different recipe websites out there, implementing them one by one is very tedious and I was incentivized to come up with ways to avoid repetition as much as possible.</p>
+
+<p>For the recipes I’ve looked at so far, I’ve found several different patterns for how they store their recipe lines and titles. The first, and simples, is an <code class="language-plaintext highlighter-rouge">html</code> component with a specified attribute. In these cases, the same <code class="language-plaintext highlighter-rouge">BeautifulSoup</code> command can essentially be run, and I just change out the parts that I look for. Here’s the start of the dictionary I use for these cases:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">ingredient_parsers</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">"www.allrecipes.com"</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s">"title"</span><span class="p">:</span> <span class="p">(</span><span class="s">"h1"</span><span class="p">,</span> <span class="s">"id"</span><span class="p">,</span> <span class="s">"recipe-main-content"</span><span class="p">),</span>
+        <span class="s">"lines"</span><span class="p">:</span> <span class="p">(</span><span class="s">"span"</span><span class="p">,</span> <span class="s">"class"</span><span class="p">,</span> <span class="s">"recipe-ingred_txt"</span><span class="p">)</span>
+    <span class="p">},</span>
+    <span class="s">"www.foodnetwork.com"</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s">"title"</span><span class="p">:</span> <span class="p">(</span><span class="s">"span"</span><span class="p">,</span> <span class="s">"class"</span><span class="p">,</span> <span class="s">"o-AssetTitle__a-HeadlineText"</span><span class="p">),</span>
+        <span class="s">"lines"</span><span class="p">:</span> <span class="p">(</span><span class="s">"p"</span><span class="p">,</span> <span class="s">"class"</span><span class="p">,</span> <span class="s">"o-Ingredients__a-Ingredient"</span><span class="p">)</span>
+    <span class="p">},</span>
+    <span class="s">"www.food.com"</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s">"title"</span><span class="p">:</span> <span class="p">(</span><span class="s">"div"</span><span class="p">,</span> <span class="s">"class"</span><span class="p">,</span> <span class="s">"recipe-title"</span><span class="p">),</span>
+        <span class="s">"lines"</span><span class="p">:</span> <span class="p">(</span><span class="s">"div"</span><span class="p">,</span> <span class="s">"class"</span><span class="p">,</span> <span class="s">"recipe-ingredients__ingredient"</span><span class="p">)</span>
+    <span class="p">},</span>
+    <span class="s">"www.yummly.com"</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s">"title"</span><span class="p">:</span> <span class="p">(</span><span class="s">"h1"</span><span class="p">,</span> <span class="s">"class"</span><span class="p">,</span> <span class="s">"recipe-title"</span><span class="p">),</span>
+        <span class="s">"lines"</span><span class="p">:</span> <span class="p">(</span><span class="s">"li"</span><span class="p">,</span> <span class="s">"class"</span><span class="p">,</span> <span class="s">"IngredientLine"</span><span class="p">)</span>
+    <span class="p">},</span>
+    <span class="p">...</span></code></pre></figure>
+
+<p>I parse the url and check if the main domain is in the dictionary. If it is, then I retrieve the necessary component names and scrape accordingly:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">parsing_information</span> <span class="o">=</span> <span class="n">ingredient_parsers</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">netloc</span><span class="p">,</span> <span class="s">""</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">parsing_information</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">"found for "</span><span class="p">,</span> <span class="n">parsing_information</span><span class="p">)</span>
+        <span class="c1"># get information for the title
+</span>        <span class="n">component</span><span class="p">,</span> <span class="n">attribute</span><span class="p">,</span> <span class="n">name</span> <span class="o">=</span> <span class="n">parsing_information</span><span class="p">[</span><span class="s">"title"</span><span class="p">]</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">recipe_title</span> <span class="o">=</span> <span class="n">soup</span><span class="p">.</span><span class="n">find</span><span class="p">(</span><span class="n">component</span><span class="p">,</span> <span class="p">{</span><span class="n">attribute</span><span class="p">:</span> <span class="n">name</span><span class="p">}).</span><span class="n">get_text</span><span class="p">()</span>
+        <span class="k">except</span> <span class="nb">AttributeError</span><span class="p">:</span>
+            <span class="n">recipe_title</span> <span class="o">=</span> <span class="n">soup</span><span class="p">.</span><span class="n">title</span><span class="p">.</span><span class="n">get_text</span><span class="p">()</span>  <span class="c1"># we get some kind of name if we can't parse the actual recipe
+</span>
+        <span class="c1"># get information for the lines
+</span>        <span class="n">component</span><span class="p">,</span> <span class="n">attribute</span><span class="p">,</span> <span class="n">name</span> <span class="o">=</span> <span class="n">parsing_information</span><span class="p">[</span><span class="s">"lines"</span><span class="p">]</span>
+        <span class="n">ingredients</span> <span class="o">=</span> <span class="n">soup</span><span class="p">.</span><span class="n">find_all</span><span class="p">(</span><span class="n">component</span><span class="p">,</span> <span class="p">{</span><span class="n">attribute</span><span class="p">:</span> <span class="n">name</span><span class="p">})</span>
+        <span class="n">ingredient_lines</span> <span class="o">=</span> <span class="p">[</span><span class="n">line</span><span class="p">.</span><span class="n">get_text</span><span class="p">()</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">ingredients</span><span class="p">]</span></code></pre></figure>
+
+<p>(Here, “o” is a <code class="language-plaintext highlighter-rouge">urlparse</code> object initialized with the provided url.)</p>
+
+<p>Of course, some websites are a bit more complicated. For these, I actually have to make a specific function to scrape from them. I tried to make this as easy as possible as well, however, by creating a second dictionary that stores the functions:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">get_recipe_food52</span><span class="p">(</span><span class="n">soup</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"getting from food52"</span><span class="p">)</span>
+    <span class="n">ingredient_div</span> <span class="o">=</span> <span class="n">soup</span><span class="p">.</span><span class="n">find</span><span class="p">(</span><span class="s">"div"</span><span class="p">,</span> <span class="p">{</span><span class="s">"class"</span><span class="p">:</span> <span class="s">"recipe__list"</span><span class="p">})</span>
+    <span class="n">ingredient_list</span> <span class="o">=</span> <span class="n">ingredient_div</span><span class="p">.</span><span class="n">find</span><span class="p">(</span><span class="s">"ul"</span><span class="p">)</span>
+    <span class="n">ingredient_items</span> <span class="o">=</span> <span class="n">ingredient_list</span><span class="p">.</span><span class="n">find_all</span><span class="p">(</span><span class="s">"li"</span><span class="p">)</span>
+
+    <span class="n">ingredient_lines</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">ingredient_items</span><span class="p">:</span>
+        <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="p">.</span><span class="n">text</span><span class="p">.</span><span class="n">replace</span><span class="p">(</span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="s">" "</span><span class="p">)</span>
+        <span class="n">s_line</span> <span class="o">=</span> <span class="n">line</span><span class="p">.</span><span class="n">split</span><span class="p">()</span>
+        <span class="n">line</span> <span class="o">=</span> <span class="s">" "</span><span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">s_line</span><span class="p">)</span>
+        <span class="n">ingredient_lines</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">title</span> <span class="o">=</span> <span class="n">soup</span><span class="p">.</span><span class="n">find</span><span class="p">(</span><span class="s">"h1"</span><span class="p">,</span> <span class="p">{</span><span class="s">"class"</span><span class="p">:</span> <span class="s">"recipe__title"</span><span class="p">}).</span><span class="n">get_text</span><span class="p">()</span>
+    <span class="k">except</span> <span class="nb">AttributeError</span><span class="p">:</span>
+        <span class="n">title</span> <span class="o">=</span> <span class="n">soup</span><span class="p">.</span><span class="n">title</span><span class="p">.</span><span class="n">get_text</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s">"title"</span><span class="p">:</span> <span class="n">title</span><span class="p">,</span>
+        <span class="s">"recipe_lines"</span><span class="p">:</span> <span class="n">ingredient_lines</span>
+    <span class="p">}</span>
+
+<span class="p">...</span>
+
+<span class="n">ingredient_functions</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">"food52.com"</span><span class="p">:</span> <span class="n">get_recipe_food52</span><span class="p">,</span>
+    <span class="p">...</span></code></pre></figure>
+
+<p>This way, I can check if the domain name is in the second list, and return the information right then and there:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">elif</span> <span class="n">o</span><span class="p">.</span><span class="n">netloc</span> <span class="ow">in</span> <span class="n">ingredient_functions</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">ingredient_functions</span><span class="p">[</span><span class="n">o</span><span class="p">.</span><span class="n">netloc</span><span class="p">](</span><span class="n">soup</span><span class="p">)</span></code></pre></figure>
+
+<p>There are a few other small tricks that I’m using to make this process easier. For one, many of the recipe blogs are Wordpress based, and use one of the many Wordpress plugins for recipe blogs. I created standard templates for the websites that use them, such as this one for Wordpress Recipe Maker:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># repeated attributes for sites using WordPress Recipe maker
+</span><span class="n">wprm_scrapers</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">"title"</span><span class="p">:</span> <span class="p">(</span><span class="s">"h2"</span><span class="p">,</span> <span class="s">"class"</span><span class="p">,</span> <span class="s">"wprm-recipe-name"</span><span class="p">),</span>
+    <span class="s">"lines"</span><span class="p">:</span> <span class="p">(</span><span class="s">"li"</span><span class="p">,</span> <span class="s">"class"</span><span class="p">,</span> <span class="s">"wprm-recipe-ingredient"</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="p">...</span>
+<span class="c1"># in my main ingredient_parsers dictionary
+</span><span class="s">"minimalistbaker.com"</span><span class="p">:</span> <span class="n">wprm_scrapers</span><span class="p">,</span>
+<span class="s">"www.budgetbytes.com"</span><span class="p">:</span> <span class="n">wprm_scrapers</span></code></pre></figure>
+
+<p>Another plugin requires its own function to parse, but luckily that function can be used on more than one recipe:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># function for scraping websites that use the TastyRecipes plugin
+</span><span class="k">def</span> <span class="nf">get_recipe_tastyrecipes</span><span class="p">(</span><span class="n">soup</span><span class="p">):</span>
+    <span class="n">ingredient_div</span> <span class="o">=</span> <span class="n">soup</span><span class="p">.</span><span class="n">find</span><span class="p">(</span><span class="s">"div"</span><span class="p">,</span> <span class="p">{</span><span class="s">"class"</span><span class="p">:</span> <span class="s">"tasty-recipe-ingredients"</span><span class="p">})</span>
+    <span class="n">ingredient_lines</span> <span class="o">=</span> <span class="n">ingredient_div</span><span class="p">.</span><span class="n">find_all</span><span class="p">(</span><span class="s">"li"</span><span class="p">)</span>
+    <span class="n">recipe_lines</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">ingredient_lines</span><span class="p">:</span>
+        <span class="n">recipe_lines</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">.</span><span class="n">text</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">line</span><span class="p">.</span><span class="n">text</span><span class="p">)</span>
+
+    <span class="n">recipe_title_div</span> <span class="o">=</span> <span class="n">soup</span><span class="p">.</span><span class="n">find</span><span class="p">(</span><span class="s">"div"</span><span class="p">,</span> <span class="p">{</span><span class="s">"class"</span><span class="p">:</span> <span class="s">"tasty-recipes"</span><span class="p">})</span>
+    <span class="n">recipe_title</span> <span class="o">=</span> <span class="n">recipe_title_div</span><span class="p">.</span><span class="n">find</span><span class="p">(</span><span class="s">"h2"</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s">"title"</span><span class="p">:</span> <span class="n">recipe_title</span><span class="p">.</span><span class="n">text</span><span class="p">,</span>
+        <span class="s">"recipe_lines"</span><span class="p">:</span> <span class="n">recipe_lines</span>
+    <span class="p">}</span>
+
+<span class="p">...</span>
+
+<span class="c1"># in ingredient_functions dictionary:
+</span><span class="s">"cookieandkate.com"</span><span class="p">:</span> <span class="n">get_recipe_tastyrecipes</span><span class="p">,</span></code></pre></figure>
+
+<p>… and so on and so forth. There are a <em>lot</em> of sites out there, and there’s no way I could get them all, but I’d like to have enough that the odds are fairly good you’ll be using a site that’s covered. Regardless, I had quite a bit of fun working on this code; one of the things I enjoy the most is figuring out new ways to solve problems that would require a lot of busy work to do otherwise. Writing out a specified function for every single recipe website would have been a lot of unneeded work.</p>
+
+<p>Anyway, that’s all I’ve got for now, but I’ll be posting some new updates to the recipe parser as I go. I have a feeling that I’m almost done with this one, at least for now. Huh, finishing a project. Great feeling.</p>
+
+</div>
+
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
+    </div>
+    </div>
+  </body>
+</html>

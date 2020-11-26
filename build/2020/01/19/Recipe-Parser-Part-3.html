@@ -1,0 +1,203 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Building a Recipe Parser -- Part 3</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-container">
+  <div class="blog-header">
+      <h2>Building a Recipe Parser -- Part 3</h2>
+      <small>19 Jan 2020</small>
+  </div>
+  </div>
+</header>
+
+
+<div class="post">
+<p><em>If you’re looking for Part 1 of this writeup, please click <a href="/2020/01/17/Recipe-Parser-Part-1.html">here</a>. If you’re looking for Part 2, please click <a href="/2020/01/18/Recipe-Parser-Part-2.html">here</a></em></p>
+
+<p>In this post I’m going to explain Mark I of my NLP recipe parser. Full disclosure, it’s a bit janky, but it gets the job done for now and was an excellent crash course in NLP basics. Please note that this isn’t a tutorial on spaCy or Natural Language Processing; it’s just a breakdown of the steps I took and how I made use of NLP to better parse my ingredient lists. If you’re looking for a more in-depth look at how natural language processing works, you can refer to the list of resources in the bottom of my <a href="/2020/01/18/Recipe-Parser-Part-2.html">previous post</a>. They’re what I used, and I highly recommend them.</p>
+
+<p>I started by creating a simple list of ingredients that I could pass through, rather than go through the trouble of opening a webpage every time I wanted to test something:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">test_recipe_text</span> <span class="o">=</span> <span class="p">[</span><span class="s">"1 cup flour, sifted"</span><span class="p">,</span>
+                    <span class="s">"1 teaspoons sea salt"</span><span class="p">,</span>
+                    <span class="s">"1 egg"</span><span class="p">,</span>
+                    <span class="s">"1/2 cup milk"</span><span class="p">,</span>
+                    <span class="s">"1 rounded tablespoon baking powder"</span><span class="p">,</span>
+                    <span class="s">"2 tablespoons olive oil"</span><span class="p">,</span>
+                    <span class="s">"3 cups lightly toasted sesame seeds"</span><span class="p">,</span>
+                    <span class="s">"1 (8 oz) package ground beef"</span><span class="p">]</span></code></pre></figure>
+
+<p>As you can see, I tried to add in a series of different problems for the parser to use, including lines that varied from the basic <code class="language-plaintext highlighter-rouge">amount measurement ingredient</code> format.</p>
+
+<p>With these examples in hand, I was ready to begin.</p>
+
+<h4 id="finding-the-amount">Finding the Amount</h4>
+
+<p>The first step was to load up an NLP library and start passing it information. We can then iterate through each token in the phrase:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">nlp</span> <span class="o">=</span> <span class="n">spacy</span><span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="s">"en_core_web_sm"</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">test_recipe_text</span><span class="p">:</span>
+  <span class="n">nlp_ing</span> <span class="o">=</span> <span class="n">nlp</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+  <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">nlp_ing</span><span class="p">:</span>
+    <span class="c1"># extract meaning here</span></code></pre></figure>
+
+<p>Recall that I need to find three important variables:</p>
+<ul>
+  <li>the ingredient</li>
+  <li>the measurement</li>
+  <li>the amount</li>
+</ul>
+
+<p>I figured that the amount would be the easiest, since it is most likely going to come at the beginning of the phrase and would <em>usually</em> (but not always) be the only number in the phrase. A quick check to the token’s parts of speech caught most numbers fairly quickly:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">if</span> <span class="n">token</span><span class="p">.</span><span class="n">pos_</span> <span class="o">==</span> <span class="s">'NUM'</span><span class="p">:</span>
+  <span class="bp">self</span><span class="p">.</span><span class="n">amount</span> <span class="o">=</span> <span class="n">Fraction</span><span class="p">(</span><span class="n">token</span><span class="p">.</span><span class="n">text</span><span class="p">)</span></code></pre></figure>
+
+<p>You can also see here that I’m using python’s built-in <code class="language-plaintext highlighter-rouge">fractions</code> library, since I felt it kept everything more legible and was in keeping with the recipe theme in general.</p>
+
+<h4 id="finding-the-ingredient">Finding the Ingredient</h4>
+
+<p>Finding the ingredient was a little bit trickier, for several reasons. At first, I thought it would be as easy as checking the dependencies of the word for the subject of the sentence or the root. I would then check to make sure the word in question was a noun, and we would have our ingredient:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">if</span> <span class="n">token</span><span class="p">.</span><span class="n">dep_</span> <span class="ow">in</span> <span class="p">[</span><span class="s">'ROOT'</span><span class="p">,</span> <span class="s">'nsubj'</span><span class="p">]:</span>
+  <span class="k">if</span> <span class="n">token</span><span class="p">.</span><span class="n">pos_</span> <span class="ow">in</span> <span class="p">[</span><span class="s">'NOUN'</span><span class="p">,</span> <span class="s">'PROPN'</span><span class="p">]:</span>
+    <span class="n">ingredient</span> <span class="o">=</span> <span class="n">token</span><span class="p">.</span><span class="n">text</span></code></pre></figure>
+
+<p>Again, this caught <em>most</em> of the ingredients, but not all of them, and I’m still not entirely sure why. I <em>think</em> it has to do, at least in part, with the fact that recipe lines don’t necessarily use proper English grammar, and that was confusing the spaCy model. Ultimately, I had to add a few extra tags, including <code class="language-plaintext highlighter-rouge">dobj</code> and <code class="language-plaintext highlighter-rouge">appos</code> in order to catch some edge cases, but to be honest I’m still uneasy about this approach, because it feels kind of rickety. But I’m fast prototyping and trying to get something out, and this will do for now.</p>
+
+<p>There is still a significant problem, however: as is now, this can only catch an ingredient if the ingredient is one word. Because we’re scanning by token, an ingredient like <code class="language-plaintext highlighter-rouge">'olive oil'</code> won’t be caught; the program will just read it as <code class="language-plaintext highlighter-rouge">'oil'</code>. To fix this, I had the program, once it found the noun base, scan the children of the word for compounds or modifications:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">token</span><span class="p">.</span><span class="n">children</span><span class="p">:</span>
+  <span class="c1"># sometimes the measurements are registered as children
+</span>  <span class="k">if</span> <span class="ow">not</span> <span class="n">measurement_regex</span><span class="p">.</span><span class="n">match</span><span class="p">(</span><span class="n">child</span><span class="p">.</span><span class="n">text</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">child</span><span class="p">.</span><span class="n">dep_</span> <span class="ow">in</span> <span class="p">[</span><span class="s">'compound'</span><span class="p">,</span> <span class="s">'amod'</span><span class="p">]:</span>
+      <span class="n">ingredient</span> <span class="o">+=</span> <span class="n">child</span><span class="p">.</span><span class="n">text</span> <span class="o">+</span> <span class="s">' '</span></code></pre></figure>
+
+<p>One thing you’ll note here is the use of a <code class="language-plaintext highlighter-rouge">regex</code>, which I’ll be discussing momentarily. Suffice to say that the <code class="language-plaintext highlighter-rouge">regex</code> is being used to scan for measurement types.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">regex</code> notwithstanding, the rest of the code is pretty self-evident. If the program thinks it found an ingredient, it checks the children of the token in question and scans for compounds or modifiers. If it finds any, then it adds them to the ingredient. This is, frankly, another example of the program seeming smarter than it really is, but what the hell, I’ll take it (at least for now).</p>
+
+<p>Putting it all together, we get:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">if</span> <span class="n">token</span><span class="p">.</span><span class="n">dep_</span> <span class="ow">in</span> <span class="p">[</span><span class="s">'ROOT'</span><span class="p">,</span> <span class="s">'nsubj'</span><span class="p">,</span> <span class="s">'dobj'</span><span class="p">,</span> <span class="s">'appos'</span><span class="p">]:</span>
+  <span class="k">if</span> <span class="n">token</span><span class="p">.</span><span class="n">pos_</span> <span class="ow">in</span> <span class="p">[</span><span class="s">'NOUN'</span><span class="p">,</span> <span class="s">'PROPN'</span><span class="p">]:</span>
+    <span class="c1"># we have found an ingredient, so check children
+</span>    <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">token</span><span class="p">.</span><span class="n">children</span><span class="p">:</span>
+      <span class="c1"># sometimes the measurements are registered as children
+</span>      <span class="k">if</span> <span class="ow">not</span> <span class="n">measurement_regex</span><span class="p">.</span><span class="n">match</span><span class="p">(</span><span class="n">child</span><span class="p">.</span><span class="n">text</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">child</span><span class="p">.</span><span class="n">dep_</span> <span class="ow">in</span> <span class="p">[</span><span class="s">'compound'</span><span class="p">,</span> <span class="s">'amod'</span><span class="p">]:</span>
+          <span class="n">ingredient</span> <span class="o">+=</span> <span class="n">child</span><span class="p">.</span><span class="n">text</span> <span class="o">+</span> <span class="s">' '</span>
+    <span class="n">ingredient</span> <span class="o">+=</span> <span class="n">token</span><span class="p">.</span><span class="n">text</span> <span class="o">+</span> <span class="s">' '</span></code></pre></figure>
+
+<h4 id="finding-the-measurement">Finding the Measurement</h4>
+
+<p>Finding the measurement was pretty tricky, because spaCy pretty regularly confused the measurement with the ingredient. Turns out that something like <code class="language-plaintext highlighter-rouge">'cup'</code> or <code class="language-plaintext highlighter-rouge">'tablespoon'</code> are also nouns and sometimes have the same dependencies as the ingredients. This stymied me for a bit, and I became worried that the whole house of cards was going to be felled. However, I found a solution in the form of my old adversary: <code class="language-plaintext highlighter-rouge">regex</code>.</p>
+
+<p>I decided that, before I checked the parts of speech or dependencies for an amount or an ingredient, I would run them through a regex to see if they were a measurement. This would take the measurements out of the pool of potential other choices, and ensure that the rest of my program only had to search for amounts and ingredients. The regex I used was simple:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">measurement_regex</span> <span class="o">=</span> <span class="n">re</span><span class="p">.</span><span class="nb">compile</span><span class="p">(</span><span class="s">'(cup|tablespoon|teaspoon|oz|pound|ounce|clove|cube)s?'</span><span class="p">)</span></code></pre></figure>
+
+<p>And then, all I had to do was check:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">if</span> <span class="n">measurement_regex</span><span class="p">.</span><span class="n">search</span><span class="p">(</span><span class="n">token</span><span class="p">.</span><span class="n">text</span><span class="p">):</span>
+  <span class="n">measurement</span> <span class="o">=</span> <span class="n">measurement_regex</span><span class="p">.</span><span class="n">search</span><span class="p">(</span><span class="n">token</span><span class="p">.</span><span class="n">text</span><span class="p">).</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span></code></pre></figure>
+
+<p>This is very simple, so simple that it could probably be a list instead, so I will probably return to refactor this area. But again, for now, it works. Changing the other <code class="language-plaintext highlighter-rouge">if</code> statements to <code class="language-plaintext highlighter-rouge">elif</code>s ensured that a measurement token wouldn’t be scanned for amount or ingredient, and I had the skeleton in place.</p>
+
+<h4 id="edge-cases-and-other-details">Edge Cases and Other Details</h4>
+
+<p>There were still a few small kinks to work out, which I found while testing my program. The first was that the amount was sometimes registered as a <code class="language-plaintext highlighter-rouge">'ROOT'</code>, <code class="language-plaintext highlighter-rouge">'nsubj'</code>, or other dependency that would be caught by the ingredient checker. The program was smart enough to realize that a number was the ingredient, but because of the <code class="language-plaintext highlighter-rouge">elif</code> statements, it then skipped the later number check. I solved this by adding an additional catch at the end of the ingredient checker:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">elif</span> <span class="n">token</span><span class="p">.</span><span class="n">dep_</span> <span class="ow">in</span><span class="p">[</span><span class="s">'ROOT'</span><span class="p">,</span> <span class="s">'nsubj'</span><span class="p">,</span> <span class="s">'dobj'</span><span class="p">,</span> <span class="s">'appos'</span><span class="p">]:</span>
+  <span class="p">...</span>
+  <span class="k">if</span> <span class="n">token</span><span class="p">.</span><span class="n">pos_</span> <span class="o">==</span> <span class="s">'NUM'</span><span class="p">:</span>  <span class="c1">#sometimes the amount is registered as nsubj
+</span>    <span class="n">amount</span> <span class="o">=</span> <span class="n">Fraction</span><span class="p">(</span><span class="n">token</span><span class="p">.</span><span class="n">text</span><span class="p">)</span></code></pre></figure>
+
+<p>Another issue I found with the number checking was that spaCy would sometimes tag the number as <code class="language-plaintext highlighter-rouge">'X'</code> rather than <code class="language-plaintext highlighter-rouge">'NUM'</code> in its parts-of-speech tagger. I think, again, that this has to do with spaCy’s model not quite knowing what to do with the unusual syntax of ingredient phrases, but again, it was an easy enough fix. Even though spaCy didn’t recognize it as a <code class="language-plaintext highlighter-rouge">'NUM'</code>, it checked dependency correctly, so a few additional lines of code caught these outliers:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">elif</span> <span class="n">token</span><span class="p">.</span><span class="n">pos_</span> <span class="o">==</span> <span class="s">'X'</span> <span class="ow">and</span> <span class="n">token</span><span class="p">.</span><span class="n">dep_</span> <span class="o">==</span> <span class="s">'nummod'</span><span class="p">:</span>
+  <span class="n">amount</span> <span class="o">=</span> <span class="n">Fraction</span><span class="p">(</span><span class="n">token</span><span class="p">.</span><span class="n">text</span><span class="p">)</span></code></pre></figure>
+
+<p>Finally, I added a small check to remove water and salt from the ingredient lists, since presumably most kitchens have them.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">if</span> <span class="n">token</span><span class="p">.</span><span class="n">lower_</span> <span class="ow">in</span> <span class="p">[</span><span class="s">'salt'</span><span class="p">,</span> <span class="s">'water'</span><span class="p">]:</span>
+  <span class="k">continue</span></code></pre></figure>
+
+<h4 id="integrating-the-parser-by-making-it-a-class">Integrating the Parser by Making it a Class</h4>
+<p>Now that all of the pieces were in place, it was time to integrate the code into the main recipe parser. I decided to encapsulate the code into a few classes, to make importing as easy as possible. Specifically, I tried to follow spaCy’s model in my class construction: just as you can load a spaCy model and then run various pieces of text through it, I wanted to be able to load my parser and then run various texts through it. I felt that this was the best choice of ease of use.</p>
+
+<p>To that end, I created two classes, a <code class="language-plaintext highlighter-rouge">RecipeNLP</code> class that loaded spaCy, and a <code class="language-plaintext highlighter-rouge">ParsedLine</code> class, which the <code class="language-plaintext highlighter-rouge">RecipeNLP</code> class returned when the function <code class="language-plaintext highlighter-rouge">parse</code> was called. The logic for parsing the recipe was then stored in the <code class="language-plaintext highlighter-rouge">ParsedLine</code> class, to be called in <code class="language-plaintext highlighter-rouge">__init__</code>.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">class</span> <span class="nc">RecipeNLP</span><span class="p">:</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="p">.</span><span class="n">nlp</span> <span class="o">=</span> <span class="n">spacy</span><span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="s">'en_core_web_sm'</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">parse</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">recipe_line</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">ParsedLine</span><span class="p">(</span><span class="bp">self</span><span class="p">.</span><span class="n">nlp</span><span class="p">,</span> <span class="n">recipe_line</span><span class="p">)</span>
+
+<span class="k">class</span> <span class="nc">ParsedLine</span><span class="p">:</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nlp</span><span class="p">,</span> <span class="n">recipe_line</span><span class="p">):</span>
+    <span class="n">nlp_ing</span> <span class="o">=</span> <span class="n">nlp</span><span class="p">(</span><span class="n">recipe_line</span><span class="p">)</span>
+    <span class="bp">self</span><span class="p">.</span><span class="n">measurement_regex</span> <span class="o">=</span> <span class="n">re</span><span class="p">.</span><span class="nb">compile</span><span class="p">(</span><span class="s">'(cup|tablespoon|teaspoon|oz|pound|ounce|clove|cube)s?'</span><span class="p">)</span>
+
+    <span class="bp">self</span><span class="p">.</span><span class="n">ingredient</span> <span class="o">=</span> <span class="s">""</span>
+    <span class="bp">self</span><span class="p">.</span><span class="n">measurement</span> <span class="o">=</span> <span class="s">""</span>
+    <span class="bp">self</span><span class="p">.</span><span class="n">amount</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">nlp_ing</span><span class="p">:</span>
+      <span class="c1"># all the logic for parsing the line goes here</span></code></pre></figure>
+
+<p>This honestly worked even better than I’d hoped. In the main program, it was a cinch to create one <code class="language-plaintext highlighter-rouge">RecipeNLP</code> class and then pass through as many lines as necessary. In the main <code class="language-plaintext highlighter-rouge">GroceryListParser</code> class, it looked like this:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="kn">from</span> <span class="nn">recipe_parser</span> <span class="kn">import</span> <span class="n">RecipeNLP</span>
+<span class="p">...</span>
+
+<span class="k">def</span> <span class="nf">parse_recipe</span><span class="p">(</span><span class="n">url</span><span class="p">):</span>
+  <span class="p">...</span>
+  <span class="n">nlp</span> <span class="o">=</span> <span class="n">RecipeNLP</span><span class="p">()</span>
+
+  <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">ingredient_lines</span><span class="p">:</span>
+    <span class="n">parsed_line</span> <span class="o">=</span> <span class="n">nlp</span><span class="p">.</span><span class="n">parse</span><span class="p">(</span><span class="n">line</span><span class="p">.</span><span class="n">text</span><span class="p">)</span>
+    <span class="n">ingredient</span> <span class="o">=</span> <span class="n">parsed_line</span><span class="p">.</span><span class="n">ingredient</span>
+    <span class="n">measurement</span> <span class="o">=</span> <span class="n">parsed_line</span><span class="p">.</span><span class="n">measurement</span>
+    <span class="n">amount</span> <span class="o">=</span> <span class="n">parsed_line</span><span class="p">.</span><span class="n">amount</span></code></pre></figure>
+
+<p>This greatly simplified my code in the main program, and the modular design makes it so that I can easily refractor my code in the <code class="language-plaintext highlighter-rouge">recipe_parser</code> file, without worrying about anything in the main program being broken.</p>
+
+<p>And I do plan to refractor that code.</p>
+
+<h4 id="closing-thoughts">Closing Thoughts</h4>
+
+<p>This is my first venture into Natural Language Processing, and considering that, I’m pleased with it. I feel like I was able to get the basics of how NLP works down, and certainly this program is head and shoulders above my previous <code class="language-plaintext highlighter-rouge">regex</code> attempts to parse ingredient lines.</p>
+
+<p>That said, it’s still pretty janky. There are a lot of things that <em>work</em> but kinda-maybe <em>shouldn’t</em>, and I don’t like that. I think my next step for improving this project would be to look into actually training a spaCy model specifically to recognize and parse ingredient lines.</p>
+
+<p>Of course, the tragic truth is that, in programming, usually someone else has done it before. During the course of writing this, I did some googling and found this extremely intersting article from the New York Times Blog: <a href="https://open.blogs.nytimes.com/2015/04/09/extracting-structured-data-from-recipes-using-conditional-random-fields/">Extracting Structured Data from Recipes Using Conditional Random Fields</a>. Turns out they were doing pretty much the same thing as me, and they even posted their code up on <a href="https://github.com/nytimes/ingredient-phrase-tagger">GitHub</a>. However, I’m taking this as a learning experiment, and I think the next thing I’m going to do is look over their code and see if I can replicate it myself.</p>
+
+</div>
+
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
+    </div>
+    </div>
+  </body>
+</html>

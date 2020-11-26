@@ -1,0 +1,372 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Creating the User Schema and Endpoints</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-container">
+  <div class="blog-header">
+      <h2>Creating the User Schema and Endpoints</h2>
+      <small>14 May 2020</small>
+  </div>
+  </div>
+</header>
+
+
+<div class="post">
+<p>Before we get to today’s schemas and endpoints, we need to talk about validation. I spent some time researching API validation and ultimately took most of my inspiration from <a href="https://blog.miguelgrinberg.com/post/restful-authentication-with-flask">this</a> article by Miguel Grinberg. My passwords are hashed with a <code class="language-plaintext highlighter-rouge">custom_app_context</code> object, which is done in a class function.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># function to hash password
+</span><span class="k">def</span> <span class="nf">hash_password</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">password</span><span class="p">):</span>
+    <span class="bp">self</span><span class="p">.</span><span class="n">hashed_password</span> <span class="o">=</span> <span class="n">pwd_context</span><span class="p">.</span><span class="n">encrypt</span><span class="p">(</span><span class="n">password</span><span class="p">)</span>
+
+<span class="c1"># function to verify password
+</span><span class="k">def</span> <span class="nf">verify_password</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">password</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="bp">self</span><span class="p">.</span><span class="n">hashed_password</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pwd_context</span><span class="p">.</span><span class="n">verify</span><span class="p">(</span><span class="n">password</span><span class="p">,</span> <span class="bp">self</span><span class="p">.</span><span class="n">hashed_password</span><span class="p">)</span></code></pre></figure>
+
+<p>Additionally, I created methods for creating and authenticating a token, as recommended by the article. This way the user’s credentials are not sent back and forth with every API request.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># generate a secure token for authentication
+</span><span class="k">def</span> <span class="nf">generate_auth_token</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">expiration</span><span class="o">=</span><span class="mi">600</span><span class="p">):</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">Serializer</span><span class="p">(</span><span class="n">current_app</span><span class="p">.</span><span class="n">config</span><span class="p">[</span><span class="s">'SECRET_KEY'</span><span class="p">],</span> <span class="n">expires_in</span><span class="o">=</span><span class="n">expiration</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">s</span><span class="p">.</span><span class="n">dumps</span><span class="p">({</span><span class="s">'id'</span><span class="p">:</span> <span class="bp">self</span><span class="p">.</span><span class="nb">id</span><span class="p">}).</span><span class="n">decode</span><span class="p">(</span><span class="s">"utf-8"</span><span class="p">)</span>
+
+<span class="c1"># verify a token
+</span><span class="o">@</span><span class="nb">staticmethod</span>
+<span class="k">def</span> <span class="nf">verify_auth_token</span><span class="p">(</span><span class="n">token</span><span class="p">):</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">Serializer</span><span class="p">(</span><span class="n">current_app</span><span class="p">.</span><span class="n">config</span><span class="p">[</span><span class="s">'SECRET_KEY'</span><span class="p">])</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">s</span><span class="p">.</span><span class="n">loads</span><span class="p">(</span><span class="n">token</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">SignatureExpired</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">None</span>  <span class="c1"># valid token, expired
+</span>    <span class="k">except</span> <span class="n">BadSignature</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">None</span>  <span class="c1"># invalid token
+</span>
+    <span class="n">user</span> <span class="o">=</span> <span class="n">User</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">'id'</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">user</span></code></pre></figure>
+
+<p>I imported the <code class="language-plaintext highlighter-rouge">flask_httpauth</code> package and initialized an <code class="language-plaintext highlighter-rouge">HTTPBasicAuth</code> object in my <code class="language-plaintext highlighter-rouge">__init__.py</code> folder. Then I created the <code class="language-plaintext highlighter-rouge">verify_password</code> function.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># verifying password and email
+</span><span class="o">@</span><span class="n">auth</span><span class="p">.</span><span class="n">verify_password</span>
+<span class="k">def</span> <span class="nf">verify_password</span><span class="p">(</span><span class="n">username_or_token</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="n">needs_valid_email</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">username_or_token</span><span class="p">,</span> <span class="n">password</span><span class="p">)</span>
+    <span class="c1"># first try to authenticate by token
+</span>    <span class="n">user</span> <span class="o">=</span> <span class="n">User</span><span class="p">.</span><span class="n">verify_auth_token</span><span class="p">(</span><span class="n">username_or_token</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">user</span><span class="p">:</span>
+        <span class="c1"># try to authenticate with username, password
+</span>        <span class="n">user</span> <span class="o">=</span> <span class="n">User</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">email</span><span class="o">=</span><span class="n">username_or_token</span><span class="p">).</span><span class="n">first</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">user</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">user</span><span class="p">.</span><span class="n">verify_password</span><span class="p">(</span><span class="n">password</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">if</span> <span class="n">needs_valid_email</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">user</span><span class="p">.</span><span class="n">email_validated</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"Email not validated."</span><span class="p">,</span> <span class="mi">401</span><span class="p">)</span>
+    <span class="n">g</span><span class="p">.</span><span class="n">user</span> <span class="o">=</span> <span class="n">user</span>
+    <span class="k">return</span> <span class="bp">True</span></code></pre></figure>
+
+<p>This function first tries to authenticate by token, and then by username and password if token authentication fails. It’s a pretty straight rewrite of Miguel Grinberg’s example, with one difference: I added a <code class="language-plaintext highlighter-rouge">needs_valid_email</code> check to determine if the user had validated their email. This was enabled on default, but I needed an option to disable it for specific instances, which I’ll detail later in this post. The <code class="language-plaintext highlighter-rouge">user.email_validated</code> variable is a boolean that I added to the <code class="language-plaintext highlighter-rouge">User</code> model.</p>
+
+<p>With the authentication written, it was time to define my schema.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># schema that returns/validates a user
+</span><span class="k">class</span> <span class="nc">UserSchema</span><span class="p">(</span><span class="n">ma</span><span class="p">.</span><span class="n">SQLAlchemyAutoSchema</span><span class="p">):</span>
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">User</span>
+        <span class="n">include_fk</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="c1"># return a user
+</span>    <span class="o">@</span><span class="n">post_load</span>
+    <span class="k">def</span> <span class="nf">return_user</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">**</span> <span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">existing_user</span> <span class="o">=</span> <span class="n">User</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">email</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s">"email"</span><span class="p">]).</span><span class="n">first</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">existing_user</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">existing_user</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">User</span><span class="p">(</span><span class="o">**</span> <span class="n">data</span><span class="p">)</span></code></pre></figure>
+
+<p>Again, this schema is extremely simple and relies on the SQLAlchemyAutoSchema class to generate. The only piece I added on was a <code class="language-plaintext highlighter-rouge">post_load</code> call that checked if the user was in the system, and returned that specific user if so. If not, it reaturned a new user. I queried the users using the <code class="language-plaintext highlighter-rouge">email</code> attribute, as it is guaranteed to be present (unlike the <code class="language-plaintext highlighter-rouge">id</code> and also unique).</p>
+
+<p>Additionally, I added a second schema, specifically for the creation of new Users. I chose to do it this way because I wanted to store the logic of hashing the password in the schema, rather than doing so in the actual route. This also allowed me to validate a “password” field to ensure that the user’s password was up to security standards before hashing. I used a <code class="language-plaintext highlighter-rouge">post_load</code> decorator to hash the password and a <code class="language-plaintext highlighter-rouge">validates</code> decorator to validate the password.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># schema for creating a new user
+</span><span class="k">class</span> <span class="nc">CreateUserSchema</span><span class="p">(</span><span class="n">ma</span><span class="p">.</span><span class="n">Schema</span><span class="p">):</span>
+    <span class="n">email</span> <span class="o">=</span> <span class="n">fields</span><span class="p">.</span><span class="n">Str</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">password</span> <span class="o">=</span> <span class="n">fields</span><span class="p">.</span><span class="n">Str</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">access_level</span> <span class="o">=</span> <span class="n">fields</span><span class="p">.</span><span class="n">Int</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="o">@</span><span class="n">post_load</span>
+    <span class="k">def</span> <span class="nf">return_new_user</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">**</span> <span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">data</span><span class="p">[</span><span class="s">"hashed_password"</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="s">"password"</span><span class="p">)</span>  <span class="c1"># prevent typeerror when creating User
+</span>        <span class="n">new_user</span> <span class="o">=</span> <span class="n">User</span><span class="p">(</span><span class="o">**</span> <span class="n">data</span><span class="p">)</span>
+        <span class="n">new_user</span><span class="p">.</span><span class="n">hash_password</span><span class="p">(</span><span class="n">new_user</span><span class="p">.</span><span class="n">hashed_password</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">new_user</span>
+
+    <span class="o">@</span><span class="n">validates</span><span class="p">(</span><span class="s">'password'</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">validate_password</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">password</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">password</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="s">"Password is too short!"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">password</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">20</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="s">"Password is too long!"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">password</span><span class="p">.</span><span class="n">isalpha</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="s">"Password must contain at least one number and one symbol!"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">password</span><span class="p">.</span><span class="n">isdigit</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="s">"Password must contain at least one letter!"</span><span class="p">)</span>
+        <span class="n">required_characters</span> <span class="o">=</span> <span class="p">[</span><span class="s">'!'</span><span class="p">,</span> <span class="s">'@'</span><span class="p">,</span> <span class="s">"#"</span><span class="p">,</span> <span class="s">"$"</span><span class="p">,</span> <span class="s">"%"</span><span class="p">,</span> <span class="s">"^"</span><span class="p">,</span> <span class="s">"&amp;"</span><span class="p">,</span> <span class="s">"* "</span><span class="p">,</span> <span class="s">"+"</span><span class="p">,</span> <span class="s">"="</span><span class="p">,</span> <span class="s">"?"</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">char</span> <span class="ow">in</span> <span class="n">password</span> <span class="k">for</span> <span class="n">char</span> <span class="ow">in</span> <span class="n">required_characters</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="s">f"Password must contain one of the following characters: </span><span class="si">{</span><span class="n">required_characters</span><span class="si">}</span><span class="s">"</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">True</span></code></pre></figure>
+
+<p>Also note that <code class="language-plaintext highlighter-rouge">access_level</code> defaults to 0 right now. I’m still working out the best way to structure user levels of access, but tentatively I’m thinking that 2 is an admin (and would only use my specific account), whereas 0 and 1 are either guest accounts or unverified emails. Frankly, I’m not entirely wedded to the three-tiered system, as you’ll see later in this post.</p>
+
+<h3 id="the-endpoints">The Endpoints</h3>
+
+<p>The endpoints follow REST standards: there is a “GET” for both collections and single users, a “POST” for new users, a “DELETE” for single users, and a “PUT” for changing user information, such as password and email.</p>
+
+<p>The two “GET” routes and the “DELETE” route are the simplest, and are extremely similar to my other resource routes of the same type:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># return all users, or a filtered list
+</span><span class="o">@</span><span class="n">user</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/users"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"GET"</span><span class="p">])</span>
+<span class="o">@</span><span class="n">auth</span><span class="p">.</span><span class="n">login_required</span>
+<span class="k">def</span> <span class="nf">get_users</span><span class="p">():</span>
+    <span class="n">all_users</span> <span class="o">=</span> <span class="n">User</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="nb">all</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">users_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">all_users</span><span class="p">))</span>
+
+
+<span class="c1"># get a specific user
+</span><span class="o">@</span><span class="n">user</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/users/&lt;int:id_&gt;"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"GET"</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">get_user</span><span class="p">(</span><span class="n">id_</span><span class="p">):</span>
+    <span class="n">cur_user</span> <span class="o">=</span> <span class="n">User</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">id_</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">cur_user</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">NotFoundException</span><span class="p">(</span><span class="s">"user"</span><span class="p">,</span> <span class="n">id_</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">user_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">cur_user</span><span class="p">))</span>
+
+
+<span class="c1"># delete a user
+</span><span class="o">@</span><span class="n">user</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/users/&lt;int:id_&gt;"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"DELETE"</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">delete_user</span><span class="p">(</span><span class="n">id_</span><span class="p">):</span>
+    <span class="n">cur_user</span> <span class="o">=</span> <span class="n">User</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">id_</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">cur_user</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">NotFoundException</span><span class="p">(</span><span class="s">"user"</span><span class="p">,</span> <span class="n">id_</span><span class="p">)</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">delete</span><span class="p">(</span><span class="n">cur_user</span><span class="p">)</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="p">(</span><span class="s">""</span><span class="p">,</span> <span class="mi">204</span><span class="p">)</span></code></pre></figure>
+
+<p>My “POST” request for new users makes use of the <code class="language-plaintext highlighter-rouge">CreateUserSchema</code>, and I catch any <code class="language-plaintext highlighter-rouge">ValidationError</code>s to send back to the client as a payload.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># post a new user
+</span><span class="o">@</span><span class="n">user</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/users"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"POST"</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">post_user</span><span class="p">():</span>
+    <span class="n">new_user_json</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">json</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"user"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">new_user_json</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"You must provide a 'user' key to post a new user."</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">new_user</span> <span class="o">=</span> <span class="n">create_user_schema</span><span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="n">new_user_json</span><span class="p">)</span>
+        <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">new_user</span><span class="p">)</span>
+        <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">user_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">new_user</span><span class="p">),</span> <span class="mi">201</span>
+    <span class="k">except</span> <span class="n">ValidationError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"Your user data was not formatted correctly."</span><span class="p">,</span> <span class="n">payload</span><span class="o">=</span><span class="n">error</span><span class="p">.</span><span class="n">messages</span><span class="p">)</span></code></pre></figure>
+
+<p>My “PUT” request went through several iterations before I realized that I wasn’t complying with proper RESTful standards by allowing the user to change only part of the data. I rewrote it so that all of the information about the user must be provided for every “PUT” request. In order to make sure that the new information was valid, I reused my <code class="language-plaintext highlighter-rouge">CreateUserSchema</code>, which validated the password for me and checked that all information was there. It then returns a new user, and I transfer the data from that user to my old user (to preserve the ID).</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># change user information
+</span><span class="o">@</span><span class="n">user</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/users/&lt;int:id_&gt;"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"PUT"</span><span class="p">])</span>
+<span class="o">@</span><span class="n">auth</span><span class="p">.</span><span class="n">login_required</span>
+<span class="k">def</span> <span class="nf">change_user_info</span><span class="p">(</span><span class="n">id_</span><span class="p">):</span>
+    <span class="n">updated_user</span> <span class="o">=</span> <span class="n">User</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">id_</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">updated_user</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">NotFoundException</span><span class="p">(</span><span class="s">"user"</span><span class="p">,</span> <span class="n">id_</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">updated_user</span><span class="p">.</span><span class="nb">id</span> <span class="o">!=</span> <span class="n">g</span><span class="p">.</span><span class="n">user</span><span class="p">.</span><span class="nb">id</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"You don't have permission to edit accounts that aren't yours."</span><span class="p">,</span> <span class="mi">401</span><span class="p">)</span>
+    <span class="n">updated_information</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">json</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"user"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">updated_information</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"You must provide information with a 'user' label."</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">updated_information_user</span> <span class="o">=</span> <span class="n">create_user_schema</span><span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="n">updated_information</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">ValidationError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"Your user data was not formatted correctly."</span><span class="p">,</span> <span class="n">payload</span><span class="o">=</span><span class="n">error</span><span class="p">.</span><span class="n">messages</span><span class="p">)</span>
+
+    <span class="n">updated_user</span><span class="p">.</span><span class="n">email</span> <span class="o">=</span> <span class="n">updated_information_user</span><span class="p">.</span><span class="n">email</span>
+    <span class="n">updated_user</span><span class="p">.</span><span class="n">hashed_password</span> <span class="o">=</span> <span class="n">updated_information_user</span><span class="p">.</span><span class="n">hashed_password</span>
+    <span class="n">updated_user</span><span class="p">.</span><span class="n">access_level</span> <span class="o">=</span> <span class="n">updated_information_user</span><span class="p">.</span><span class="n">access_level</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="k">except</span> <span class="n">IntegrityError</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"That email is already in use."</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">user_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">updated_user</span><span class="p">))</span></code></pre></figure>
+
+<p>In addition to the basic endpoints, I also implemented three additional ones for verifying email and resources. The first simply generates a token using the method that I created in my Users model.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># get a token for a user
+</span><span class="o">@</span><span class="n">user</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/users/token"</span><span class="p">)</span>
+<span class="o">@</span><span class="n">auth</span><span class="p">.</span><span class="n">login_required</span>
+<span class="k">def</span> <span class="nf">get_auth_token</span><span class="p">():</span>
+    <span class="n">token</span> <span class="o">=</span> <span class="n">g</span><span class="p">.</span><span class="n">user</span><span class="p">.</span><span class="n">generate_auth_token</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s">'token'</span><span class="p">:</span> <span class="n">token</span><span class="p">.</span><span class="n">decode</span><span class="p">(</span><span class="s">'ascii'</span><span class="p">)})</span></code></pre></figure>
+
+<p>The next one sends an email to the user’s provided email account in order to validate it. This one was a bit tricker for several reasons. One, my <code class="language-plaintext highlighter-rouge">auth.login_required</code> function checked if a user’s email account was verified and denied permission if it was not. Therefore, I couldn’t use it to validate the user’s credentials. I solved this by manually verifying in the function, using my <code class="language-plaintext highlighter-rouge">verify_password</code> funciton with the <code class="language-plaintext highlighter-rouge">needs_valid_email</code> setting set to false.</p>
+
+<p>The second issue was the route. In my previous example, the email verification sent a link to the email that, when clicked on, redirected to the app and valided the email of the user in the provided token. However, I couldn’t do that this time, because I did not want any user interaction with the backend.</p>
+
+<p>My solution was partial, and won’t be complete until I can work on the frontend. Essentially, the <code class="language-plaintext highlighter-rouge">/users/verification</code> route requires a url argument, in addition to login credentials. This will be the route to the frontend app. The backend sends the email to the user, which directs the user to the frontend page. The frontend then informs the backend that the user is successfully verified.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># email a user with the validation route, provided by the client
+</span><span class="k">def</span> <span class="nf">send_validate_email</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">route</span><span class="p">):</span>
+    <span class="n">token</span> <span class="o">=</span> <span class="n">user</span><span class="p">.</span><span class="n">generate_auth_token</span><span class="p">(</span><span class="n">expiration</span><span class="o">=</span><span class="mi">2000</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"token:"</span><span class="p">,</span> <span class="n">token</span><span class="p">)</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="n">Message</span><span class="p">(</span><span class="s">'Verify Your Email'</span><span class="p">,</span> <span class="n">sender</span><span class="o">=</span><span class="s">'groceryapp@gmail.com'</span><span class="p">,</span> <span class="n">recipients</span><span class="o">=</span><span class="p">[</span><span class="n">user</span><span class="p">.</span><span class="n">email</span><span class="p">])</span>
+    <span class="n">msg</span><span class="p">.</span><span class="n">body</span> <span class="o">=</span> <span class="s">f'''To verify your email, please visit this link: </span><span class="si">{</span><span class="n">route</span><span class="si">}</span><span class="s">/</span><span class="si">{</span><span class="n">token</span><span class="si">}</span><span class="s">.'''</span>
+    <span class="n">mail</span><span class="p">.</span><span class="n">send</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">token</span>
+
+
+<span class="c1"># send a verification email
+</span><span class="o">@</span><span class="n">user</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/users/verification"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"GET"</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">send_verify_email</span><span class="p">():</span>
+    <span class="c1"># not using decorator because email is not yet validated
+</span>    <span class="n">username</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">authorization</span><span class="p">[</span><span class="s">"username"</span><span class="p">]</span>
+    <span class="n">password</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">authorization</span><span class="p">[</span><span class="s">"password"</span><span class="p">]</span>
+    <span class="n">verify_password</span><span class="p">(</span><span class="n">username</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="n">needs_valid_email</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+
+    <span class="n">url_to_send</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">args</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"url"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">url_to_send</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"You must provide a client-side url for the verification route"</span><span class="p">)</span>
+    <span class="n">token</span> <span class="o">=</span> <span class="n">send_validate_email</span><span class="p">(</span><span class="n">g</span><span class="p">.</span><span class="n">user</span><span class="p">,</span> <span class="n">url_to_send</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s">"token"</span><span class="p">:</span> <span class="n">token</span><span class="p">})</span>
+
+
+<span class="c1"># receive verification confirmation
+</span><span class="o">@</span><span class="n">user</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/users/verification"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"PUT"</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">verify_email</span><span class="p">():</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"verifying email"</span><span class="p">)</span>
+    <span class="n">token</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">json</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"token"</span><span class="p">)</span>
+    <span class="n">user</span> <span class="o">=</span> <span class="n">User</span><span class="p">.</span><span class="n">verify_auth_token</span><span class="p">(</span><span class="n">token</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">user</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"Unable to get user from token."</span><span class="p">)</span>
+    <span class="n">user</span><span class="p">.</span><span class="n">email_validated</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">user_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">user</span><span class="p">))</span></code></pre></figure>
+
+<p>It’s a bit confusing, but hopefully when I get the frontend set up, I’ll be able to revisit this and explain the process in a bit more depth.</p>
+
+<p>And those are my endpoints. Before I was finished with the user implementation, however, there were a few things I needed to change in the other resources. The addition of Users meant that I needed permissions on who got to edit GroceryLists and Recipes.</p>
+
+<h3 id="new-permissions">New Permissions</h3>
+
+<p>The first thing I did was make a slight modification to how my Recipes and GroceryLists were stored. I implemented a <code class="language-plaintext highlighter-rouge">creator_id</code> field for both of them, which would store the id of the User who created them. Recipes would only be allowed to be modified by their creator, although anyone can use one in a GroceryList. GroceryLists will have the ability to have multiple collaborators, but I still wanted to establish the creator as a separate field. Thus, the association table became one of “editors” rather than “users.”</p>
+
+<p>This required some updating of my endpoints. For my Recipes, the changes were minor: I simply added a <code class="language-plaintext highlighter-rouge">login_required</code> decorator in front of the “DELETE” and “POST” methods. For the “POST” method, the user’s id was added to the json data before it was passed into the RecipeSchema. For the “DELETE” method, the user’s login information is compared with the creator’s ID (to ensure that only the creator can delete a recipe). If they don’t match, then a <code class="language-plaintext highlighter-rouge">401</code> response is given.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">recipe</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/recipes"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"POST"</span><span class="p">])</span>
+<span class="o">@</span><span class="n">auth</span><span class="p">.</span><span class="n">login_required</span>
+<span class="k">def</span> <span class="nf">post_recipe</span><span class="p">():</span>
+    <span class="n">new_recipe_data</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">json</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"recipe"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">new_recipe_data</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"You must provide a recipe to POST."</span><span class="p">)</span>
+    <span class="n">new_recipe_data</span><span class="p">[</span><span class="s">"creator_id"</span><span class="p">]</span> <span class="o">=</span> <span class="n">g</span><span class="p">.</span><span class="n">user</span><span class="p">.</span><span class="nb">id</span>
+
+    <span class="n">new_recipe</span> <span class="o">=</span> <span class="n">recipe_schema</span><span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">json</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"recipe"</span><span class="p">))</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">new_recipe</span><span class="p">)</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">recipe_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">new_recipe</span><span class="p">)),</span> <span class="mi">201</span>
+
+
+<span class="o">@</span><span class="n">recipe</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/recipes/&lt;int:id_&gt;"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"DELETE"</span><span class="p">])</span>
+<span class="o">@</span><span class="n">auth</span><span class="p">.</span><span class="n">login_required</span>
+<span class="k">def</span> <span class="nf">delete_recipe</span><span class="p">(</span><span class="n">id_</span><span class="p">):</span>
+    <span class="n">recipe_to_delete</span> <span class="o">=</span> <span class="n">Recipe</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">id_</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">recipe_to_delete</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">NotFoundException</span><span class="p">(</span><span class="s">"recipe"</span><span class="p">,</span> <span class="n">id_</span><span class="p">,</span> <span class="s">"The recipe you are trying to delete does not exist."</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">recipe_to_delete</span><span class="p">.</span><span class="n">creator</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">g</span><span class="p">.</span><span class="n">user</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"You are not the creator of this recipe."</span><span class="p">,</span> <span class="mi">401</span><span class="p">)</span>
+
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">delete</span><span class="p">(</span><span class="n">recipe_to_delete</span><span class="p">)</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="p">(</span><span class="s">''</span><span class="p">,</span> <span class="mi">204</span><span class="p">)</span></code></pre></figure>
+
+<p>For my GroceryList endpoints, things were a bit more complicated. The easy change was to the “POST” and “DELETE” methods, and were essentially the same as the new “POST” method for the recipe. For my “PUT” method, however, I needed to check both the creator and the list of editors. I also rewrote the method so that it replaced the entire contents of the list, rather than modifying it as it had before.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">grocerylist</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/lists/&lt;int:id_&gt;"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"PUT"</span><span class="p">])</span>
+<span class="o">@</span><span class="n">auth</span><span class="p">.</span><span class="n">login_required</span>
+<span class="k">def</span> <span class="nf">add_to_list</span><span class="p">(</span><span class="n">id_</span><span class="p">):</span>
+    <span class="n">list_to_modify</span> <span class="o">=</span> <span class="n">GroceryList</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">id_</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">list_to_modify</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">NotFoundException</span><span class="p">(</span><span class="s">"grocerylist"</span><span class="p">,</span> <span class="n">id_</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">list_to_modify</span><span class="p">.</span><span class="n">creator</span> <span class="o">==</span> <span class="n">g</span><span class="p">.</span><span class="n">user</span> <span class="ow">or</span> <span class="n">g</span><span class="p">.</span><span class="n">user</span> <span class="ow">in</span> <span class="n">list_to_modify</span><span class="p">.</span><span class="n">editors</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">g</span><span class="p">.</span><span class="n">user</span><span class="p">,</span> <span class="n">list_to_modify</span><span class="p">.</span><span class="n">editors</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"You don't have permission to modify this list."</span><span class="p">,</span> <span class="mi">401</span><span class="p">)</span>
+
+    <span class="n">list_to_modify</span><span class="p">.</span><span class="n">clear_grocerylist</span><span class="p">()</span>
+
+    <span class="c1"># add provided recipes
+</span>    <span class="n">recipes</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">json</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"recipes"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">recipes</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">recipe</span> <span class="ow">in</span> <span class="n">recipes</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">recipe</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"id"</span><span class="p">):</span>
+                <span class="n">list_to_modify</span><span class="p">.</span><span class="n">recipes</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="n">Recipe</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">recipe</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"id"</span><span class="p">)))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"You must add a recipe by its id."</span><span class="p">)</span>
+
+    <span class="c1"># add provided ingredients
+</span>    <span class="n">ingredients</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">json</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"ingredients"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">ingredients</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">ingredient</span> <span class="ow">in</span> <span class="n">ingredients</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">ingredient</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"name"</span><span class="p">):</span>
+                <span class="n">add_additional_ingredients</span><span class="p">(</span><span class="n">id_</span><span class="p">,</span> <span class="n">ingredient</span><span class="p">)</span>
+                <span class="k">pass</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"You must add an ingredient by its name."</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">grocerylist_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">list_to_modify</span><span class="p">))</span></code></pre></figure>
+
+<p>Finally, I also needed a new route that would allow the creator of the list to modify who could edit it. This route takes a list of users and verifies them before replacing the old list of editors.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># set editors to a GroceryList
+</span><span class="o">@</span><span class="n">grocerylist</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/lists/&lt;int:id_&gt;/editors"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"PUT"</span><span class="p">])</span>
+<span class="o">@</span><span class="n">auth</span><span class="p">.</span><span class="n">login_required</span>
+<span class="k">def</span> <span class="nf">add_editors</span><span class="p">(</span><span class="n">id_</span><span class="p">):</span>
+    <span class="n">current_list</span> <span class="o">=</span> <span class="n">GroceryList</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">id_</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">current_list</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">NotFoundException</span><span class="p">(</span><span class="s">"grocerylist"</span><span class="p">,</span> <span class="n">id_</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">current_list</span><span class="p">.</span><span class="n">creator</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">g</span><span class="p">.</span><span class="n">user</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"You are not the creator of this Grocery List"</span><span class="p">,</span> <span class="mi">401</span><span class="p">)</span>
+    <span class="n">new_editors</span> <span class="o">=</span> <span class="n">users_schema</span><span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">json</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"users"</span><span class="p">))</span>
+    <span class="n">current_list</span><span class="p">.</span><span class="n">editors</span> <span class="o">=</span> <span class="n">new_editors</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">users_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">new_editors</span><span class="p">)),</span> <span class="mi">201</span></code></pre></figure>
+
+<h3 id="conclusions">Conclusions</h3>
+
+<p>And that’s it! There are still a few areas that I need to cover, such as adding in filters on my GroceryList, as well as integrating spaCy and my web scrapers. I would also like to do some refactoring, since code is repeated in several places and that’s a no-go. But the bulk of my functionality is in place now for the backend, and I’m really excited to begin work on the front. I’ve been teaching myself React in the mornings since I started this new version, and I’m really excited to bring a ton of new functionality to this thing.</p>
+
+</div>
+
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
+    </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,157 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Rewriting PUT Requests with Exposed Association Endpoints</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-container">
+  <div class="blog-header">
+      <h2>Rewriting PUT Requests with Exposed Association Endpoints</h2>
+      <small>26 May 2020</small>
+  </div>
+  </div>
+</header>
+
+
+<div class="post">
+<p>This is a bit of an unexpected post, in that it grew out of a need to solve a somewhat different problem. I had completed by refactoring for the “GET” and “POST” endpoints, and was trying to do the same for my “PUT” requests. The problem was that the various attributes that needed to be changed for different “PUT” requests were significantly different from each other, such that trying to write a single function to work with all of them began to feel unnecessary and maybe even counterproductive.</p>
+
+<p>But in the course of doing that work, I had to confront a different, but related problem: there was not a particularly robust or easy way to modify the associations between Recipes and GroceryLists and between Users and GroceryLists. Up to this point, I had been submitting the recipe/ingredient/user ids to the GroceryList PUT request, either as single ids or as the full schematic representation of the resource. This worked, but was clunky and often turned up confusing errors. The program often attempted to create new versions of already existing resources, and then threw <code class="language-plaintext highlighter-rouge">IntegrityError</code>s when it couldn’t successfully insert these objects into the database. I had gotten around that previously by expanding my schemas and adding checks, but as my program became more complicated and the checks required increasing detail and special cases, the whole thing just began to feel a bit janky.</p>
+
+<p>Worse, I suspected that this wasn’t the proper way to model associations in a RESTful API, as they didn’t really follow the database and it felt like a significant amount of the flexibility that I had worked to incorporate was being wasted.</p>
+
+<p>So I spent a bit of time googling solutions. How had others modeled associations in their APIs? I found several potential solutions, including nesting endpoints and creating mirrored endpoints that reflected the opposite versions of the same association. However, I felt that the best solution (at least for me) was to expose the associations as resources themselves, and manipulate them with their own set of endpoints. I liked this because it would enable me to manipulate individual associations, and cleanly add or remove them without worrying about contamination from other areas. It seemed like the ideal solution for an app that encouraged users to add and remove recipes and editors at their leisure.</p>
+
+<p>Of course, this meant making additional endpoints, schemas, etc.; the whole nine yards. But by this point I’ve got some experience with it, so it wasn’t nearly as bad as I’d feared.</p>
+
+<h3 id="the-schemas">The Schemas</h3>
+
+<p>First thing’s first: while there are three many-to-many associations in my database (ingredient to line, recipe to grocerylist, user to grocerylist), I’m only exposing the latter two as resources in of themselves. That’s because the ingredient-to-line association actually works <em>better</em> if they are created and destroyed as a single unit. After all, changing “whole milk” to “milk” as the ingredient of the line not only adds “milk”, it also destroys “whole milk.” So modifying each relationship individually would actually be counterproductive in that case.</p>
+
+<p>But the other two are different stories. I started by creating schemas to represent the associations. This worked slightly differently than my previous schemas, since I was querying a Table object rather than a Model, and because the actual return of is extremely simple. I needed my schema to recognize three integer values: the <code class="language-plaintext highlighter-rouge">id</code> of the association, the <code class="language-plaintext highlighter-rouge">id</code> of the grocerylist, and the <code class="language-plaintext highlighter-rouge">id</code> of whatever other resource was being associated with it. For example, here’s the schema for user-to-grocerylist associations:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">check_if_tuple</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">first_id_name</span><span class="p">,</span> <span class="n">second_id_name</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+        <span class="n">id_</span><span class="p">,</span> <span class="n">first_id</span><span class="p">,</span> <span class="n">second_id</span> <span class="o">=</span> <span class="n">data</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s">"id"</span><span class="p">:</span> <span class="n">id_</span><span class="p">,</span> <span class="n">first_id_name</span><span class="p">:</span> <span class="n">first_id</span><span class="p">,</span> <span class="n">second_id_name</span><span class="p">:</span> <span class="n">second_id</span><span class="p">}</span>
+    <span class="k">return</span> <span class="n">data</span>
+
+<span class="k">class</span> <span class="nc">EditorAssociationSchema</span><span class="p">(</span><span class="n">ma</span><span class="p">.</span><span class="n">Schema</span><span class="p">):</span>
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">fields</span><span class="p">.</span><span class="n">Int</span><span class="p">()</span>
+    <span class="n">grocerylist_id</span> <span class="o">=</span> <span class="n">fields</span><span class="p">.</span><span class="n">Int</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">user_id</span> <span class="o">=</span> <span class="n">fields</span><span class="p">.</span><span class="n">Int</span><span class="p">(</span><span class="n">requred</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+    <span class="o">@</span><span class="n">pre_load</span>
+    <span class="k">def</span> <span class="nf">load_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">**</span> <span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">"in preload"</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">check_if_tuple</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="s">"grocerylist_id"</span><span class="p">,</span> <span class="s">"user_id"</span><span class="p">)</span>
+
+    <span class="o">@</span><span class="n">post_load</span>
+    <span class="k">def</span> <span class="nf">get_associated_user_grocerylist</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">**</span> <span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">GroceryList</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">"grocerylist_id"</span><span class="p">]),</span>
+            <span class="n">User</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">"user_id"</span><span class="p">])</span>
+        <span class="p">)</span>
+
+    <span class="o">@</span><span class="n">pre_dump</span>
+    <span class="k">def</span> <span class="nf">dump_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">**</span> <span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">check_if_tuple</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="s">"grocerylist_id"</span><span class="p">,</span> <span class="s">"user_id"</span><span class="p">)</span></code></pre></figure>
+
+<p>There are a couple of things to note here. The <code class="language-plaintext highlighter-rouge">check_if_tuple</code> function converts the tuple value that the database provides for the associations into a dictionary that the schema can understand and validate. It serves both as a <code class="language-plaintext highlighter-rouge">pre_dump</code> function (for taking the tuple and dumping it into the body of the response) and as a <code class="language-plaintext highlighter-rouge">pre_load</code> function (for loading the tuple to be manipulated). Additionally, the <code class="language-plaintext highlighter-rouge">post_load</code> function returns a tuple of its own; the GroceryList object and the User object that is going to have its editing privileges modified. I do this for convienence, as it makes the endpoints much easier to work with.</p>
+
+<h3 id="the-endpoints">The Endpoints</h3>
+
+<p>In order to keep the endpoints looking clean, I wrote a few helper functions that take care of most of the low-end logic and help the endpoints look more like a “table of contents.” Unfortunately, because I’m dealing with a Table rather than a Model, I couldn’t reuse my previous helper functions, but astute readers will notice definite similarities here.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">load_list_and_check_permissions</span><span class="p">(</span><span class="n">association_to_modify</span><span class="p">,</span> <span class="n">association_schema</span><span class="p">):</span>
+    <span class="n">list_to_modify</span><span class="p">,</span> <span class="n">resource_to_change</span> <span class="o">=</span> <span class="n">association_schema</span><span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="n">association_to_modify</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">g</span><span class="p">.</span><span class="n">user</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">list_to_modify</span><span class="p">.</span><span class="n">editors</span> <span class="ow">and</span> <span class="n">g</span><span class="p">.</span><span class="n">user</span><span class="p">.</span><span class="nb">id</span> <span class="o">!=</span> <span class="n">list_to_modify</span><span class="p">.</span><span class="n">creator_id</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"You don't have permission to modify this list."</span><span class="p">,</span> <span class="mi">401</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">list_to_modify</span><span class="p">,</span> <span class="n">resource_to_change</span>
+
+
+<span class="k">def</span> <span class="nf">get_association_or_404</span><span class="p">(</span><span class="n">id_</span><span class="p">,</span> <span class="n">table</span><span class="p">):</span>
+    <span class="n">association</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">query</span><span class="p">(</span><span class="n">table</span><span class="p">).</span><span class="n">filter_by</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">id_</span><span class="p">).</span><span class="n">first</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">association</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"The association you're looking for can't be found."</span><span class="p">,</span> <span class="mi">404</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">association</span>
+
+
+<span class="k">def</span> <span class="nf">add_association</span><span class="p">(</span><span class="n">new_resource_for_list</span><span class="p">,</span> <span class="n">list_to_add_to</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">new_resource_for_list</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">list_to_add_to</span><span class="p">:</span>
+        <span class="n">list_to_add_to</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_resource_for_list</span><span class="p">)</span>
+        <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span></code></pre></figure>
+
+<p>The first function makes use of my new schemas to load the necessary resources, and checks that the user has permission to edit the list (either to add/remove a recipe or to add/remove an editor). If so, it returns the resources. If not, it returns a <code class="language-plaintext highlighter-rouge">401 Forbidden</code>.</p>
+
+<p>The second function works the same way my <code class="language-plaintext highlighter-rouge">get_resource_or_404</code> function works: it finds the relevant association by its <code class="language-plaintext highlighter-rouge">id</code> and returns it. If no associated <code class="language-plaintext highlighter-rouge">id</code> exists, it returns a <code class="language-plaintext highlighter-rouge">404</code>.</p>
+
+<p>The third function actually adds the association to the list, provided the association doesn’t already exist. I want the associations to be idempotent (i.e., sending many of the same requests does not create additional associations), so the function doesn’t do anything if the association already exists.</p>
+
+<p>Here are the endpoints for my user/grocerylist associations.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">associations</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/list-user-associations"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"GET"</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">get_list_user_associations</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">list_user_associations_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">query</span><span class="p">(</span><span class="n">user_list_associations</span><span class="p">).</span><span class="nb">all</span><span class="p">()))</span>
+
+
+<span class="o">@</span><span class="n">associations</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/list-user-associations/&lt;int:id_&gt;"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"GET"</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">get_specific_list_user_association</span><span class="p">(</span><span class="n">id_</span><span class="p">):</span>
+    <span class="n">specific_association</span> <span class="o">=</span> <span class="n">get_association_or_404</span><span class="p">(</span><span class="n">id_</span><span class="p">,</span> <span class="n">user_list_associations</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">list_user_association_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">specific_association</span><span class="p">))</span>
+
+
+<span class="o">@</span><span class="n">associations</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/list-user-associations"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"PUT"</span><span class="p">])</span>
+<span class="o">@</span><span class="n">auth</span><span class="p">.</span><span class="n">login_required</span>
+<span class="k">def</span> <span class="nf">post_list_user_association</span><span class="p">():</span>
+    <span class="n">list_to_modify</span><span class="p">,</span> <span class="n">new_editor</span> <span class="o">=</span> <span class="n">load_list_and_check_permissions</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">json</span><span class="p">,</span> <span class="n">list_user_association_schema</span><span class="p">)</span>
+    <span class="n">add_association</span><span class="p">(</span><span class="n">new_editor</span><span class="p">,</span> <span class="n">list_to_modify</span><span class="p">.</span><span class="n">editors</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">list_user_association_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span>
+        <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">query</span><span class="p">(</span><span class="n">user_list_associations</span><span class="p">).</span><span class="n">filter_by</span><span class="p">(</span>
+            <span class="n">grocery_list</span><span class="o">=</span><span class="n">list_to_modify</span><span class="p">.</span><span class="nb">id</span><span class="p">,</span>
+            <span class="n">user</span><span class="o">=</span><span class="n">new_editor</span><span class="p">.</span><span class="nb">id</span>
+        <span class="p">).</span><span class="n">first</span><span class="p">()</span>
+    <span class="p">)),</span> <span class="mi">201</span>
+
+
+<span class="o">@</span><span class="n">associations</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/list-user-associations/&lt;int:id_&gt;"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"DELETE"</span><span class="p">])</span>
+<span class="o">@</span><span class="n">auth</span><span class="p">.</span><span class="n">login_required</span>
+<span class="k">def</span> <span class="nf">delete_list_user_association</span><span class="p">(</span><span class="n">id_</span><span class="p">):</span>
+    <span class="n">association_to_remove</span> <span class="o">=</span> <span class="n">get_association_or_404</span><span class="p">(</span><span class="n">id_</span><span class="p">,</span> <span class="n">user_list_associations</span><span class="p">)</span>
+    <span class="n">list_to_modify</span><span class="p">,</span> <span class="n">editor_to_remove</span> <span class="o">=</span> <span class="n">load_list_and_check_permissions</span><span class="p">(</span><span class="n">association_to_remove</span><span class="p">,</span> <span class="n">list_user_association_schema</span><span class="p">)</span>
+    <span class="n">list_to_modify</span><span class="p">.</span><span class="n">editors</span><span class="p">.</span><span class="n">remove</span><span class="p">(</span><span class="n">editor_to_remove</span><span class="p">)</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="k">return</span> <span class="s">""</span><span class="p">,</span> <span class="mi">204</span></code></pre></figure>
+
+<p>They all make use of the helper functions defined above. There are a few places where I had to include some lower level logic here, most notably when returning the result of a “PUT” request. I did so because the queries don’t generalize quite as easily, although I may come back and write something a bit more elegant.</p>
+
+<p>But regardless, the end result is the same. With the exposure of these associations as endpoints in of themselves, individual associations can be added or deleted without worrying about messing up other parts of the data. This is a much stronger solution than what I previously had, and it closes one of the last real holes in my backend. I still need to do some error catching and tidy up a bit more, but this part of my app is almost done.</p>
+
+</div>
+
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
+    </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,218 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Creating a More Interactive List Page</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-container">
+  <div class="blog-header">
+      <h2>Creating a More Interactive List Page</h2>
+      <small>20 Feb 2020</small>
+  </div>
+  </div>
+</header>
+
+
+<div class="post">
+<p>It was now time for me to add more interactivity to the list page, which at present does nothing but show the ingredients. I thought for a while on how to do this, and spent a few days chasing a lark in the form of a sidebar. I still might go back to that, but I realized that I was not being faithful to my primary goal in this endeavor, which is to get everything functioning first, and worry about making it pretty later. To that end, I decided that I would go with a simple second list, displaying all the recipes on the side, like so:</p>
+
+<p><img src="/assets/img/posts/show-recipes.png" alt="alt text" /></p>
+
+<p>Next, I wanted  some way to distinguish the lines in the list that are attached to each individual recipe. I decided that the best way to do that would be to assign a random color to the recipe when the user first enters it, and use that color as the distinguishing feature of the recipe on the list page.</p>
+
+<p>First, I added a line in the database to store a color for the recipe:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">hex_color</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">String</span><span class="p">(</span><span class="mi">6</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>  <span class="c1"># randomly generated color for use in lists</span></code></pre></figure>
+
+<p>Because my brain sometimes misses things that are right in front of my face, I first tried to use a hex from the <code class="language-plaintext highlighter-rouge">secrets</code> module:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">hex_color</span> <span class="o">=</span> <span class="n">secrets</span><span class="p">.</span><span class="n">token_urlsafe</span><span class="p">(</span><span class="mi">6</span><span class="p">)</span></code></pre></figure>
+
+<p>I added this to the creation of each <code class="language-plaintext highlighter-rouge">RecipeList</code>. Of course, this didn’t work, because the <code class="language-plaintext highlighter-rouge">secrets.token_urlsafe()</code> function does not return a hex that is necessarily a valid color. I consulted the internet for a solution to random colors in python, and found <a href="https://stackoverflow.com/questions/13998901/generating-a-random-hex-color-in-python">this</a>. It was fairly easy to incorporate into my code, like so:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">r</span> <span class="o">=</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">random</span><span class="p">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">)</span>
+<span class="n">hex_color</span> <span class="o">=</span> <span class="p">(</span><span class="s">'#%02X%02X%02X'</span> <span class="o">%</span> <span class="p">(</span><span class="n">r</span><span class="p">(),</span> <span class="n">r</span><span class="p">(),</span> <span class="n">r</span><span class="p">()))</span></code></pre></figure>
+
+<p>From there, I went into the list template page, and added some inline CSS that matched the appropriate color:</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html">{% for recipe in recipe_list %}
+    <span class="nt">&lt;a</span> <span class="na">class=</span><span class="s">"recipe-button list-group-item"</span><span class="nt">&gt;&lt;span</span> <span class="na">class=</span><span class="s">"dot"</span> <span class="na">style=</span><span class="s">"background-color:{{recipe.hex_color}}"</span><span class="nt">&gt;&lt;/span&gt;</span> {{recipe.name}} <span class="nt">&lt;/a&gt;</span>
+{% endfor %}</code></pre></figure>
+
+<p>Note that the <code class="language-plaintext highlighter-rouge">dot</code> class is a simple span I made to structure a small circle, which is what I wanted to be dynamically colored. I loaded it up and was delighted to see those beautiful, beautiful colored dots.</p>
+
+<p><img src="/assets/img/posts/app-recipeinterface/dynamic-recipe-dots.png" alt="alt text" /></p>
+
+<p>Now, to get them on the recipe lines as well.</p>
+
+<p>I thought for a little while of how to do this, because I did not have a direct connection between the <code class="language-plaintext highlighter-rouge">CleanedLine</code> items and the <code class="language-plaintext highlighter-rouge">RecipeList</code> items. What I did have was a relationship from <code class="language-plaintext highlighter-rouge">CleanedLine</code> to <code class="language-plaintext highlighter-rouge">RawLine</code> to <code class="language-plaintext highlighter-rouge">RecipeList</code>, but I wouldn’t be able to do those queries on the template.</p>
+
+<p>Ultimately, I decided that what I <em>really</em> needed was a list of all the <code class="language-plaintext highlighter-rouge">RawLine</code>s for each <code class="language-plaintext highlighter-rouge">CleanedLine</code>, both for this and for some later additions. And because I needed to generate this information on the server, I felt it best to encapsulate it into a python class, similarly to how I made the json values work on the “cleaning” page. Here’s my implementation:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># class that takes the db CleanedLine object and turns it into a python class to pass to template
+</span><span class="k">class</span> <span class="nc">CompiledIngredientLine</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cleaned_line</span><span class="p">):</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">ingredient</span> <span class="o">=</span> <span class="n">cleaned_line</span><span class="p">.</span><span class="n">ingredient</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">amount</span> <span class="o">=</span> <span class="n">cleaned_line</span><span class="p">.</span><span class="n">amount</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">measurement</span> <span class="o">=</span> <span class="n">cleaned_line</span><span class="p">.</span><span class="n">measurement</span>
+
+        <span class="c1"># get list of all raw lines that make up the cleaned line
+</span>        <span class="bp">self</span><span class="p">.</span><span class="n">raw_lines</span> <span class="o">=</span> <span class="n">RawLine</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">cleaned_line</span><span class="o">=</span><span class="n">cleaned_line</span><span class="p">).</span><span class="nb">all</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="p">.</span><span class="n">color_dots</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">raw_line</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">.</span><span class="n">raw_lines</span><span class="p">:</span>
+            <span class="n">recipe</span> <span class="o">=</span> <span class="n">RecipeList</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">filter_by</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">raw_line</span><span class="p">.</span><span class="n">list_id</span><span class="p">).</span><span class="n">first_or_404</span><span class="p">()</span>
+            <span class="bp">self</span><span class="p">.</span><span class="n">color_dots</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">recipe</span><span class="p">.</span><span class="n">hex_color</span><span class="p">)</span></code></pre></figure>
+
+<p>Note that I still query the recipe for the color, instead of just the <code class="language-plaintext highlighter-rouge">RawLine</code>. I might change this, but I didn’t want to double add an amount to the database if I could help it. So this sacrifices some performance for a better style.</p>
+
+<p>It was a simple one-liner to change the <code class="language-plaintext highlighter-rouge">CleanedLine</code> list into a <code class="language-plaintext highlighter-rouge">CompiledIngredientLine</code>:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">list_lines</span> <span class="o">=</span> <span class="p">[</span><span class="n">CompiledIngredientLine</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">list_lines</span><span class="p">]</span></code></pre></figure>
+
+<p>I then modified my template to add as many spans as necessary to incorporate all the dots:</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html"><span class="nt">&lt;li</span> <span class="na">class=</span><span class="s">"list-group-item"</span><span class="nt">&gt;</span>
+        {% for dot in line.color_dots %}
+                <span class="nt">&lt;span</span> <span class="na">class=</span><span class="s">"dot"</span> <span class="na">style=</span><span class="s">"background-color:{{dot}}"</span><span class="err">"</span><span class="nt">&gt;&lt;/span&gt;</span>
+        {% endfor %}
+        {{ line.ingredient }}
+<span class="nt">&lt;/li&gt;</span></code></pre></figure>
+
+<p>Everything seems to be working:</p>
+
+<p><img src="/assets/img/posts/app-recipeinterface/dots-on-list.png" alt="alt text" /></p>
+
+<p>But I still wasn’t quite done. I wanted a bit more interactivity to this list, to better engage the user. To that end, I wanted the ability to toggle the dots, so that when the user clicks on the recipe, the dots appear, and when the user clicks again, they disappear. Furthermore, I wanted to do the same when the user hovers, to give a preview of what it woudl look like.</p>
+
+<p>And for those tasks, it was time to return to jQuery. Adding hovering and clicking to the recipe dots was accomplished easily enough by querying the <code class="language-plaintext highlighter-rouge">.recipe-button</code> class and toggling it to <code class="language-plaintext highlighter-rouge">hidden</code>. I then toggled <code class="language-plaintext highlighter-rouge">active</code> when it was clicked on, and checked in the hover to make sure the class wasn’t active before applying the toggle.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="nx">$</span><span class="p">(</span><span class="nb">document</span><span class="p">).</span><span class="nx">ready</span><span class="p">(</span><span class="kd">function</span><span class="p">(){</span>
+  <span class="kd">var</span> <span class="nx">recipe_buttons</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span><span class="dl">'</span><span class="s1">.recipe-button</span><span class="dl">'</span><span class="p">)</span>
+
+  <span class="nx">recipe_buttons</span><span class="p">.</span><span class="nx">hover</span><span class="p">(</span>
+    <span class="kd">function</span><span class="p">(){</span>
+      <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="nx">$</span><span class="p">(</span> <span class="k">this</span> <span class="p">).</span><span class="nx">hasClass</span><span class="p">(</span><span class="dl">"</span><span class="s2">active</span><span class="dl">"</span><span class="p">)){</span>
+        <span class="nx">$</span><span class="p">(</span> <span class="k">this</span> <span class="p">).</span><span class="nx">find</span><span class="p">(</span><span class="dl">"</span><span class="s2">span</span><span class="dl">"</span><span class="p">).</span><span class="nx">toggleClass</span><span class="p">(</span><span class="dl">"</span><span class="s2">hidden</span><span class="dl">"</span><span class="p">)</span>
+      <span class="p">}</span>
+    <span class="p">},</span>
+    <span class="kd">function</span><span class="p">(){</span>
+      <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="nx">$</span><span class="p">(</span> <span class="k">this</span> <span class="p">).</span><span class="nx">hasClass</span><span class="p">(</span><span class="dl">"</span><span class="s2">active</span><span class="dl">"</span><span class="p">)){</span>
+        <span class="nx">$</span><span class="p">(</span> <span class="k">this</span> <span class="p">).</span><span class="nx">find</span><span class="p">(</span><span class="dl">"</span><span class="s2">span</span><span class="dl">"</span><span class="p">).</span><span class="nx">toggleClass</span><span class="p">(</span><span class="dl">"</span><span class="s2">hidden</span><span class="dl">"</span><span class="p">)</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">)</span>
+
+  <span class="nx">recipe_buttons</span><span class="p">.</span><span class="nx">click</span><span class="p">(</span><span class="kd">function</span><span class="p">(){</span>
+    <span class="nx">$</span><span class="p">(</span> <span class="k">this</span> <span class="p">).</span><span class="nx">toggleClass</span><span class="p">(</span><span class="dl">"</span><span class="s2">active</span><span class="dl">"</span><span class="p">)</span>
+  <span class="p">})</span>
+
+<span class="p">})</span></code></pre></figure>
+
+<p>This allows the dots to appear and disappear when they are hovered, and to stay when clicked. I wasn’t done, however. I still wanted to link the dots on the Recipe List with the dots on the Compiled list. That way, when they were hovered over, the dots on the compiled list would appear to show the ingredients associated with that recipe.</p>
+
+<p>This wouldn’t work with a <code class="language-plaintext highlighter-rouge">find()</code> command, so I consulted the jQuery documentation and found the <code class="language-plaintext highlighter-rouge">filter()</code> command, which can have a function passed to it.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">var</span> <span class="nx">dot</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span> <span class="k">this</span> <span class="p">).</span><span class="nx">find</span><span class="p">(</span><span class="dl">"</span><span class="s2">span</span><span class="dl">"</span><span class="p">)</span>
+<span class="kd">var</span> <span class="nx">color</span> <span class="o">=</span> <span class="nx">dot</span><span class="p">.</span><span class="nx">css</span><span class="p">(</span><span class="dl">"</span><span class="s2">background-color</span><span class="dl">"</span><span class="p">)</span>
+
+<span class="kd">var</span> <span class="nx">dots_to_hide</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#compiled-list</span><span class="dl">"</span><span class="p">).</span><span class="nx">find</span><span class="p">(</span><span class="dl">"</span><span class="s2">span</span><span class="dl">"</span><span class="p">).</span><span class="nx">filter</span><span class="p">(</span><span class="kd">function</span><span class="p">(){</span>
+  <span class="k">return</span> <span class="nx">$</span><span class="p">(</span> <span class="k">this</span> <span class="p">).</span><span class="nx">css</span><span class="p">(</span><span class="dl">"</span><span class="s2">background-color</span><span class="dl">"</span><span class="p">)</span> <span class="o">===</span> <span class="nx">color</span>
+<span class="p">})</span></code></pre></figure>
+
+<p>This function finds all of the <code class="language-plaintext highlighter-rouge">dot</code> spans in the <code class="language-plaintext highlighter-rouge">.compiled-list</code> class, and returns them if they have the same color as the <code class="language-plaintext highlighter-rouge">dot</code> in the recipe list. Then, hiding them is as easy as:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="nx">dots_to_hide</span><span class="p">.</span><span class="nx">toggleClass</span><span class="p">(</span><span class="dl">"</span><span class="s2">hidden</span><span class="dl">"</span><span class="p">)</span></code></pre></figure>
+
+<p>Not too shabby. But I still wasn’t quite done. There was a lot of rewritten code, which I found offensive to my newly-developing jQuery sensibilities. I decided to rewrite the <code class="language-plaintext highlighter-rouge">hover()</code> code into a separate function and call it for both on- and off-hover. The final code was a bit more elegant:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="nx">$</span><span class="p">(</span><span class="nb">document</span><span class="p">).</span><span class="nx">ready</span><span class="p">(</span><span class="kd">function</span><span class="p">(){</span>
+  <span class="kd">var</span> <span class="nx">link_dots</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(){</span>
+    <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="nx">$</span><span class="p">(</span> <span class="k">this</span> <span class="p">).</span><span class="nx">hasClass</span><span class="p">(</span><span class="dl">"</span><span class="s2">active</span><span class="dl">"</span><span class="p">)){</span>
+      <span class="kd">var</span> <span class="nx">dot</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span> <span class="k">this</span> <span class="p">).</span><span class="nx">find</span><span class="p">(</span><span class="dl">"</span><span class="s2">span</span><span class="dl">"</span><span class="p">)</span>
+      <span class="kd">var</span> <span class="nx">color</span> <span class="o">=</span> <span class="nx">dot</span><span class="p">.</span><span class="nx">css</span><span class="p">(</span><span class="dl">"</span><span class="s2">background-color</span><span class="dl">"</span><span class="p">)</span>
+      <span class="nx">dot</span><span class="p">.</span><span class="nx">toggleClass</span><span class="p">(</span><span class="dl">"</span><span class="s2">hidden</span><span class="dl">"</span><span class="p">)</span>
+
+      <span class="kd">var</span> <span class="nx">dots_to_hide</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#compiled-list</span><span class="dl">"</span><span class="p">).</span><span class="nx">find</span><span class="p">(</span><span class="dl">"</span><span class="s2">span</span><span class="dl">"</span><span class="p">).</span><span class="nx">filter</span><span class="p">(</span><span class="kd">function</span><span class="p">(){</span>
+        <span class="k">return</span> <span class="nx">$</span><span class="p">(</span> <span class="k">this</span> <span class="p">).</span><span class="nx">css</span><span class="p">(</span><span class="dl">"</span><span class="s2">background-color</span><span class="dl">"</span><span class="p">)</span> <span class="o">===</span> <span class="nx">color</span>
+      <span class="p">})</span>
+      <span class="nx">dots_to_hide</span><span class="p">.</span><span class="nx">toggleClass</span><span class="p">(</span><span class="dl">"</span><span class="s2">hidden</span><span class="dl">"</span><span class="p">)</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+  <span class="kd">var</span> <span class="nx">recipe_buttons</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span><span class="dl">'</span><span class="s1">.recipe-button</span><span class="dl">'</span><span class="p">)</span>
+
+  <span class="nx">recipe_buttons</span><span class="p">.</span><span class="nx">hover</span><span class="p">(</span><span class="nx">link_dots</span><span class="p">(),</span> <span class="nx">link_dots</span><span class="p">())</span>
+  <span class="nx">recipe_buttons</span><span class="p">.</span><span class="nx">click</span><span class="p">(</span><span class="kd">function</span><span class="p">(){</span>
+    <span class="nx">$</span><span class="p">(</span> <span class="k">this</span> <span class="p">).</span><span class="nx">toggleClass</span><span class="p">(</span><span class="dl">"</span><span class="s2">active</span><span class="dl">"</span><span class="p">)</span>
+  <span class="p">})</span>
+<span class="p">})</span></code></pre></figure>
+
+<p>After all that, I’m delighted to say that it’s working as intended:</p>
+
+<p><img src="/assets/img/posts/app-recipeinterface/clicked-dots.png" alt="alt text" /></p>
+
+<p>In this picture, you can see that the top “Bailey’s Red Velvet Tres Leches Cake” is clicked, and that the matching blue-purple dots are similarly activated on the other side. Likewise, you can see at the bottom that the “angel hair pasta” line does not have a dot, because it’s associated with the “Parmesan-Crusted Shrimp Scampi” recipe. So that’s good.</p>
+
+<p>There are a few glitches, however. Every now and then, for some reason, the dot toggle seems to reverse, so that when I hover/click the dots disappear instead of appear. I’m marking it down as a bug for now, and will probably go back through to add some more checks to make sure it doesn’t happen.</p>
+
+<p>Next steps:</p>
+<ul>
+  <li>show the actual <code class="language-plaintext highlighter-rouge">RawLine</code> when a recipe list item is clicked</li>
+  <li>add the ability to edit recipe lines</li>
+  <li>add the ability to add additional lines</li>
+</ul>
+
+<h3 id="an-update-221-because-i-am-a-dumb-dumb">An Update 2/21 (Because I am a dumb dumb)</h3>
+
+<p>I turned on my app today to get cracking on the next feature, and discovered to my horror that none of my scripts from yesterday were working. Luckily it was a quick fix, but the solution left me red in the face. Folks, we have some JavaScript errors. Turns out I shouldn’t have declared the function with the <code class="language-plaintext highlighter-rouge">var</code> keyword and, more importantly, I shouldn’t have used parenthesis in the <code class="language-plaintext highlighter-rouge">hover()</code> function when using my <code class="language-plaintext highlighter-rouge">link_dots</code> function. The proper code looks like this:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="nx">$</span><span class="p">(</span><span class="nb">document</span><span class="p">).</span><span class="nx">ready</span><span class="p">(</span><span class="kd">function</span><span class="p">(){</span>
+  <span class="kd">function</span> <span class="nx">link_dots</span><span class="p">(){</span>
+    <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="nx">$</span><span class="p">(</span> <span class="k">this</span> <span class="p">).</span><span class="nx">hasClass</span><span class="p">(</span><span class="dl">"</span><span class="s2">active</span><span class="dl">"</span><span class="p">)){</span>
+      <span class="kd">var</span> <span class="nx">dot</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span> <span class="k">this</span> <span class="p">).</span><span class="nx">find</span><span class="p">(</span><span class="dl">"</span><span class="s2">span</span><span class="dl">"</span><span class="p">)</span>
+      <span class="kd">var</span> <span class="nx">color</span> <span class="o">=</span> <span class="nx">dot</span><span class="p">.</span><span class="nx">css</span><span class="p">(</span><span class="dl">"</span><span class="s2">background-color</span><span class="dl">"</span><span class="p">)</span>
+      <span class="nx">dot</span><span class="p">.</span><span class="nx">toggleClass</span><span class="p">(</span><span class="dl">"</span><span class="s2">hidden</span><span class="dl">"</span><span class="p">)</span>
+
+      <span class="kd">var</span> <span class="nx">dots_to_hide</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#compiled-list</span><span class="dl">"</span><span class="p">).</span><span class="nx">find</span><span class="p">(</span><span class="dl">"</span><span class="s2">span</span><span class="dl">"</span><span class="p">).</span><span class="nx">filter</span><span class="p">(</span><span class="kd">function</span><span class="p">(){</span>
+        <span class="k">return</span> <span class="nx">$</span><span class="p">(</span> <span class="k">this</span> <span class="p">).</span><span class="nx">css</span><span class="p">(</span><span class="dl">"</span><span class="s2">background-color</span><span class="dl">"</span><span class="p">)</span> <span class="o">===</span> <span class="nx">color</span>
+      <span class="p">})</span>
+      <span class="nx">dots_to_hide</span><span class="p">.</span><span class="nx">toggleClass</span><span class="p">(</span><span class="dl">"</span><span class="s2">hidden</span><span class="dl">"</span><span class="p">)</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+  <span class="kd">var</span> <span class="nx">recipe_buttons</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span><span class="dl">'</span><span class="s1">.recipe-button</span><span class="dl">'</span><span class="p">)</span>
+
+  <span class="nx">recipe_buttons</span><span class="p">.</span><span class="nx">hover</span><span class="p">(</span><span class="nx">link_dots</span><span class="p">,</span> <span class="nx">link_dots</span><span class="p">)</span>
+  <span class="nx">recipe_buttons</span><span class="p">.</span><span class="nx">click</span><span class="p">(</span><span class="kd">function</span><span class="p">(){</span>
+    <span class="nx">$</span><span class="p">(</span> <span class="k">this</span> <span class="p">).</span><span class="nx">toggleClass</span><span class="p">(</span><span class="dl">"</span><span class="s2">active</span><span class="dl">"</span><span class="p">)</span>
+  <span class="p">})</span>
+<span class="p">})</span></code></pre></figure>
+
+<p>I’m not sure why I didn’t catch these bugs yesterday, since the code was working. My best guess is that it was loading the older, working JavaScript from the cache (the non-refactored code), and therefore the bugs didn’t go through. It’s an easy fix, but still kind of annoying. Oh well. On to the next features!</p>
+
+</div>
+
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
+    </div>
+    </div>
+  </body>
+</html>

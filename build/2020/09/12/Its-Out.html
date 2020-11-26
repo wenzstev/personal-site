@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>It's Out</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-container">
+  <div class="blog-header">
+      <h2>It's Out</h2>
+      <small>12 Sep 2020</small>
+  </div>
+  </div>
+</header>
+
+
+<div class="post">
+<p>As usual, this process took longer than I expected it to, but I am very please to present to you, my very-existing reading audience, <a href="https://www.souschef.stevenwenzel.com">SousChef</a>. Yes that’s a name I just came up with this week; I needed something snappy for my “About” page.</p>
+
+<p>Work since my last post was split roughly 50/50 between tweaking the actual code and figuring out how to deploy the website on DigitalOcean. I have experience with this, but the fact that I was using a separate frontend and backend complicated matters. I ended up using Nginx as a reverse proxy, running the backend on a gunicorn server and the frontend through the <code class="language-plaintext highlighter-rouge">build</code> command of “create-react-app.” At some point soon, I’d like to do a more thorough rundown of how I did it, because it required a fair amount of synthesis of several other tutorials and I had to figure out a few things.</p>
+
+<p>But no matter. It’s complete.</p>
+
+<p>Or at least <em>depolyed.</em> It’s far from complete; these things never are. Next I want to add some small animations and make the splash pages look a bit better for people who are investigating it, as well as some kind of warning that this is still in alpha and continually in development. As far as actual functionality, the number one thing I would like to add is the ability to use other people’s recipes. After that, there’s a long line of things to do…. As <a href="https://quoteinvestigator.com/2019/03/01/abandon/">somebody once said</a> (the origin of this quote is apparently somewhat complicated): “Works are never completed, they are only abandoned.”</p>
+
+</div>
+
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
+    </div>
+    </div>
+  </body>
+</html>
