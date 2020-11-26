@@ -30,7 +30,7 @@ a:hover { color: darkslategray; }
 
 .projects p { font-size: .9rem; }
 
-.projects li { margin: 0; background-color: #F6DCB9; padding: .5rem; border-radius: 3px; }
+.projects li { margin: .5rem 0; background-color: #F6DCB9; padding: .5rem; border-radius: 3px; }
 
 .blog { margin: 4.5rem .5rem .5rem .5rem; padding: .5rem; border-radius: 3px; background-color: #EEDFFB; }
 
