@@ -1,0 +1,195 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Emailing the Grocery List</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-container">
+  <div class="blog-header">
+      <h2>Emailing the Grocery List</h2>
+      <small>24 Mar 2020</small>
+  </div>
+  </div>
+</header>
+
+
+<div class="post">
+<p>With a basic pdf export available, it’s time to look at emailing the grocery list. When I add accounts, I want to give the user the option to do a one-click email to their inbox, so that they can easily access the grocery list outside of the app. In the meantime, I want to be able to allow the user to input an email address of their choice, and have the app send to the given email.</p>
+
+<p>First, I created a test case, just to make sure I could actually send emails. I created a new gmail account for the app and added the email and password to my environmental variables. Then I imported <code class="language-plaintext highlighter-rouge">flask_email</code> and set up a new email object for my app:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># in config.py
+</span><span class="k">class</span> <span class="nc">Config</span><span class="p">:</span>
+    <span class="n">SECRET_KEY</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">environ</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'FLASK_SECRET_KEY'</span><span class="p">)</span>
+    <span class="n">SQLALCHEMY_DATABASE_URI</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">environ</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'FLASK_DATABASE_URI'</span><span class="p">)</span>
+    <span class="n">MAIL_SERVER</span> <span class="o">=</span> <span class="s">'smtp.gmail.com'</span>
+    <span class="n">MAIL_PORT</span> <span class="o">=</span> <span class="mi">587</span>
+    <span class="n">MAIL_USE_TLS</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">MAIL_USERNAME</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">environ</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'EMAIL_USER'</span><span class="p">)</span>
+    <span class="n">MAIL_PASSWORD</span> <span class="o">=</span> <span class="n">os</span><span class="p">.</span><span class="n">environ</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'EMAIL_PASS'</span><span class="p">)</span>
+
+<span class="c1"># in __init__.py
+</span><span class="kn">from</span> <span class="nn">flask</span> <span class="kn">import</span> <span class="n">Flask</span>
+<span class="kn">from</span> <span class="nn">flask_sqlalchemy</span> <span class="kn">import</span> <span class="n">SQLAlchemy</span>
+<span class="kn">from</span> <span class="nn">flask_mail</span> <span class="kn">import</span> <span class="n">Mail</span>
+
+<span class="kn">from</span> <span class="nn">grocerylistapp.config</span> <span class="kn">import</span> <span class="n">Config</span>
+
+<span class="n">db</span> <span class="o">=</span> <span class="n">SQLAlchemy</span><span class="p">()</span>
+<span class="n">mail</span> <span class="o">=</span> <span class="n">Mail</span><span class="p">()</span>
+
+
+<span class="k">def</span> <span class="nf">create_app</span><span class="p">(</span><span class="n">config_class</span><span class="o">=</span><span class="n">Config</span><span class="p">):</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">Flask</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+    <span class="n">app</span><span class="p">.</span><span class="n">config</span><span class="p">.</span><span class="n">from_object</span><span class="p">(</span><span class="n">config_class</span><span class="p">)</span>
+
+    <span class="n">db</span><span class="p">.</span><span class="n">init_app</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+    <span class="n">mail</span><span class="p">.</span><span class="n">init_app</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+
+    <span class="kn">from</span> <span class="nn">grocerylistapp.main.routes</span> <span class="kn">import</span> <span class="n">main</span>
+    <span class="n">app</span><span class="p">.</span><span class="n">register_blueprint</span><span class="p">(</span><span class="n">main</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">app</span></code></pre></figure>
+
+<p>Note that I still only have one blueprint here. That’s going to have to change soon, I think. Things are getting a bit unweildy.</p>
+
+<p>Then I added a new email route to my <code class="language-plaintext highlighter-rouge">routes.py</code> folder and a placeholder mailing function in <code class="language-plaintext highlighter-rouge">utils.py</code>, which doesn’t do anything but send a test email to myself.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># in routes.py
+</span><span class="o">@</span><span class="n">main</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">'/list/export'</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">export_list</span><span class="p">():</span>
+    <span class="n">test_message</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">url_for</span><span class="p">(</span><span class="s">'main.home'</span><span class="p">))</span>
+
+<span class="c1"># in utils.py
+</span><span class="k">def</span> <span class="nf">test_message</span><span class="p">():</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="n">Message</span><span class="p">(</span><span class="s">'This is a test'</span><span class="p">,</span> <span class="n">sender</span><span class="o">=</span><span class="s">'noreply@demo.com'</span><span class="p">,</span> <span class="n">recipients</span><span class="o">=</span><span class="p">[</span><span class="s">'wenzelstev@gmail.com'</span><span class="p">])</span>
+
+    <span class="n">msg</span><span class="p">.</span><span class="n">body</span> <span class="o">=</span> <span class="s">"This is a test to see if the emailing is working. Yay!"</span>
+
+    <span class="n">mail</span><span class="p">.</span><span class="n">send</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span></code></pre></figure>
+
+<p><em>(That’s my email address, by the way, in case you didn’t know. Feel free to contact me!)</em></p>
+
+<p>Finally, I added a new button and, yes, a new modal to my list page. I’ve been thinking about the modals, and wondering if there might be a way to combine them into a single modal div component, and have dynamic information display. Something to consider for later. But for now, my copy/paste of the modal template continues.</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html"><span class="c">&lt;!-- Modal Email --&gt;</span>
+<span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"modal fade"</span> <span class="na">tabindex=</span><span class="s">"-1"</span> <span class="na">id=</span><span class="s">"exportModal"</span> <span class="na">role=</span><span class="s">"dialog"</span> <span class="na">aria-labelledby=</span><span class="s">"deleteModalLabel"</span> <span class="na">aria-hidden=</span><span class="s">"true"</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"modal-dialog"</span> <span class="na">role=</span><span class="s">"document"</span><span class="nt">&gt;</span>
+        <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"modal-content"</span><span class="nt">&gt;</span>
+            <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"modal-header"</span><span class="nt">&gt;</span>
+                <span class="nt">&lt;h5</span> <span class="na">class=</span><span class="s">"modal-title"</span> <span class="na">id=</span><span class="s">"exportModalLabel"</span><span class="nt">&gt;</span>Export List<span class="nt">&lt;/h5&gt;</span>
+                <span class="nt">&lt;button</span> <span class="na">type=</span><span class="s">"button"</span> <span class="na">class=</span><span class="s">"close"</span> <span class="na">data-dismiss=</span><span class="s">"modal"</span> <span class="na">aria-label=</span><span class="s">"Close"</span><span class="nt">&gt;</span>
+                    <span class="nt">&lt;span</span> <span class="na">aria-hidden=</span><span class="s">"true"</span><span class="nt">&gt;</span>x<span class="nt">&lt;/span&gt;</span>
+                <span class="nt">&lt;/button&gt;</span>
+            <span class="nt">&lt;/div&gt;</span>
+            <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"modal-body"</span><span class="nt">&gt;</span>
+                <span class="nt">&lt;a</span> <span class="na">href=</span><span class="s">"{{url_for('main.export_list')}}"</span> <span class="na">target=</span><span class="s">"_ blank"</span> <span class="na">class=</span><span class="s">"btn btn-primary"</span><span class="nt">&gt;</span>Test Message<span class="nt">&lt;/a&gt;</span>
+            <span class="nt">&lt;/div&gt;</span>
+        <span class="nt">&lt;/div&gt;</span>
+    <span class="nt">&lt;/div&gt;</span>
+<span class="nt">&lt;/div&gt;</span></code></pre></figure>
+
+<p>I then added a button to email right next to the print button, in what’s becoming a toolbar of sorts:</p>
+
+<p><img src="/assets/img/posts/export-recipe/email-toolbar.png" alt="alt text" /></p>
+
+<p>I then sent a test email, and am pleased to report that it is working:</p>
+
+<p><img src="/assets/img/posts/export-recipe/email-working.png" alt="alt text" /></p>
+
+<p>With the proof of concept up and running, it was time to make the email actually have important information. First, I created a new form in my <code class="language-plaintext highlighter-rouge">forms.py</code> folder to take in the email address:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">class</span> <span class="nc">ExportToEmailForm</span><span class="p">(</span><span class="n">FlaskForm</span><span class="p">):</span>
+    <span class="n">email</span> <span class="o">=</span> <span class="n">StringField</span><span class="p">(</span><span class="s">"Email to send list to: "</span><span class="p">)</span>
+    <span class="n">submit</span> <span class="o">=</span> <span class="n">SubmitField</span><span class="p">(</span><span class="s">"Send Email"</span><span class="p">)</span></code></pre></figure>
+
+<p>I added this form into my main list route and inserted it into my template on the modal I’d already made:</p>
+
+<figure class="highlight"><pre><code class="language-html" data-lang="html"><span class="nt">&lt;form</span> <span class="na">method=</span><span class="s">"POST"</span> <span class="na">action=</span><span class="s">""</span><span class="nt">&gt;</span>
+    {{export_to_email_form.hidden_tag()}}
+    <span class="nt">&lt;fieldset&gt;</span>
+        {{export_to_email_form.email.label}}
+        {{export_to_email_form.email(class='form-control')}}
+    <span class="nt">&lt;/fieldset&gt;</span>
+    {{export_to_email_form.submit(class='btn btn-primary')}}
+<span class="nt">&lt;/form&gt;</span></code></pre></figure>
+
+<p>This created a nice looking modal:</p>
+
+<p><img src="/assets/img/posts/export-recipe/email-modal.png" alt="alt text" /></p>
+
+<p>Then, it was time to create the actual body of the email. I created a function in my <code class="language-plaintext highlighter-rouge">utils.py</code> file that took in all of the relevant information from the list page, and produced a simply-formatted email. Because this is an email and therefore paper resources wouldn’t be an issue, I didn’t bother including as much customization, instead providing the list items (noting if they’re checked or not), the recipe names, and the links to the recipes. I tried to get a little more use out of f-strings in this process, and I’m reasonably pleased with how it turned out.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">email_list</span><span class="p">(</span><span class="n">email</span><span class="p">,</span> <span class="n">comp_list</span><span class="p">,</span> <span class="n">list_lines</span><span class="p">,</span> <span class="n">recipe_list</span><span class="p">):</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="n">Message</span><span class="p">(</span><span class="s">'Your Grocery List: '</span> <span class="o">+</span> <span class="n">comp_list</span><span class="p">.</span><span class="n">name</span><span class="p">,</span>
+                  <span class="n">sender</span><span class="o">=</span><span class="s">'grocerylistapp5@gmail.com'</span><span class="p">,</span>
+                  <span class="n">recipients</span><span class="o">=</span><span class="p">[</span><span class="n">email</span><span class="p">])</span>
+
+    <span class="n">list_html</span> <span class="o">=</span> <span class="s">f'''
+    &lt;h1&gt;</span><span class="si">{</span><span class="n">comp_list</span><span class="p">.</span><span class="n">name</span><span class="si">}</span><span class="s">&lt;/h1&gt;
+    &lt;ul&gt;'''</span>
+
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">list_lines</span><span class="p">:</span>
+
+        <span class="n">line_style</span> <span class="o">=</span> <span class="s">" style='color:darkgrey'"</span> <span class="k">if</span> <span class="n">line</span><span class="p">.</span><span class="n">checked</span> <span class="k">else</span> <span class="s">""</span>
+        <span class="n">line_checked</span> <span class="o">=</span> <span class="s">" &lt;span style='font-style: italic'&gt;(checked)&lt;/span&gt;"</span> <span class="k">if</span> <span class="n">line</span><span class="p">.</span><span class="n">checked</span> <span class="k">else</span> <span class="s">""</span>
+
+        <span class="n">list_html</span> <span class="o">+=</span> <span class="s">f'&lt;li</span><span class="si">{</span><span class="n">line_style</span><span class="si">}</span><span class="s">&gt;</span><span class="si">{</span><span class="n">line</span><span class="p">.</span><span class="n">ingredient</span><span class="si">}{</span><span class="n">line_checked</span><span class="si">}</span><span class="s">&lt;/li&gt;'</span>
+
+    <span class="n">list_html</span> <span class="o">+=</span> <span class="s">'''
+    &lt;/ul&gt;
+    &lt;h1&gt; Recipes in List: &lt;/h1&gt;
+    &lt;ul&gt;'''</span>
+
+    <span class="c1"># remove 'Additional Ingredients' recipe:
+</span>    <span class="n">recipe_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">recipe</span> <span class="k">for</span> <span class="n">recipe</span> <span class="ow">in</span> <span class="n">recipe_list</span> <span class="k">if</span> <span class="n">recipe</span><span class="p">.</span><span class="n">name</span> <span class="o">!=</span> <span class="s">"Additional Ingredients"</span><span class="p">]</span>
+
+    <span class="k">for</span> <span class="n">recipe</span> <span class="ow">in</span> <span class="n">recipe_list</span><span class="p">:</span>
+        <span class="n">list_html</span> <span class="o">+=</span> <span class="s">f'''&lt;li&gt;&lt;a href=</span><span class="si">{</span><span class="n">recipe</span><span class="p">.</span><span class="n">recipe_url</span><span class="si">}</span><span class="s">&gt;</span><span class="si">{</span><span class="n">recipe</span><span class="p">.</span><span class="n">name</span><span class="si">}</span><span class="s">&lt;/a&gt;&lt;/li&gt;'''</span>
+
+    <span class="n">list_html</span> <span class="o">+=</span> <span class="s">'&lt;/ul&gt;'</span>
+
+    <span class="n">msg</span><span class="p">.</span><span class="n">html</span> <span class="o">=</span> <span class="n">list_html</span>
+
+    <span class="n">mail</span><span class="p">.</span><span class="n">send</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span></code></pre></figure>
+
+<p>I gave it another test with the new email, and I’m pleased to report that everything seems to be working just fine:</p>
+
+<p><img src="/assets/img/posts/export-recipe/finished-email.png" alt="alt text" /></p>
+
+<p>And that’s about it for today! This was honestly much easier than I thought it would be; the whole process was fairly straightforward and I’m reasonably pleased with the result. Moving through the list quickly now; almost time for the last big feature: adding users. But a few more things to touch up on first.</p>
+
+<h4 id="next-steps">Next Steps:</h4>
+<ul>
+  <li>text messaging (optional, need to investigate if it will cost money)</li>
+  <li>some refactoring to prepare for adding users</li>
+</ul>
+
+
+</div>
+
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
+    </div>
+    </div>
+  </body>
+</html>

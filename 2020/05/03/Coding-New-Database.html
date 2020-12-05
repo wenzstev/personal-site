@@ -1,0 +1,220 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Coding the New Database</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-container">
+  <div class="blog-header">
+      <h2>Coding the New Database</h2>
+      <small>03 May 2020</small>
+  </div>
+  </div>
+</header>
+
+
+<div class="post">
+<p>In a continuation of the <a href="/2020/05/02/Designing-A-New-Database.html">last post</a>, today I’m going to go through the actual code that I’ve been using to set up the database, and explain why I made some of the choices I did. I will be using <a href="https://flask-sqlalchemy.palletsprojects.com/en/2.x/">flask-sqlalchemy</a> and an SQLite database for my implementation, which is what I used last time as well.</p>
+
+<h3 id="ingredient-and-recipeline">Ingredient and RecipeLine</h3>
+
+<p>Our first table is the <code class="language-plaintext highlighter-rouge">Ingredient</code> table.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># Represents an ingredient.
+</span><span class="k">class</span> <span class="nc">Ingredient</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s">'ingredient'</span>
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">String</span><span class="p">,</span> <span class="n">unique</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>    <span class="c1"># the actual name of the ingredient
+</span>
+    <span class="c1"># validator to ensure that an ingredient is in the proper form (all lower case, no dashes or other symbols)
+</span>    <span class="o">@</span><span class="n">db</span><span class="p">.</span><span class="n">validates</span><span class="p">(</span><span class="s">'name'</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">validate_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">address</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">address</span><span class="p">.</span><span class="n">islower</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="nb">ValueError</span><span class="p">(</span><span class="s">"Ingredient must be in all lower case!"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">address</span><span class="p">.</span><span class="n">isalpha</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="nb">ValueError</span><span class="p">(</span><span class="s">"Ingredient must have only letters!"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">address</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+      <span class="k">return</span> <span class="s">f"&lt;Ingredient '</span><span class="si">{</span><span class="bp">self</span><span class="p">.</span><span class="n">name</span><span class="si">}</span><span class="s">'&gt;"</span></code></pre></figure>
+
+<p>Recall from my last post that the <code class="language-plaintext highlighter-rouge">Ingredient</code> table need only store the name of each ingredient. Originally, I’d planned for that name to be the primary key of the table, but seeing as ingredients could be an arbitrary length, I ultimately felt it was better to include a primary key table as well. I am specifying that the “name” attribute be <code class="language-plaintext highlighter-rouge">unique</code>, which more or less accomplishes the same goal.</p>
+
+<p>Additionally, I’ve implemented a validator here that establishes a few base requirements for every ingredient. Namely, they must be in all lower case, and cannot contain any other characters. I’m adding this to reduce duplicates; the idea of storing “all-purpose flour” and “all-purpose flour” differently seems pointless. Note that there’s nothing implemented at this point to convert a non-standard ingredient form into a standard form; I’ll be adding that elsewhere. This is merely to serve as a last line of defense to make sure that improperly formatted data isn’t added to the database.</p>
+
+<p>Next up is the <code class="language-plaintext highlighter-rouge">RecipeLine</code> table.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># Represents a line in a recipe. Can hold an arbitrary number of ingredients
+</span><span class="k">class</span> <span class="nc">RecipeLine</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s">'recipe_line'</span>
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">String</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>  <span class="c1"># the text of the line
+</span>    <span class="n">recipe_id</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Integer</span><span class="p">,</span> <span class="n">db</span><span class="p">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="s">'recipe.id'</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">f"&lt;RecipeLine in '</span><span class="si">{</span><span class="bp">self</span><span class="p">.</span><span class="n">recipe</span><span class="si">}</span><span class="s">' -- '</span><span class="si">{</span><span class="bp">self</span><span class="p">.</span><span class="n">text</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">20</span><span class="p">]</span><span class="si">}</span><span class="s">...' &gt;"</span></code></pre></figure>
+
+<p>Again, this table is straightforward. Each recipe line holds an <code class="language-plaintext highlighter-rouge">id</code>, the <code class="language-plaintext highlighter-rouge">text</code> of the line, and a <code class="language-plaintext highlighter-rouge">recipe_id</code> that relates to the <code class="language-plaintext highlighter-rouge">Recipe</code> it is a part of. We haven’t implemented the <code class="language-plaintext highlighter-rouge">Recipe</code> table yet, but <code class="language-plaintext highlighter-rouge">'recipe.id'</code> will be the name of the primary key for the <code class="language-plaintext highlighter-rouge">Recipe</code> table.</p>
+
+<p>Additionally, with these two classes implemented, we can build our first association table, between the <code class="language-plaintext highlighter-rouge">RecipeLine</code>s and associated <code class="language-plaintext highlighter-rouge">Ingredients</code>.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># association table between RecipeLine and Ingredient models (many-to-many relationship)
+</span><span class="n">line_ingredient_associations</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Table</span><span class="p">(</span><span class="s">'line_ingredient_associations'</span><span class="p">,</span>
+                                        <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="s">'ingredient'</span><span class="p">,</span> <span class="n">db</span><span class="p">.</span><span class="n">Integer</span><span class="p">,</span> <span class="n">db</span><span class="p">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="s">'ingredient.id'</span><span class="p">)),</span>
+                                        <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="s">'recipe_line'</span><span class="p">,</span> <span class="n">db</span><span class="p">.</span><span class="n">Integer</span><span class="p">,</span> <span class="n">db</span><span class="p">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="s">'recipe_line.id'</span><span class="p">))</span>
+                                        <span class="p">)</span></code></pre></figure>
+
+<p>We then add two <code class="language-plaintext highlighter-rouge">relationship</code> attributes, one for <code class="language-plaintext highlighter-rouge">Ingredient</code> and one for <code class="language-plaintext highlighter-rouge">RecipeLine</code>. I chose to use the <code class="language-plaintext highlighter-rouge">back_populates</code> attribute rather than the <code class="language-plaintext highlighter-rouge">backref</code> attributed because I like the additional control provided by the former.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># in the Ingredient class:
+</span><span class="n">recipe_lines</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">relationship</span><span class="p">(</span><span class="s">"RecipeLine"</span><span class="p">,</span>    <span class="c1"># lines where this ingredient appears.
+</span>                               <span class="n">secondary</span><span class="o">=</span><span class="n">line_ingredient_associations</span><span class="p">,</span>
+                               <span class="n">back_populates</span><span class="o">=</span><span class="s">'ingredients'</span><span class="p">)</span>
+
+<span class="c1"># in the RecipeLine class:
+</span><span class="n">ingredients</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">relationship</span><span class="p">(</span><span class="s">"Ingredient"</span><span class="p">,</span>   <span class="c1"># ingredients in the line
+</span>                              <span class="n">secondary</span><span class="o">=</span><span class="n">line_ingredient_associations</span><span class="p">,</span>
+                              <span class="n">back_populates</span><span class="o">=</span><span class="s">"recipe_lines"</span><span class="p">)</span></code></pre></figure>
+
+<p>Now the association is established, but there’s still one final check to make: we need to make sure that any <code class="language-plaintext highlighter-rouge">Ingredient</code> added to a line is actually <em>in</em> the line. This is accomplished by another pair of validators, one in <code class="language-plaintext highlighter-rouge">Ingredient</code> and one in <code class="language-plaintext highlighter-rouge">RecipeLine</code>, which compare the <code class="language-plaintext highlighter-rouge">name</code> attribute of <code class="language-plaintext highlighter-rouge">Ingredient</code> to the <code class="language-plaintext highlighter-rouge">text</code> attribute of <code class="language-plaintext highlighter-rouge">RecipeLine</code>, to confirm that the <code class="language-plaintext highlighter-rouge">Ingredient</code> actually does appear in the <code class="language-plaintext highlighter-rouge">RecipeLine</code>.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># in Ingredient class:
+</span><span class="o">@</span><span class="n">db</span><span class="p">.</span><span class="n">validates</span><span class="p">(</span><span class="s">'recipe_lines'</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">validate_recipe_line</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">address</span><span class="p">):</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="p">.</span><span class="nb">id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">address</span><span class="p">.</span><span class="n">text</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="nb">ValueError</span><span class="p">(</span><span class="s">"Ingredient not in line!"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">address</span>
+
+<span class="c1"># in RecipeLine class:
+</span><span class="o">@</span><span class="n">db</span><span class="p">.</span><span class="n">validates</span><span class="p">(</span><span class="s">'ingredients'</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">validate_ingredient</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">address</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">address</span><span class="p">.</span><span class="nb">id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">.</span><span class="n">text</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="nb">ValueError</span><span class="p">(</span><span class="s">"Ingredient not in recipe line!"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">address</span></code></pre></figure>
+
+<p>Again, these should never be called, as our program will hopefully be smart enough to never try to add an <code class="language-plaintext highlighter-rouge">Ingredient</code> to a <code class="language-plaintext highlighter-rouge">RecipeLine</code> that doesn’t feature it. But if it does, we’re covered.</p>
+
+<h3 id="recipes">Recipes</h3>
+
+<p>Next up is the <code class="language-plaintext highlighter-rouge">Recipe</code> class. This one consists of a <code class="language-plaintext highlighter-rouge">name</code>, a <code class="language-plaintext highlighter-rouge">url</code>, and a collection of <code class="language-plaintext highlighter-rouge">RecipeLine</code>s.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># Represents a recipe. Can relate to an arbitrary number of RecipeLines, many-to-one
+</span><span class="k">class</span> <span class="nc">Recipe</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s">'recipe'</span>
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">String</span><span class="p">(</span><span class="mi">50</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">String</span><span class="p">(</span><span class="mi">200</span><span class="p">))</span>     <span class="c1"># url of where the recipe was gotten (if applicable)
+</span>    <span class="n">recipe_lines</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">relationship</span><span class="p">(</span><span class="s">"RecipeLine"</span><span class="p">,</span> <span class="n">back_populates</span><span class="o">=</span><span class="s">'recipe'</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">f"&lt;Recipe '</span><span class="si">{</span><span class="bp">self</span><span class="p">.</span><span class="n">name</span><span class="si">}</span><span class="s">'&gt;"</span></code></pre></figure>
+
+<p>Now that we’ve implemented the <code class="language-plaintext highlighter-rouge">Recipe</code> class, we can add a <code class="language-plaintext highlighter-rouge">relationship</code> attribute back to the <code class="language-plaintext highlighter-rouge">RecipeLine</code> class:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># in RecipeLine class
+</span><span class="n">recipe</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">relationship</span><span class="p">(</span><span class="s">"Recipe"</span><span class="p">,</span> <span class="n">back_populates</span><span class="o">=</span><span class="s">"recipe_lines"</span><span class="p">)</span></code></pre></figure>
+
+<p>Since the relationship between <code class="language-plaintext highlighter-rouge">Recipe</code>s and <code class="language-plaintext highlighter-rouge">RecipeLine</code>s is one-to-many, we don’t need an association table here.</p>
+
+<h3 id="grocerylists-and-users">GroceryLists and Users</h3>
+
+<p>Now, we implement a <code class="language-plaintext highlighter-rouge">GroceryList</code> class to represent the actual lists. On it’s own, it holds nothing except a <code class="language-plaintext highlighter-rouge">name</code> and an <code class="language-plaintext highlighter-rouge">id</code>.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">lass</span> <span class="n">GroceryList</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s">'grocery_list'</span>
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">String</span><span class="p">(</span><span class="mi">50</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">f"&lt;GroceryList '</span><span class="si">{</span><span class="bp">self</span><span class="p">.</span><span class="n">name</span><span class="si">}</span><span class="s">'&gt;"</span></code></pre></figure>
+
+<p>However, the addition of <code class="language-plaintext highlighter-rouge">GroceryList</code>s means we can add our second association table, which links <code class="language-plaintext highlighter-rouge">Recipe</code>s and <code class="language-plaintext highlighter-rouge">GroceryList</code>s.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># association table between Recipe and GroceryList models (many-to-many relationship)
+</span><span class="n">recipe_list_associations</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Table</span><span class="p">(</span><span class="s">'recipe_list_associations'</span><span class="p">,</span>
+                                    <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="s">'recipe'</span><span class="p">,</span> <span class="n">db</span><span class="p">.</span><span class="n">Integer</span><span class="p">,</span> <span class="n">db</span><span class="p">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="s">'recipe.id'</span><span class="p">)),</span>
+                                    <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="s">'grocery_list'</span><span class="p">,</span> <span class="n">db</span><span class="p">.</span><span class="n">Integer</span><span class="p">,</span> <span class="n">db</span><span class="p">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="s">'grocery_list.id'</span><span class="p">))</span>
+                                    <span class="p">)</span>
+
+<span class="c1"># relationship in the Recipe class
+</span><span class="n">grocery_lists</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">relationship</span><span class="p">(</span><span class="s">"GroceryList"</span><span class="p">,</span>
+                                <span class="n">secondary</span><span class="o">=</span><span class="n">recipe_list_associations</span><span class="p">,</span>
+                                <span class="n">back_populates</span><span class="o">=</span><span class="s">"recipes"</span><span class="p">)</span>
+
+<span class="c1"># relationship in the GroceryList class
+</span><span class="n">recipes</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">relationship</span><span class="p">(</span><span class="s">"Recipe"</span><span class="p">,</span>
+                          <span class="n">secondary</span><span class="o">=</span><span class="n">recipe_list_associations</span><span class="p">,</span>
+                          <span class="n">back_populates</span><span class="o">=</span><span class="s">"grocery_lists"</span><span class="p">)</span></code></pre></figure>
+
+<p>This gives us our many-to-many relationship between <code class="language-plaintext highlighter-rouge">Recipe</code>s and <code class="language-plaintext highlighter-rouge">GroceryList</code>s, ensuring that a user could reuse a given <code class="language-plaintext highlighter-rouge">Recipe</code> for a new <code class="language-plaintext highlighter-rouge">GroceryList</code>. It also means, theoretically, that a user could have a <code class="language-plaintext highlighter-rouge">GroceryList</code> with a <code class="language-plaintext highlighter-rouge">Recipe</code> on it that they did not create, and I’m going to have to check for that when I start adding permissions. I like the idea of a user being able to use a <code class="language-plaintext highlighter-rouge">Recipe</code> they didn’t add, but not being able to alter the ingredients on it. If they want to alter them, they can make a copy. But I’m getting ahead of myself.</p>
+
+<p>Our final main table is the <code class="language-plaintext highlighter-rouge">User</code> table, which holds an <code class="language-plaintext highlighter-rouge">email</code>, a <code class="language-plaintext highlighter-rouge">hashed_password</code>, and an <code class="language-plaintext highlighter-rouge">access_level</code>.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># Represents a user. Can relate to an arbitrary number of GroceryLists
+</span><span class="k">class</span> <span class="nc">User</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s">'user'</span>
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">email</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">String</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+    <span class="n">hashed_password</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">String</span><span class="p">(</span><span class="mi">16</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+    <span class="n">access_level</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="n">db</span><span class="p">.</span><span class="n">Integer</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">grocery_lists</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">relationship</span><span class="p">(</span><span class="s">"GroceryList"</span><span class="p">,</span>
+                                    <span class="n">secondary</span><span class="o">=</span><span class="n">user_list_associations</span><span class="p">,</span>
+                                    <span class="n">back_populates</span><span class="o">=</span><span class="s">"users"</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">f"&lt;User </span><span class="si">{</span><span class="nb">id</span><span class="si">}</span><span class="s"> -- email:'</span><span class="si">{</span><span class="bp">self</span><span class="p">.</span><span class="n">email</span><span class="si">}</span><span class="s">' access_level: </span><span class="si">{</span><span class="bp">self</span><span class="p">.</span><span class="n">access_level</span><span class="si">}</span><span class="s">&gt;"</span></code></pre></figure>
+
+<p>We can also add our final association table, with the necessary <code class="language-plaintext highlighter-rouge">relationship</code>s in <code class="language-plaintext highlighter-rouge">GroceryList</code> and <code class="language-plaintext highlighter-rouge">User</code>.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># association table between GroceryList and User models (many-to-many relationship)
+</span><span class="n">user_list_associations</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">Table</span><span class="p">(</span><span class="s">'user_list_associations'</span><span class="p">,</span>
+                                  <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="s">'grocery_list'</span><span class="p">,</span> <span class="n">db</span><span class="p">.</span><span class="n">Integer</span><span class="p">,</span> <span class="n">db</span><span class="p">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="s">'grocery_list.id'</span><span class="p">)),</span>
+                                  <span class="n">db</span><span class="p">.</span><span class="n">Column</span><span class="p">(</span><span class="s">'user'</span><span class="p">,</span> <span class="n">db</span><span class="p">.</span><span class="n">Integer</span><span class="p">,</span> <span class="n">db</span><span class="p">.</span><span class="n">ForeignKey</span><span class="p">(</span><span class="s">'user.id'</span><span class="p">))</span>
+                                  <span class="p">)</span>
+
+<span class="c1"># in GroceryList class
+</span><span class="n">users</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">relationship</span><span class="p">(</span><span class="s">"User"</span><span class="p">,</span>
+                        <span class="n">secondary</span><span class="o">=</span><span class="n">user_list_associations</span><span class="p">,</span>
+                        <span class="n">back_populates</span><span class="o">=</span><span class="s">"grocery_lists"</span><span class="p">)</span>
+
+<span class="c1"># in Users class
+</span><span class="n">grocery_lists</span> <span class="o">=</span> <span class="n">db</span><span class="p">.</span><span class="n">relationship</span><span class="p">(</span><span class="s">"GroceryList"</span><span class="p">,</span>
+                                <span class="n">secondary</span><span class="o">=</span><span class="n">user_list_associations</span><span class="p">,</span>
+                                <span class="n">back_populates</span><span class="o">=</span><span class="s">"users"</span><span class="p">)</span></code></pre></figure>
+
+<p>This ensures that each <code class="language-plaintext highlighter-rouge">User</code> can own an arbitrary number of <code class="language-plaintext highlighter-rouge">GroceryList</code>s, and each <code class="language-plaintext highlighter-rouge">GroceryList</code> can be owned by an arbitrary number of <code class="language-plaintext highlighter-rouge">User</code>s.</p>
+
+<p>And with that, the setup of the database is complete. I’ll probably need to go back and tweak a few things, but overall the implementation was really smooth. As I’m writing this, I’m pretty deep into serializing everything (teaser for my next post), and so far this implementation has served me really well. All in all, I’m very glad that I took the time to sit down and plan this out; it feels like a much, much stronger foundation for my app.</p>
+
+<h4 id="next-steps">Next Steps</h4>
+<ul>
+  <li>integrate <code class="language-plaintext highlighter-rouge">flask-marshmallow</code> to serialize all the objects</li>
+  <li>begin construction of the api endpoints</li>
+</ul>
+
+</div>
+
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
+    </div>
+    </div>
+  </body>
+</html>

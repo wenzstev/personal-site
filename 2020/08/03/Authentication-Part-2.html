@@ -1,0 +1,144 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Adding Authentication - Part 2</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-container">
+  <div class="blog-header">
+      <h2>Adding Authentication - Part 2</h2>
+      <small>03 Aug 2020</small>
+  </div>
+  </div>
+</header>
+
+
+<div class="post">
+<p>Well, this post is coming earlier than I thought it would. Turns out it was actually fairly easy to alter my backend code to support a refresh token. What’s more, I got to get my hands dirty with a bit of Python again, something I haven’t done in a while.</p>
+
+<p>Let’s go through the process.</p>
+
+<h3 id="creating-the-refresh-token-endpoints">Creating the Refresh Token Endpoints</h3>
+
+<p>Adding support for a refresh token necessitated the creation of some new endpoints. The first is the aptly-named “<code class="language-plaintext highlighter-rouge">/users/reset-token</code>”, which make use of the already existing <code class="language-plaintext highlighter-rouge">generate_auth_token</code> method. It creates a cookie with a much longer expiration time (14 days) and stores it with the <code class="language-plaintext highlighter-rouge">httpOnly</code> flag, preventing the client from accessing it.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># get a refresh token for a user
+</span><span class="o">@</span><span class="n">user</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/users/refresh-token"</span><span class="p">)</span>
+<span class="o">@</span><span class="n">auth</span><span class="p">.</span><span class="n">login_required</span>
+<span class="k">def</span> <span class="nf">get_refresh_token</span><span class="p">():</span>
+    <span class="n">refresh_token</span> <span class="o">=</span> <span class="n">g</span><span class="p">.</span><span class="n">user</span><span class="p">.</span><span class="n">generate_auth_token</span><span class="p">(</span><span class="n">expiration</span><span class="o">=</span><span class="mi">1209600</span><span class="p">)</span>  <span class="c1"># 14 days
+</span>    <span class="n">response</span> <span class="o">=</span> <span class="n">make_response</span><span class="p">(</span><span class="s">''</span><span class="p">,</span> <span class="mi">204</span><span class="p">)</span>
+    <span class="n">response</span><span class="p">.</span><span class="n">set_cookie</span><span class="p">(</span><span class="s">'refresh_token'</span><span class="p">,</span> <span class="n">refresh_token</span><span class="p">,</span> <span class="n">httponly</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">response</span></code></pre></figure>
+
+<p>Next, I modified the <code class="language-plaintext highlighter-rouge">/users/token</code> endpoint to instead check the cookies for the refresh token. It then uses the token to verify the user and provide the actual access token. I shortened the access token to just five minutes; after that, the client will need to request a new one.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># get a token for a user
+</span><span class="o">@</span><span class="n">user</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/users/token"</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">get_auth_token</span><span class="p">():</span>
+    <span class="n">refresh_token</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">cookies</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'refresh_token'</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">refresh_token</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">refresh_token</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"No refresh token"</span><span class="p">,</span> <span class="mi">404</span><span class="p">)</span>
+    <span class="n">user</span> <span class="o">=</span> <span class="n">User</span><span class="p">.</span><span class="n">verify_auth_token</span><span class="p">(</span><span class="n">refresh_token</span><span class="p">)</span>
+    <span class="n">access_token</span> <span class="o">=</span> <span class="n">user</span><span class="p">.</span><span class="n">generate_auth_token</span><span class="p">(</span><span class="n">expiration</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s">'token'</span><span class="p">:</span> <span class="n">access_token</span><span class="p">})</span></code></pre></figure>
+
+<p>Finally, I created a new route to log out, which in this case essentially removes the refresh token. Because there isn’t an accepted way to delete a cookie on the server side (see <a href="https://stackoverflow.com/questions/14386304/flask-how-to-remove-cookies">this</a> post), I simply set the cookie to a blank value and have it instantly expire.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># log out user by deleting httpOnly refresh cookie
+</span><span class="o">@</span><span class="n">user</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">'/users/logout'</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">logout_user</span><span class="p">():</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">make_response</span><span class="p">(</span><span class="s">''</span><span class="p">,</span> <span class="mi">204</span><span class="p">)</span>
+    <span class="n">response</span><span class="p">.</span><span class="n">set_cookie</span><span class="p">(</span><span class="s">'refresh_token'</span><span class="p">,</span> <span class="s">''</span><span class="p">,</span> <span class="n">expires</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">response</span></code></pre></figure>
+
+<p>And that’s all the Python work I needed to do.</p>
+
+<h3 id="handling-the-refresh-token-on-the-client-side">Handling the Refresh Token on the Client Side</h3>
+
+<p>Next, I needed a way to continually get new refresh tokens, which meant I needed a timed interval. Because I wanted the entire app to hold the token and to attempt to get a refresh token, I decided to add the logic for this part in the main <code class="language-plaintext highlighter-rouge">App.js</code> file.</p>
+
+<p>First, I created a method, <code class="language-plaintext highlighter-rouge">getToken</code>, which would sent a <code class="language-plaintext highlighter-rouge">fetch</code> request to the “<code class="language-plaintext highlighter-rouge">/users/token</code>” endpoint. Because the refresh token would already exist as a cookie, I didn’t need to do anything special to send it. I just waited for the server’s response. If it returns 200, all is well. If it returns 404, then there isn’t a refresh token and we’ll need to direct the user to the login page.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">getToken</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="nx">fetch</span><span class="p">(</span><span class="dl">'</span><span class="s1">/users/token</span><span class="dl">'</span><span class="p">)</span>
+  <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">response</span><span class="o">=&gt;</span><span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">response</span><span class="p">.</span><span class="nx">status</span> <span class="o">===</span> <span class="mi">200</span><span class="p">){</span>
+      <span class="k">return</span> <span class="nx">response</span><span class="p">.</span><span class="nx">json</span><span class="p">()</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">response</span><span class="p">.</span><span class="nx">status</span> <span class="o">===</span> <span class="mi">404</span><span class="p">){</span>
+      <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">No refresh token.</span><span class="dl">'</span><span class="p">)</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+      <span class="k">throw</span> <span class="k">new</span> <span class="nb">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Something went wrong.</span><span class="dl">'</span><span class="p">)</span>
+    <span class="p">}</span>
+  <span class="p">})</span>
+  <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">json</span><span class="o">=&gt;</span><span class="p">{</span>
+    <span class="nx">setToken</span><span class="p">(</span><span class="nx">json</span><span class="p">[</span><span class="dl">'</span><span class="s1">token</span><span class="dl">'</span><span class="p">])</span>
+    <span class="nx">setHasToken</span><span class="p">(</span><span class="kc">true</span><span class="p">)</span>
+  <span class="p">})</span>
+  <span class="p">.</span><span class="k">catch</span><span class="p">(</span><span class="nx">error</span><span class="o">=&gt;</span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">error</span><span class="p">))</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>I also created a new piece of state, <code class="language-plaintext highlighter-rouge">hasToken</code>, which was set as <code class="language-plaintext highlighter-rouge">true</code> if there was a token and <code class="language-plaintext highlighter-rouge">false</code> if not. I did this rather than just check if <code class="language-plaintext highlighter-rouge">token</code> was <code class="language-plaintext highlighter-rouge">null</code> because I needed to use a <code class="language-plaintext highlighter-rouge">useEffect</code> statement, and I only wanted it to fire once (when we got the first token) rather than every time a new token was retrieved.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="nx">useEffect</span><span class="p">(()</span><span class="o">=&gt;</span><span class="p">{</span>
+  <span class="nx">getToken</span><span class="p">()</span>
+  <span class="k">if</span><span class="p">(</span><span class="nx">hasToken</span> <span class="o">===</span> <span class="kc">true</span><span class="p">){</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">'</span><span class="s1">setting interval</span><span class="dl">'</span><span class="p">)</span>
+    <span class="nx">setInterval</span><span class="p">(()</span><span class="o">=&gt;</span><span class="p">{</span>
+      <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">'</span><span class="s1">getting new token</span><span class="dl">'</span><span class="p">)</span>
+      <span class="nx">getToken</span><span class="p">()</span>
+    <span class="p">},</span> <span class="mi">240000</span><span class="p">)</span>
+  <span class="p">}</span>
+<span class="p">},</span> <span class="p">[</span><span class="nx">hasToken</span><span class="p">])</span></code></pre></figure>
+
+<p>Thus, every four minutes the server requests a new token. I made the interval slightly shorter than the actual amount of time the token has to give the system some buffer time. May not be strictly necessary, but I prefer it that way.</p>
+
+<p>The best part about this system is that I don’t have to do anything else to tell React that a user is logged in; the conditional rendering on the <code class="language-plaintext highlighter-rouge">token</code> variable takes care of that for me. All that’s left is to link up the “<code class="language-plaintext highlighter-rouge">/users/logout</code>” endpoint with the front end.</p>
+
+<p>Unfortunately, doing so required quite a bit of passing down props. This is the first time that I’m really feeling the lack of Redux, as it would be much better to have the token stored there than at the top level of my app. As is, I had to pass the <code class="language-plaintext highlighter-rouge">setToken</code> function down five or six levels to get it to the “Log Out” button in my <code class="language-plaintext highlighter-rouge">NavMenu</code> component. Once there, however, the function was pretty simple: I send a <code class="language-plaintext highlighter-rouge">fetch</code> request to “<code class="language-plaintext highlighter-rouge">/users/logout</code>,” which deletes the cookie. Once I confirm that the cookie was deleted (204 response), I use the <code class="language-plaintext highlighter-rouge">setToken</code> function to return the token to “null.” This resets the app and effectively logs the user out.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">logout</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="nx">fetch</span><span class="p">(</span><span class="dl">'</span><span class="s1">/users/logout</span><span class="dl">'</span><span class="p">)</span>
+  <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">response</span><span class="o">=&gt;</span><span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">response</span><span class="p">.</span><span class="nx">status</span> <span class="o">===</span> <span class="mi">204</span><span class="p">){</span>
+      <span class="nx">props</span><span class="p">.</span><span class="nx">setToken</span><span class="p">(</span><span class="kc">null</span><span class="p">)</span>
+    <span class="p">}</span>
+  <span class="p">})</span>
+  <span class="p">.</span><span class="k">catch</span><span class="p">(</span><span class="nx">err</span><span class="o">=&gt;</span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">err</span><span class="p">))</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>And that’s it! The app now stays logged in through a refresh. Granted, the user will need to log back in properly in two weeks time, but that is less of an issue, and I can always request a new refresh token sometime down the line.</p>
+
+<h3 id="next-steps">Next Steps</h3>
+<ul>
+  <li>display lists, recipes, and ingredients</li>
+  <li>implement recipe page</li>
+  <li>search functions</li>
+</ul>
+
+</div>
+
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
+    </div>
+    </div>
+  </body>
+</html>

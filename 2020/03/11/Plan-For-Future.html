@@ -1,0 +1,181 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>A Road Map for the Future</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-container">
+  <div class="blog-header">
+      <h2>A Road Map for the Future</h2>
+      <small>11 Mar 2020</small>
+  </div>
+  </div>
+</header>
+
+
+<div class="post">
+<p>As I mentioned yesterday, I wanted to take a moment of time to slow down and plan where I want this project to go. To be honest, this isn’t something that comes particularly easy to me; I tend to jump into things headfirst and try to sort out a plan as I go. But for the past few weeks I’ve noticed a bit of a slowing to my approach to this project. Not quite procrastinating, but maybe a bit of stalling. I’d put my attention on one feature, finish it, and then kind of rest on my laurels for a little while, playing with it and patting myself on the back. It hasn’t slowed down the project <em>too</em> much, but it’s something I noticed and something that I want to nip in the bud.</p>
+
+<p>I’m determined to finish this thing, or at least to get out a “version 1.0” that I can be happy with. I’ve got <em>lots</em> of ideas for it, many of which won’t make it into this version. I concieved of this as a small project to teach myself Flask and the basics of web app design, and it’s grown to become something more. So I want to get it to a point where I can show it to others and say, “hey, I made this, check it out, it’s cool.” And then I want to do just that, host it somewhere and see what people think. And maybe down the road I’ll come back to it and add in some of the more “reach” features that have been bouncing around in my head. But for now, let’s figure out what “v1.0” is going to need.</p>
+
+<p>First, I sketched out some vague ideas on my whiteboard.</p>
+
+<p><img src="/assets/img/posts/plan-for-future.jpg" alt="alt text" /></p>
+
+<p>My handwriting is of course terrible, but I find that I tend to think better standing and it was good to get a bunch of stuff out. Here’s an annotated list of everything I came up with, complete with notes and a (<em>very</em>) rough estimate of how long I think each piece will take. Note that I’m estimating in “sessions,” which is basically my way of saying “the two to three hours I have each morning to work on this thing.”</p>
+
+<h4 id="list-page">List Page</h4>
+<ol>
+  <li>rename list
+    <ul>
+      <li>the ability to rename the list, self explanatory</li>
+      <li><em>estimated time: one session</em></li>
+    </ul>
+  </li>
+  <li>check items off list
+    <ul>
+      <li>give the user the ability to “check” an item off, causing it to grey out and not be printed or exported. can be toggled.</li>
+      <li><em>estimated time: one session</em></li>
+    </ul>
+  </li>
+  <li>delete items from list
+    <ul>
+      <li>the ability to delete an item from the list permanently. need to double check that the user wants to do so</li>
+      <li><em>estimated time: one session</em></li>
+    </ul>
+  </li>
+  <li>move list items around
+    <ul>
+      <li>the ability to click and drag an item on the list to change the order, to make organizing grocery items easier</li>
+      <li><em>estimated time: one session</em></li>
+    </ul>
+  </li>
+  <li>link to recipe if gotten from url
+    <ul>
+      <li>if the user got the recipe from a website, there should be a link to the recipe page that they can access</li>
+      <li><em>estimated time: less than one session</em></li>
+    </ul>
+  </li>
+</ol>
+
+<h4 id="clean-list-page">Clean List Page</h4>
+<ol>
+  <li>delete lines from recipe
+    <ul>
+      <li>when cleaning a list, the user should have the ability to completely delete a recipe line</li>
+      <li><em>estimated time: one session</em></li>
+    </ul>
+  </li>
+</ol>
+
+<h4 id="list-exporting">List Exporting</h4>
+<ol>
+  <li>print to pdf
+    <ul>
+      <li>the user should have the ability to create a pdf list that can be printed or downloaded</li>
+      <li><em>estimated time: 1-2 sessions</em></li>
+    </ul>
+  </li>
+  <li>other ways to export list
+    <ul>
+      <li>the user should be able to have the list emailed to them</li>
+      <li>possibly have the list texted to them? unsure</li>
+      <li>possibly with facebook/social media?</li>
+      <li><em>estimated time: 2-3 sessions</em></li>
+    </ul>
+  </li>
+</ol>
+
+<h4 id="accounts">Accounts</h4>
+<ol>
+  <li>accounts with username and password
+    <ul>
+      <li>users should be able to create an account wiht a username and password. user can only edit their own lists</li>
+      <li><em>estimated time: 3 sessions</em></li>
+    </ul>
+  </li>
+  <li>“guest” lists
+    <ul>
+      <li>if the user does not want to create an account, they can make a temporary list that will not be saved</li>
+      <li><em>estimated time: 1 session</em></li>
+    </ul>
+  </li>
+  <li>user “settings” page
+    <ul>
+      <li>there should be a page where the user can edit their information and possibly other personalization features</li>
+      <li><em>estimated time: 2-3 sessions</em></li>
+    </ul>
+  </li>
+  <li>User homepage
+    <ul>
+      <li>the user should have a homepage that lists all their lists (heh) and possibly other things, such as saved recipes</li>
+      <li><em>estimated time: 2-3 sessions</em></li>
+    </ul>
+  </li>
+  <li>user interaction?
+    <ul>
+      <li>not sure about this, but maybe the option to copy another user’s list (to create an editable copy) and maybe comments?</li>
+      <li><em>estimated time: 2 sessions</em></li>
+    </ul>
+  </li>
+</ol>
+
+<h4 id="additional-time-allocations">Additional Time Allocations</h4>
+<ol>
+  <li>bug fixing
+    <ul>
+      <li>self-explanatory. I already have a few bugs, I should be writing them down as I go</li>
+      <li><em>estimated time: unsure</em></li>
+    </ul>
+  </li>
+  <li>make it look good/centralized theme and style
+    <ul>
+      <li>everything is very generic and bootstrappy. I would like to give it a more unique style.</li>
+      <li><em>estimated time: 4-5 sessions</em></li>
+    </ul>
+  </li>
+  <li>host it
+    <ul>
+      <li>need to figure out how I’m going to get the damn thing online</li>
+      <li><em>estimated time: 1-2 sessions</em></li>
+    </ul>
+  </li>
+  <li>unit testing?
+    <ul>
+      <li>again, something I’m pretty unsure about, considering I’ve never done it. probably overlaps with bug fixing above</li>
+      <li><em>estimated time: who knows?</em></li>
+    </ul>
+  </li>
+</ol>
+
+<p><strong>Total Estimated Time (roughly): 29 sessions</strong></p>
+
+<p>And there you have it. If I can add all of these features, I will be proud to call my program “version 1.0.” Note that these are <em>extremely</em> rough estimates of how long things will take; so far I have proven remarkably bad at knowing what things will be done quickly and what things will take a long time. But I’m going to estimate, at my current rate, another month before this thing is done. Considering it’s taken me about a month so far (I first started on <a href="/2020/02/10/Grocery-App-Pt-1.html">February 10</a>), I think that’s a reasonable amount of time for an app this size on my first try. Of course, I honestly have no idea if that’s true or not, but it’s true for me, and I think that’s what counts. So I’m going to make a personal goal for myself to have this thing out and online by April 9, 2020. As I go, I will make note of how long things are taking and adjust accordingly.</p>
+
+<p>So there you have it! Tomorrow I will begin at the top of this list, and make my way down it until I’m done. Honestly I’m a bit antsy to get back in it, but I’m glad I took this little detour. It’s always good to have a better grasp of where you’re going.</p>
+
+</div>
+
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
+    </div>
+    </div>
+  </body>
+</html>

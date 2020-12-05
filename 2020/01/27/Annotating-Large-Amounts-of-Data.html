@@ -1,0 +1,164 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Building a Command Line App to Annotate Large Amounts of Data</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-container">
+  <div class="blog-header">
+      <h2>Building a Command Line App to Annotate Large Amounts of Data</h2>
+      <small>27 Jan 2020</small>
+  </div>
+  </div>
+</header>
+
+
+<div class="post">
+<p>In order to properly teach spaCy a new entity type, we need a lot of data. SpaCy’s documentation notes that “a few hundred would be a good start.” I’m not the biggest fan of going through hundreds of lines of data and hand typing <code class="language-plaintext highlighter-rouge">{entities: (0, 12, 'QUANTITY')}</code> or whatever until my fingers bleed. So in the spirit of automation, I decided to write a command line app to do most of the work for me.</p>
+
+<p>I planned out the app to work as follows: I would feed in a list of ingredient lines, and it would cycle through them one by one. On each line, it would then prompt the user to type out what the ingredient (or other entity) was. It would then search the line and match the entity, and return the start and end locations of the entity. Finally, it would wrap all of the necessary data in the right format, so when I was done I could just plug it into spaCy and run it.</p>
+
+<p>When I’m starting a new project, even a relatively small one like this, I find it helps me a ton if I sketch out the flow first. So I wrote this as a scaffold:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># training set: the list of ingredient lines
+# entity_type: the string category of the entity (i.e., 'INGREDIENT')
+</span><span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">training_set</span><span class="p">,</span> <span class="n">entity_type</span><span class="p">):</span>
+    <span class="c1"># TODO: check if the training set is already formatted properly
+</span>
+    <span class="c1"># TODO: loop through all lines in the training set
+</span>
+    <span class="c1"># TODO: prompt the user to say what the entity is
+</span>
+    <span class="c1"># TODO: check that the user's input matched part of the string
+</span>
+    <span class="c1"># TODO: if not, prompt the user again
+</span>
+    <span class="c1"># TODO: if so, record the input as the entity and move to the next example
+</span>
+    <span class="k">pass</span></code></pre></figure>
+
+<p>Then (in a perfect world, at least), completing the program is as simple as going down the list and plugging it all in.</p>
+
+<h3 id="checkingprepping-the-training-set">Checking/Prepping the Training Set</h3>
+
+<p>Because I wanted this app to work on more than one type of data, (i.e., an unformatted list or an already formatted and partially annotated list), I needed to the program to first figure out what kind of data it was dealing with. This was accomplished with a simple <code class="language-plaintext highlighter-rouge">isinstance</code> check:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># check if the training set is already formatted properly
+</span>   <span class="n">is_formatted</span> <span class="o">=</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">training_set</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">)</span>  <span class="c1"># TODO: more rigorous checks for alternate data types</span></code></pre></figure>
+
+<p>If the inputted training set is already formatted, then this returns true. Otherwise, it returns false. I added a note here to make this more complicated for a future expansion (such as handling JSON or other formats), but for my purposes this works fine now. All I need is a simple check to access the raw text, be it in list form or annotated form:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">training_set</span><span class="p">:</span>
+       <span class="k">if</span> <span class="n">is_formatted</span><span class="p">:</span>
+           <span class="n">raw_text</span> <span class="o">=</span> <span class="n">line</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+       <span class="k">else</span><span class="p">:</span>
+           <span class="n">raw_text</span> <span class="o">=</span> <span class="n">line</span></code></pre></figure>
+
+<p>So far, so good.</p>
+
+<h3 id="having-the-user-input-the-entity">Having the User Input the Entity</h3>
+<p>Next, I wanted to print the line and prompt the user to type what the entity was. Additionally, I wanted the program to be complex enough to handle more than one entity on a line, or no entities on the line. It would also need to recognize if the user inputted something that <em>wasn’t</em> on the line (such as a typo), notify the user, and reissue the prompt. Because I needed to potentially loop as many times over this part of the text as necessary to produce a result the program could understand, I decided to move it to a secondary function: <code class="language-plaintext highlighter-rouge">entity_search()</code>. This function would either return a list of tuples containting the start and end characters for each inputted entity, <code class="language-plaintext highlighter-rouge">False</code> if the inputted entity was not found, or <code class="language-plaintext highlighter-rouge">True</code> if the user inputted nothing (indicating that there were no entities on that line). Then, I could call the function as many times as necessary before it returned either the list, or <code class="language-plaintext highlighter-rouge">True</code>:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">found_entities</span> <span class="o">=</span> <span class="n">entity_search</span><span class="p">(</span><span class="n">raw_text</span><span class="p">)</span>
+<span class="k">while</span> <span class="ow">not</span> <span class="n">found_entities</span><span class="p">:</span>  <span class="c1"># repeat the function until all matches are found
+</span>            <span class="n">found_entities</span> <span class="o">=</span> <span class="n">entity_search</span><span class="p">(</span><span class="n">raw_text</span><span class="p">)</span></code></pre></figure>
+
+<p>In the <code class="language-plaintext highlighter-rouge">entity_search()</code> function, I first printed the line then prompted the user to enter the entity. If the user inputted nothing, I returned <code class="language-plaintext highlighter-rouge">True</code>:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">entity_search</span><span class="p">(</span><span class="n">line</span><span class="p">):</span>
+    <span class="n">found_entities</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+    <span class="c1"># TODO: prompt the user to say what the entity is
+</span>    <span class="n">line_entity</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s">"Enter the entity (or leave blank if none):"</span><span class="p">)</span>
+
+    <span class="c1"># check if user entered nothing
+</span>    <span class="k">if</span> <span class="ow">not</span> <span class="n">line_entity</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">"entered nothing. returning"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">True</span></code></pre></figure>
+
+<p>If the user did enter entities, I then split the input by <code class="language-plaintext highlighter-rouge">', '</code> in order to support multiple lines. If I want to support inputting entities with commas, this will have to be changed, but it should be trivial to sub out a different character in the future.</p>
+
+<p>Then I looped through each split input and compiled a <code class="language-plaintext highlighter-rouge">regex</code> object with the input, using it to search the line. If the <code class="language-plaintext highlighter-rouge">regex</code> found the entity, then I appended my <code class="language-plaintext highlighter-rouge">found_entities</code> list with a tuple containing the start and end position of the match.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">entities</span> <span class="o">=</span> <span class="n">line_entity</span><span class="p">.</span><span class="n">split</span><span class="p">(</span><span class="s">', '</span><span class="p">)</span>  <span class="c1"># supports more than one entity, demarcated by ', '
+</span>   <span class="k">for</span> <span class="n">entity</span> <span class="ow">in</span> <span class="n">entities</span><span class="p">:</span>  <span class="c1"># loop through all entities and see if they match
+</span>       <span class="n">entity_regex</span> <span class="o">=</span> <span class="n">re</span><span class="p">.</span><span class="nb">compile</span><span class="p">(</span><span class="n">entity</span><span class="p">)</span>
+       <span class="n">entity_match</span> <span class="o">=</span> <span class="n">entity_regex</span><span class="p">.</span><span class="n">search</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+       <span class="k">if</span> <span class="n">entity_match</span><span class="p">:</span>
+           <span class="n">found_entities</span><span class="p">.</span><span class="n">append</span><span class="p">((</span><span class="n">entity_match</span><span class="p">.</span><span class="n">start</span><span class="p">(),</span> <span class="n">entity_match</span><span class="p">.</span><span class="n">end</span><span class="p">()))</span></code></pre></figure>
+
+<p>Finally, I checked the length of the <code class="language-plaintext highlighter-rouge">found_entities</code> list with the length of the <code class="language-plaintext highlighter-rouge">entities</code> list I had looped over (the one created by separating entries with <code class="language-plaintext highlighter-rouge">', '</code>). If these lists did not match, then at least one of the entered entities was a typo, and so I returned <code class="language-plaintext highlighter-rouge">False</code>, indicating that the function would be run again. Otherwise, I returned <code class="language-plaintext highlighter-rouge">found_entities</code>.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">found_entities</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">entities</span><span class="p">):</span>  <span class="c1"># if we found all the typed entities
+</span>    <span class="k">return</span> <span class="n">found_entities</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="k">return</span> <span class="bp">False</span></code></pre></figure>
+
+<p>The function was then looped until it returned an acceptable result, which was then ready for formatting.</p>
+
+<h3 id="formatting-the-entries-for-spacy">Formatting the Entries for spaCy</h3>
+
+<p>The hard part was done; now that I had the start and end indicies for my entity, all I had to do was attach the entity tag to each one, and I had my spaCy formatting. Two things I had to keep in mind, though: the program needed to check if the user had inputted nothing (indicating no entities in the line), and it needed to check if there was already a dictionary of entities (if the user had inputted a partially annotated list).</p>
+
+<p>I already knew to expect a result of <code class="language-plaintext highlighter-rouge">True</code> if the user returned no entries, so a quick <code class="language-plaintext highlighter-rouge">isinstance</code> check solved my first problem. The second issue was also easy: I had already determined if the list was annotated or not, so I added a quick line to add all entities from the annotated list, if it existed. I then appended my new <code class="language-plaintext highlighter-rouge">training_data</code> list with the new annotations:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">annotated_entity_list</span> <span class="o">=</span> <span class="p">[]</span>
+       <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">found_entities</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+           <span class="n">annotated_entity_list</span> <span class="o">=</span> <span class="p">[(</span><span class="n">entity</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">entity</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">entity_type</span><span class="p">)</span> <span class="k">for</span> <span class="n">entity</span> <span class="ow">in</span> <span class="n">found_entities</span><span class="p">]</span>
+       <span class="k">if</span> <span class="n">is_formatted</span><span class="p">:</span>
+           <span class="n">annotated_entity_list</span><span class="p">.</span><span class="n">extend</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s">"entities"</span><span class="p">])</span>
+
+       <span class="n">complete_training_data</span><span class="p">.</span><span class="n">append</span><span class="p">((</span><span class="n">raw_text</span><span class="p">,</span> <span class="p">{</span><span class="s">"entities"</span><span class="p">:</span> <span class="n">annotated_entity_list</span><span class="p">}))</span></code></pre></figure>
+
+<p>(Recall that <code class="language-plaintext highlighter-rouge">entity_type</code> was a variable I passed into the main function.)</p>
+
+<p>Once these lines were in, I added a <code class="language-plaintext highlighter-rouge">return</code> line to return the <code class="language-plaintext highlighter-rouge">complete_training_data</code> list, and my main funciton was complete.</p>
+
+<h3 id="saving-and-testing">Saving and Testing</h3>
+<p>Finally, I added a few lines to save the annotated data using the <code class="language-plaintext highlighter-rouge">pprint</code> module:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s">'combined_data.py'</span><span class="p">,</span> <span class="s">'a'</span><span class="p">)</span> <span class="k">as</span> <span class="n">data_file</span><span class="p">:</span>
+    <span class="n">pp</span> <span class="o">=</span> <span class="n">pprint</span><span class="p">.</span><span class="n">PrettyPrinter</span><span class="p">()</span>
+    <span class="n">data_file</span><span class="p">.</span><span class="n">write</span><span class="p">(</span><span class="s">"new_annotated_data = "</span> <span class="o">+</span> <span class="n">pp</span><span class="p">.</span><span class="n">pformat</span><span class="p">(</span><span class="n">new_annotated_data</span><span class="p">))</span></code></pre></figure>
+
+<p>Before creating a longer training set, I tested it with a few recipe lines that I’d made up before. And I am delighted to say that it worked beautifully:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">new_annotated_data</span> <span class="o">=</span> <span class="p">[(</span><span class="s">'1 cup flour, sifted'</span><span class="p">,</span> <span class="p">{</span><span class="s">'entities'</span><span class="p">:</span> <span class="p">[(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="s">'INGREDIENT'</span><span class="p">)]}),</span>
+ <span class="p">(</span><span class="s">'1 teaspoons sea salt'</span><span class="p">,</span> <span class="p">{</span><span class="s">'entities'</span><span class="p">:</span> <span class="p">[(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="s">'INGREDIENT'</span><span class="p">)]}),</span>
+ <span class="p">(</span><span class="s">'1 egg'</span><span class="p">,</span> <span class="p">{</span><span class="s">'entities'</span><span class="p">:</span> <span class="p">[(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="s">'INGREDIENT'</span><span class="p">)]}),</span>
+ <span class="p">(</span><span class="s">'1/2 cup milk'</span><span class="p">,</span> <span class="p">{</span><span class="s">'entities'</span><span class="p">:</span> <span class="p">[(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="s">'INGREDIENT'</span><span class="p">)]}),</span>
+ <span class="p">(</span><span class="s">'1 rounded tablespoon baking powder'</span><span class="p">,</span> <span class="p">{</span><span class="s">'entities'</span><span class="p">:</span> <span class="p">[(</span><span class="mi">21</span><span class="p">,</span> <span class="mi">34</span><span class="p">,</span> <span class="s">'INGREDIENT'</span><span class="p">)]}),</span>
+ <span class="p">(</span><span class="s">'2 tablespoons olive oil'</span><span class="p">,</span> <span class="p">{</span><span class="s">'entities'</span><span class="p">:</span> <span class="p">[(</span><span class="mi">14</span><span class="p">,</span> <span class="mi">23</span><span class="p">,</span> <span class="s">'INGREDIENT'</span><span class="p">)]}),</span>
+ <span class="p">(</span><span class="s">'3 cups lightly toasted sesame seeds'</span><span class="p">,</span>
+  <span class="p">{</span><span class="s">'entities'</span><span class="p">:</span> <span class="p">[(</span><span class="mi">23</span><span class="p">,</span> <span class="mi">35</span><span class="p">,</span> <span class="s">'INGREDIENT'</span><span class="p">)]}),</span>
+ <span class="p">(</span><span class="s">'1 (8 oz) package ground beef'</span><span class="p">,</span> <span class="p">{</span><span class="s">'entities'</span><span class="p">:</span> <span class="p">[(</span><span class="mi">17</span><span class="p">,</span> <span class="mi">28</span><span class="p">,</span> <span class="s">'INGREDIENT'</span><span class="p">)]})]</span></code></pre></figure>
+
+<h3 id="final-thoughts">Final Thoughts</h3>
+
+<p>With a few minor changes, this program feels like something that a lot of people would find useful. It streamlines annotation into a very simple command line action, and takes care of most of the annoying detail that no one likes to mess with. When I have a little bit of time, I’m going to go back through and clean this up a bit and turn it into a standalone project. I would need to add more customization and a way to annotate text that was longer, but none of that is very hard. I’m quite proud of this project, and with this in my pocket it should be pretty easy to annotate all the data I would need to train my <code class="language-plaintext highlighter-rouge">INGREDIENT</code> entity.</p>
+
+</div>
+
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
+    </div>
+    </div>
+  </body>
+</html>

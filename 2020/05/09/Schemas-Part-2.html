@@ -1,0 +1,272 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>List Schemas and Changing Queries</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-container">
+  <div class="blog-header">
+      <h2>List Schemas and Changing Queries</h2>
+      <small>09 May 2020</small>
+  </div>
+  </div>
+</header>
+
+
+<div class="post">
+<p>Well, I’m back again with some more exciting information. This time around, we’ve got the “GroceryList” schema and endpoints, with a few revisions to how I wrote some of the previous endpoints. Since that deals with information I’ve already covered, I’ll start with it.</p>
+
+<h3 id="the-new-ingredient-query">The New Ingredient Query</h3>
+
+<p>While attempting to write the logic out for how the GroceryList schema would be read into the backend (more on this later), I quickly ran into an issue that I should have seen coming: the tacked-on “All Ingredients” part of the RecipeSchema was causing the schema to invalidate itself, because “All Ingredients” wasn’t actually a proper field. I toyed with this for a little while but ultimately felt that it was better to scrap it entirely; it didn’t feel like good programming practice to me to add a sort-of field to the end of a schema and then write a bunch of <code class="language-plaintext highlighter-rouge">pre_load</code> checks to get rid of it. It’s much smoother to have the schema directly reflect the fields of the model; that way the program can automatically handle nested schemas (which I need for the GroceryList).</p>
+
+<p>Of course, that begs the question: if the RecipeSchema doesn’t hold all the ingredients that are a part of that Recipe, how will we get them? I did a bit of reading up on API structuring, and ultimately chose to use queries on the “/ingredients” endpoint. The other option would be to add an endpoint to the recipe/lists themselves that returned their ingredients (i.e., “/recipes/5/ingredients”), and while I like the nested loop, I think that grouping the endpoints by what they return is a better idea.</p>
+
+<p>In order to do so, I first modified the basic “GET” route for ingredients to make use of a new function: <code class="language-plaintext highlighter-rouge">get_ingredient_by_params()</code>, which returned a list of ingredients based on the arguments passed in.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">@</span><span class="n">ingredient</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/ingredients"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">'GET'</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">get_ingredients</span><span class="p">():</span>
+    <span class="n">ingredients_to_return</span> <span class="o">=</span> <span class="n">get_ingredient_by_params</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">args</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">ingredients_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">ingredients_to_return</span><span class="p">))</span></code></pre></figure>
+
+<p>This keeps things nice and simple on the routes page. The actual function is a bit more complex.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># method that checks if there are any arguments to filter, returns all ingredients if not
+</span><span class="k">def</span> <span class="nf">get_ingredient_by_params</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">args</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"recipe"</span><span class="p">)</span> <span class="ow">and</span> <span class="n">args</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"list"</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"Error: can't filter by recipe and line at the same time"</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"recipe"</span><span class="p">):</span>
+        <span class="n">set_to_return</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">recipe_id</span> <span class="ow">in</span> <span class="n">args</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"recipe"</span><span class="p">):</span>
+            <span class="n">set_to_return</span><span class="p">.</span><span class="n">update</span><span class="p">(</span>
+                <span class="n">Ingredient</span><span class="p">.</span><span class="n">query</span>
+                <span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">RecipeLine</span><span class="p">,</span> <span class="s">"recipe_lines"</span><span class="p">)</span>
+                <span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">Recipe</span><span class="p">)</span>
+                <span class="p">.</span><span class="nb">filter</span><span class="p">(</span><span class="n">Recipe</span><span class="p">.</span><span class="nb">id</span> <span class="o">==</span> <span class="n">recipe_id</span><span class="p">)</span>
+                <span class="p">.</span><span class="nb">all</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">set_to_return</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"list"</span><span class="p">):</span>
+        <span class="n">set_to_return</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">line_id</span> <span class="ow">in</span> <span class="n">args</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"list"</span><span class="p">):</span>
+            <span class="n">set_to_return</span><span class="p">.</span><span class="n">update</span><span class="p">(</span>
+                <span class="n">Ingredient</span><span class="p">.</span><span class="n">query</span>
+                <span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">RecipeLine</span><span class="p">,</span> <span class="s">"recipe_lines"</span><span class="p">)</span>
+                <span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">Recipe</span><span class="p">)</span>
+                <span class="p">.</span><span class="n">join</span><span class="p">(</span><span class="n">GroceryList</span><span class="p">,</span> <span class="n">Recipe</span><span class="p">.</span><span class="n">grocery_lists</span><span class="p">)</span>
+                <span class="p">.</span><span class="nb">filter</span><span class="p">(</span><span class="n">GroceryList</span><span class="p">.</span><span class="nb">id</span> <span class="o">==</span> <span class="n">line_id</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">set_to_return</span>
+
+    <span class="c1"># no queries, return all ingredients
+</span>    <span class="k">return</span> <span class="n">Ingredient</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="nb">all</span><span class="p">()</span></code></pre></figure>
+
+<p>Essentially, this method makes use of several long <code class="language-plaintext highlighter-rouge">join()</code> statements from sqlalchemy in order to return the ingredients in a given <code class="language-plaintext highlighter-rouge">recipe</code> or <code class="language-plaintext highlighter-rouge">list</code>. I used a <code class="language-plaintext highlighter-rouge">set()</code> in order to eliminate duplicates, but in retrospect I don’t think that was necessary; the design of the database should prevent that regardless. I also added a check to see if there was a <code class="language-plaintext highlighter-rouge">list</code> <em>and</em> a <code class="language-plaintext highlighter-rouge">recipe</code> argument, and to raise an error if so.</p>
+
+<p>This is the format that I’m going to be using for all of my queries. I modified my recipe quaries to use the same logic, and when I add in users (that’s for the next post), I’m going to use a similar pattern to query the user’s lists.</p>
+
+<p>Now, with that out of the way, let’s look at the GroceryList schema and endpoints.</p>
+
+<h3 id="the-schema">The Schema</h3>
+
+<p>The base schema of the GroceryList is extremely simple, and makes use of <code class="language-plaintext highlighter-rouge">SQLAlchemyAutoSchema</code> to create it’s fields:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># schema that returns/validates a list
+</span><span class="k">class</span> <span class="nc">GroceryListSchema</span><span class="p">(</span><span class="n">ma</span><span class="p">.</span><span class="n">SQLAlchemyAutoSchema</span><span class="p">):</span>
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">Recipe</span>
+        <span class="n">include_fk</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="c1"># nested recipes in the list, but we're going to exclude the recipe lines
+</span>    <span class="n">recipes</span> <span class="o">=</span> <span class="n">Nested</span><span class="p">(</span><span class="s">"RecipeSchema"</span><span class="p">,</span> <span class="n">many</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">exclude</span><span class="o">=</span><span class="p">(</span><span class="s">"recipe_lines"</span><span class="p">,))</span></code></pre></figure>
+
+<p>More complex behavior, however, is needed when it comes to creating a new GroceryList through this schema. I wanted to be able to initialize a GroceryList with Recipes already in it, definied by their “id” attribute, <em>and</em> I wanted the option to include ingredents directly into the GroceryList from the beginning. After all, this is fundamentally supposed to represent a list of ingredients; the fact that Ingredients are not directly tied to GroceryLists shouldn’t change that.</p>
+
+<p>Let’s start with the recipes first. If a list is going to be initalized with recipes, then I just want to be able to pass the <code class="language-plaintext highlighter-rouge">id</code> of the recipe, and have the backend take care of the rest. This presents a slight problem, though, because the <code class="language-plaintext highlighter-rouge">GroceryListSchema</code> expects more information than just an id. To solve this, I created a <code class="language-plaintext highlighter-rouge">pre_load</code> function that takes the provided <code class="language-plaintext highlighter-rouge">id</code>s and turns them into actual representations of the Recipe:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">add_loaded_recipes</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">recipe_schema</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"in add loaded recipes"</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">recipe</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">"recipes"</span><span class="p">]):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">full_recipe_schema</span> <span class="o">=</span> <span class="n">recipe_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">Recipe</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">recipe</span><span class="p">[</span><span class="s">"id"</span><span class="p">]))</span>
+            <span class="n">data</span><span class="p">[</span><span class="s">"recipes"</span><span class="p">][</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">full_recipe_schema</span>
+        <span class="k">except</span> <span class="nb">KeyError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span><span class="s">f"Unable to find recipe: ID not provided. Value: </span><span class="si">{</span><span class="n">recipe</span><span class="si">}</span><span class="s">"</span><span class="p">)</span></code></pre></figure>
+
+<p>This function iterates through all provided recipes, and for each one it returns the full schema of the recipe. If the recipe is not included in the form “{‘id’: number}”, then it throws an error.</p>
+
+<p>I thought this was all I needed, but not quite. I began to get <code class="language-plaintext highlighter-rouge">DataIntegrityError</code>s when I tried to insert the new list in. Looking through the data made me realize that the <code class="language-plaintext highlighter-rouge">RecipeSchema</code> was essentailly returning a new recipe object for the <code class="language-plaintext highlighter-rouge">Recipe</code>s that were already in the database. Consequently, when it tried to insert this new/old recipe, it threw an error.</p>
+
+<p>I solved this by modifying the <code class="language-plaintext highlighter-rouge">RecipeSchema</code> to sync any validated recipe with it’s version in the database (provided one existed). This way, the program didn’t try to re-add the recipe.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># create the Recipe object, or return the existing recipe object if it already exists
+</span><span class="o">@</span><span class="n">post_load</span>
+<span class="k">def</span> <span class="nf">make_recipe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">**</span> <span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">existing_recipe</span> <span class="o">=</span> <span class="n">Recipe</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">"id"</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">existing_recipe</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">existing_recipe</span>
+    <span class="k">except</span> <span class="nb">KeyError</span><span class="p">:</span>
+        <span class="c1"># there is no recipe like this in the database yet
+</span>        <span class="k">return</span> <span class="n">Recipe</span><span class="p">(</span><span class="o">**</span> <span class="n">data</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">Recipe</span><span class="p">(</span><span class="o">**</span> <span class="n">data</span><span class="p">)</span></code></pre></figure>
+
+<p>This got rid of the error. Now, I had to add an ability to add ingredients directly to the RecipeList, without necessiarily having a Recipe act as an intermeditiary. In order to do so, I decided to return to my fix from the previous version: an “Additional Ingredients” Recipe model that is automatically added to every list, and which stores ingredients that the user directly adds to the list.</p>
+
+<p>I initiated this list with another <code class="language-plaintext highlighter-rouge">post_load</code> function in my GroceryListSchema.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># create the "Additional Ingredients" recipe
+</span><span class="o">@</span><span class="nb">staticmethod</span>
+<span class="k">def</span> <span class="nf">create_additional_ingredients</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">recipe_schema</span><span class="p">):</span>
+    <span class="n">additional_ingredient_recipe</span> <span class="o">=</span> <span class="n">Recipe</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">"Additional Ingredients"</span><span class="p">)</span>
+    <span class="n">additional_ingredients</span> <span class="o">=</span> <span class="n">data</span><span class="p">.</span><span class="n">pop</span><span class="p">(</span><span class="s">"ingredients"</span><span class="p">)</span>
+    <span class="n">ingredient_schema</span> <span class="o">=</span> <span class="n">IngredientSchema</span><span class="p">()</span>
+
+    <span class="k">for</span> <span class="n">ingredient</span> <span class="ow">in</span> <span class="n">additional_ingredients</span><span class="p">:</span>
+        <span class="n">ingredient</span> <span class="o">=</span> <span class="n">ingredient_schema</span><span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="n">ingredient</span><span class="p">)</span>  <span class="c1"># load to class
+</span>
+        <span class="n">additional_ingredient_recipe</span><span class="p">.</span><span class="n">recipe_lines</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="n">RecipeLine</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="n">ingredient</span><span class="p">.</span><span class="n">name</span><span class="p">,</span> <span class="n">ingredients</span><span class="o">=</span><span class="p">[</span><span class="n">ingredient</span><span class="p">]))</span>
+
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">additional_ingredient_recipe</span><span class="p">)</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="n">data</span><span class="p">[</span><span class="s">"recipes"</span><span class="p">].</span><span class="n">append</span><span class="p">(</span><span class="n">recipe_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">additional_ingredient_recipe</span><span class="p">))</span></code></pre></figure>
+
+<p>This creates a new recipe called “Additional Ingredients” and iterates through all privided ingredients (which must be provided in a way that the IngredientSchema will understand). For each of the ingredients, it adds a RecipeLine to the Recipe, with the same text as the ingredient. This is essentially what happened in my last version of this app, although this time around, the data is much better organized.</p>
+
+<p>Finally, because I had more than one <code class="language-plaintext highlighter-rouge">post_load</code> function, I combined them into a single function to make the code easier to read and ensure that they would be run in the proper order.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># function to supply the loaded recipes, rather than creating new ones
+</span><span class="o">@</span><span class="n">pre_load</span>
+<span class="k">def</span> <span class="nf">preload_functions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">**</span> <span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">recipe_schema</span> <span class="o">=</span> <span class="n">RecipeSchema</span><span class="p">(</span><span class="n">exclude</span><span class="o">=</span><span class="p">(</span><span class="s">"recipe_lines"</span><span class="p">,</span> <span class="s">"_ links"</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">data</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"recipes"</span><span class="p">):</span>
+        <span class="bp">self</span><span class="p">.</span><span class="n">add_loaded_recipes</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">recipe_schema</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">data</span><span class="p">[</span><span class="s">"recipes"</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="bp">self</span><span class="p">.</span><span class="n">create_additional_ingredients</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">recipe_schema</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">data</span></code></pre></figure>
+
+<p>Note that this function also checks if there is a “recipes” key in the <code class="language-plaintext highlighter-rouge">data</code>, and creates one if not. This prevents the <code class="language-plaintext highlighter-rouge">create_additional_ingredients</code> function from crashing.</p>
+
+<p>With the schema built, it was time to add in my endpoints.</p>
+
+<h3 id="endpoints">Endpoints</h3>
+
+<p>The “GET” and “POST” request for GroceryList objects are very simple and follow the same format as the other endpoints.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># return list of GroceryLists, with optional filters
+</span><span class="o">@</span><span class="n">grocerylist</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/lists"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"GET"</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">get_lists</span><span class="p">():</span>
+    <span class="c1"># TODO: add checks for filters here
+</span>
+    <span class="n">all_lists</span> <span class="o">=</span> <span class="n">GroceryList</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="nb">all</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">grocerylists_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">all_lists</span><span class="p">))</span>
+
+
+<span class="c1"># post a new GroceryList
+</span><span class="o">@</span><span class="n">grocerylist</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/lists"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"POST"</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">post_list</span><span class="p">():</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">request</span><span class="p">.</span><span class="n">json</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"grocerylist"</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"No grocery list found to add."</span><span class="p">)</span>
+    <span class="n">new_list</span> <span class="o">=</span> <span class="n">grocerylist_schema</span><span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">json</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"grocerylist"</span><span class="p">))</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">new_list</span><span class="p">)</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">grocerylist_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">new_list</span><span class="p">))</span>
+
+<span class="c1"># get a specific GroceryList
+</span><span class="o">@</span><span class="n">grocerylist</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/lists/&lt;int:id_&gt;"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"GET"</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">get_list</span><span class="p">(</span><span class="n">id_</span><span class="p">):</span>
+    <span class="n">current_list</span> <span class="o">=</span> <span class="n">GroceryList</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">id_</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">current_list</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">NotFoundException</span><span class="p">(</span><span class="s">"list"</span><span class="p">,</span> <span class="n">id_</span><span class="p">,</span> <span class="s">"There is no list with this id."</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">grocerylist_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">GroceryList</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">id_</span><span class="p">)))</span></code></pre></figure>
+
+<p>I have not yet made any direct filters for lists, primarly because I haven’t added in the <code class="language-plaintext highlighter-rouge">User</code> functionality yet, and that will be the main filter. I may also add one for recipes, to return a list of GroceryLists that have a certain Recipe in them.</p>
+
+<p>Otherwise, it’s all pretty straightforward. The GroceryListSchema does most of the heavy lifting of creating the object and validiting the code, so all I have to do is pass the json data to it and add the provided list.</p>
+
+<p>Next, I added a “PUT” request to a specific grocery list. This one is slightly more complicated, and relies on a helper function, <code class="language-plaintext highlighter-rouge">add_additional_ingredients</code>.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c1"># in grocerylistapp.grocerylist.utils.py
+</span><span class="k">def</span> <span class="nf">add_additional_ingredients</span><span class="p">(</span><span class="n">grocerylist_id</span><span class="p">,</span> <span class="n">ingredient</span><span class="p">):</span>
+    <span class="n">grocerylist</span> <span class="o">=</span> <span class="n">GroceryList</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">grocerylist_id</span><span class="p">)</span>
+    <span class="n">additional_ingredients</span> <span class="o">=</span> <span class="n">Recipe</span><span class="p">.</span><span class="n">query</span>\
+        <span class="p">.</span><span class="nb">filter</span><span class="p">(</span><span class="n">Recipe</span><span class="p">.</span><span class="n">name</span> <span class="o">==</span> <span class="s">"Additional Ingredients"</span><span class="p">,</span>
+                <span class="n">Recipe</span><span class="p">.</span><span class="n">grocery_lists</span><span class="p">.</span><span class="n">contains</span><span class="p">(</span><span class="n">grocerylist</span><span class="p">)).</span><span class="n">first</span><span class="p">()</span>
+    <span class="n">additional_ingredients</span><span class="p">.</span><span class="n">recipe_lines</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="n">RecipeLine</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="n">ingredient</span><span class="p">[</span><span class="s">"name"</span><span class="p">],</span> <span class="n">ingredients</span><span class="o">=</span><span class="p">[</span><span class="n">ingredient_schema</span><span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="n">ingredient</span><span class="p">)]))</span>
+    <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+
+
+<span class="c1"># add a recipe or an ingredient to a GroceryList
+</span><span class="o">@</span><span class="n">grocerylist</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/lists/&lt;int:id_&gt;"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"PUT"</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">add_to_list</span><span class="p">(</span><span class="n">id_</span><span class="p">):</span>
+    <span class="n">list_to_modify</span> <span class="o">=</span> <span class="n">GroceryList</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">id_</span><span class="p">)</span>
+
+    <span class="c1"># add provided recipes
+</span>    <span class="k">for</span> <span class="n">recipe</span> <span class="ow">in</span> <span class="n">request</span><span class="p">.</span><span class="n">json</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"recipes"</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">recipe</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"id"</span><span class="p">):</span>
+            <span class="n">list_to_modify</span><span class="p">.</span><span class="n">recipes</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="n">Recipe</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">recipe</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"id"</span><span class="p">)))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"You must add a recipe by its id."</span><span class="p">)</span>
+
+    <span class="c1"># add provided ingredients
+</span>    <span class="k">for</span> <span class="n">ingredient</span> <span class="ow">in</span> <span class="n">request</span><span class="p">.</span><span class="n">json</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"ingredients"</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">ingredient</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">"name"</span><span class="p">):</span>
+            <span class="n">add_additional_ingredients</span><span class="p">(</span><span class="n">id_</span><span class="p">,</span> <span class="n">ingredient</span><span class="p">)</span>
+            <span class="k">pass</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">InvalidUsage</span><span class="p">(</span><span class="s">"You must add an ingredient by its name."</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">grocerylist_schema</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="n">list_to_modify</span><span class="p">))</span></code></pre></figure>
+
+<p>This function checks for Recipes and Ingredients, adding them one by one if they exist. Recipes must be added by ID. Ingredients requred the additional function, becuase I needed to load up the “Additional Ingredients” Recipe first, then add the ingredients as RecipeLines. Note that I load the Ingredients using an IngredientSchema. I do this so that it returns the Ingredient from the database (if it exists), or saves the new Ingredient to the database (if it’s a new ingredient). This prevents <code class="language-plaintext highlighter-rouge">IntegrityError</code>s.</p>
+
+<p>Again, Marshmallow has made this so much less complicated; I don’t have to worry about creating new Ingredients, because I already wrote that code last week and it doens’t need to be rewritten. It’s pretty nice.</p>
+
+<p>Finally, I added a “DELETE” endpoint. This was <em>slightly</em> more complicated than it first sounds, only becuase I wanted to make sure I deleted the “Additional Ingredients” Recipe along with the GroceryList.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">delete</span> <span class="n">a</span> <span class="n">GroceryList</span>
+<span class="o">@</span><span class="n">grocerylist</span><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">"/lists/&lt;int:id_&gt;"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"DELETE"</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">delete_list</span><span class="p">(</span><span class="n">id_</span><span class="p">):</span>
+   <span class="n">list_to_delete</span> <span class="o">=</span> <span class="n">GroceryList</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="n">id_</span><span class="p">)</span>
+   <span class="c1"># get the "Additional Ingredients" list
+</span>   <span class="n">additional_ingredients</span> <span class="o">=</span> <span class="n">Recipe</span><span class="p">.</span><span class="n">query</span><span class="p">.</span><span class="nb">filter</span><span class="p">(</span><span class="n">Recipe</span><span class="p">.</span><span class="n">name</span> <span class="o">==</span> <span class="s">"Additional Ingredients"</span><span class="p">,</span>
+                                                <span class="n">Recipe</span><span class="p">.</span><span class="n">grocery_lists</span><span class="p">.</span><span class="n">contains</span><span class="p">(</span><span class="n">list_to_delete</span><span class="p">)).</span><span class="n">first</span><span class="p">()</span>
+   <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">delete</span><span class="p">(</span><span class="n">list_to_delete</span><span class="p">)</span>
+   <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">delete</span><span class="p">(</span><span class="n">additional_ingredients</span><span class="p">)</span>
+   <span class="n">db</span><span class="p">.</span><span class="n">session</span><span class="p">.</span><span class="n">commit</span><span class="p">()</span>
+
+   <span class="k">return</span> <span class="p">(</span><span class="s">""</span><span class="p">,</span> <span class="mi">204</span><span class="p">)</span></code></pre></figure>
+
+<h3 id="conclusions">Conclusions</h3>
+
+<p>And with that, the GroceryList endpoints and schema are done. I just need to add the <code class="language-plaintext highlighter-rouge">User</code> schema and endpoints and the bulk of the backend will be done. After that, I still need to add the scraper and integrate spaCy. Then, it’s time to start the frontend.</p>
+
+</div>
+
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
+    </div>
+    </div>
+  </body>
+</html>

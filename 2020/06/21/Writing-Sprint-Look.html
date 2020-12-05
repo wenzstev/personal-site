@@ -1,0 +1,304 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Creating a Writing Sprint App Part 1</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-container">
+  <div class="blog-header">
+      <h2>Creating a Writing Sprint App Part 1</h2>
+      <small>21 Jun 2020</small>
+  </div>
+  </div>
+</header>
+
+
+<div class="post">
+<p>As my last project before beginning on the front end of my web app, I wanted to build a small project that I’ve been thinking about for a while. I like to write short fiction, but sometimes it can be difficult, especially at the beginning, to feel inspired and to think about what to write next. I wanted to create a small app that provides inspiration, and maybe more easily provokes the sensation that you’re discovering a new story, rather than simply trying to force one.</p>
+
+<p>To that end, I want to build an app that guides you through a simple “writing sprint.” This is a specified amount of time during which you write as fast as possible and keep editing to an absolute minimum. The goal is simply to get something on the page that you can go back to and work on later. Additionally, however, I wanted to provide some kind of initial jolt of inspiration, something to get you started on a new topic.</p>
+
+<p>To that end, my app will need to have several basic features:</p>
+
+<ul>
+  <li>The ability to select a sprint length and then count down,</li>
+  <li>The ability to write, and some kind of way to prevent too much editing,</li>
+  <li>A form of inspiration that is different from a simple writing prompt,</li>
+  <li>The ability to save, copy, or download your sprint after completing it.</li>
+</ul>
+
+<p>I decided to continue using <a href="https://material-ui.com/">Material-UI</a> for this project, since I want to continue growing my knowledge of it. As with my calculator, I wanted to first spend time getting the look down before working on adding in the functionality.</p>
+
+<h3 id="planning-the-components">Planning the Components</h3>
+
+<p>First, I created a new React app project and planned out how my components were going to be laid out. I started by sketching out what I wanted it to look like on my whiteboard.</p>
+
+<p><img src="/assets/img/posts/writing-sprint/IMG_20200621_095306.jpg" alt="alt text" /></p>
+
+<p>The sketch on the left is the main drawing panel, and the one on the right is the modal that allows you to customize your sprint. As you can see on the left, the paragraph currently being written is highlighted, while the rest of the sprint is displayed above. I wanted to make it so that each time the user pressed enter for a new paragraph, that paragraph was added to the sprint in the “Old Paragraph” area and could no longer be edited. That way, the user would be forced to keep going and couldn’t spend too much time going back and editing.</p>
+
+<p>The modal would be very simple, with the option to have a five, ten, or fifteen minute sprint, and possibly some additional options such as what sort of prompt the user wanted. It was here that I first came up with the idea to use a piece of artwork or a quote as inspiration, rather than simply using a generic writing prompt. I felt that this would provide a more freeform direction for the user, and as I’ve often felt that writing prompts are too bland to generate good writing, this seemed like an interesting alternative.</p>
+
+<p>Now that I had my basic look, I began to code. I started by creating a bunch of empty React components to outline how I wanted my structure to look.</p>
+
+<p><img src="/assets/img/posts/writing-sprint/sprint-outline.png" alt="alt text" /></p>
+
+<p>At this point, the app was essentially a table of contents, but the basic structure can be seen. There will be a <code class="language-plaintext highlighter-rouge">PromptWindow</code> that shows the prompt or image, also containing a <code class="language-plaintext highlighter-rouge">TimerBar</code> that shows how much time is left. Form there, there is the completed section, consisting of a list of paragraphs that have already been typed in. Finally, the <code class="language-plaintext highlighter-rouge">WritingPanel</code> is where the user actually types the current paragraph.</p>
+
+<p>I then went through and implemented the various components one by one.</p>
+
+<h3 id="coding-the-components">Coding the Components</h3>
+
+<p>The entire writing surface is surrouneded by a <code class="language-plaintext highlighter-rouge">SprintPad</code> component, which simply consists of a <code class="language-plaintext highlighter-rouge">Container</code>, a <code class="language-plaintext highlighter-rouge">Box</code>, and a <code class="language-plaintext highlighter-rouge">Paper</code>, all Material-UI components. It then holds the three main components of the pad: the <code class="language-plaintext highlighter-rouge">PromptWindow</code>, the <code class="language-plaintext highlighter-rouge">CompletedSection</code>, and the <code class="language-plaintext highlighter-rouge">WritingPanel</code>.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">SprintPad</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">return</span><span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">Container</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">my</span><span class="o">=</span><span class="p">{</span><span class="mi">2</span><span class="p">}</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">Paper</span> <span class="nx">variant</span><span class="o">=</span><span class="dl">"</span><span class="s2">outlined</span><span class="dl">"</span><span class="o">&gt;</span>
+          <span class="o">&lt;</span><span class="nx">PromptWindow</span> <span class="o">/&gt;</span>
+          <span class="o">&lt;</span><span class="nx">CompletedSection</span> <span class="o">/&gt;</span>
+          <span class="o">&lt;</span><span class="nx">WritingPanel</span> <span class="o">/&gt;</span>
+        <span class="o">&lt;</span><span class="sr">/Paper</span><span class="err">&gt;
+</span>      <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/Container</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>The <code class="language-plaintext highlighter-rouge">PromptWindow</code> itself consists of several components: an <code class="language-plaintext highlighter-rouge">ImagePrompt</code>, a <code class="language-plaintext highlighter-rouge">TextPrompt</code> and the <code class="language-plaintext highlighter-rouge">TimerBar</code>. Both the prompt components will be populated from a list, possibly using an API. The <code class="language-plaintext highlighter-rouge">TimerBar</code> shows how much time is left in the sprint; for now it has a dummy amount.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">PromptWindow</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">p</span><span class="o">=</span><span class="p">{</span><span class="mi">2</span><span class="p">}</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">Paper</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">Grid</span> <span class="nx">container</span><span class="o">&gt;</span>
+          <span class="o">&lt;</span><span class="nx">ImagePrompt</span> <span class="o">/&gt;</span>
+          <span class="o">&lt;</span><span class="nx">TextPrompt</span><span class="o">/&gt;</span>
+        <span class="o">&lt;</span><span class="sr">/Grid</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="nx">TimerBar</span> <span class="nx">progress</span><span class="o">=</span><span class="p">{</span><span class="mi">60</span><span class="p">}</span><span class="sr">/</span><span class="err">&gt;
+</span>      <span class="o">&lt;</span><span class="sr">/Paper</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">const</span> <span class="nx">TextPrompt</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">Grid</span> <span class="nx">item</span> <span class="nx">xs</span><span class="o">=</span><span class="p">{</span><span class="mi">6</span><span class="p">}</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">m</span><span class="o">=</span><span class="p">{</span><span class="mi">2</span><span class="p">}</span> <span class="nx">fontStyle</span><span class="o">=</span><span class="dl">"</span><span class="s2">italic</span><span class="dl">"</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">Typography</span> <span class="nx">align</span><span class="o">=</span><span class="dl">"</span><span class="s2">left</span><span class="dl">"</span><span class="o">&gt;</span>
+          <span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">text</span><span class="p">}</span>
+        <span class="o">&lt;</span><span class="sr">/Typography</span><span class="err">&gt;
+</span>      <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/Grid</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">const</span> <span class="nx">ImagePrompt</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">Grid</span> <span class="nx">item</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">m</span><span class="o">=</span><span class="p">{</span><span class="mi">2</span><span class="p">}</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">img</span> <span class="nx">src</span><span class="o">=</span><span class="p">{}</span> <span class="nx">height</span><span class="o">=</span><span class="p">{</span><span class="mi">200</span><span class="p">}</span><span class="sr">/</span><span class="err">&gt;
+</span>      <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/Grid</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">const</span> <span class="nx">TimerBar</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">LinearProgress</span>
+      <span class="nx">variant</span><span class="o">=</span><span class="dl">"</span><span class="s2">determinate</span><span class="dl">"</span>
+      <span class="nx">value</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">progress</span><span class="p">}</span><span class="o">&gt;</span>
+      <span class="nx">TimerBar</span>
+    <span class="o">&lt;</span><span class="sr">/LinearProgress</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>The <code class="language-plaintext highlighter-rouge">CompletedSection</code> component is just a list of <code class="language-plaintext highlighter-rouge">CompletedParagraph</code> components, each one generated when the user begins a new paragraph. For now, I put in some basic dummy text.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">CompletedSection</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">px</span><span class="o">=</span><span class="p">{</span><span class="mi">3</span><span class="p">}</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">CompletedParagraph</span> <span class="nx">text</span><span class="o">=</span><span class="dl">"</span><span class="s2">First completed paragraph</span><span class="dl">"</span><span class="o">/&gt;</span>
+      <span class="o">&lt;</span><span class="nx">CompletedParagraph</span> <span class="nx">text</span><span class="o">=</span><span class="dl">"</span><span class="s2">Second completed paragraph</span><span class="dl">"</span><span class="o">/&gt;</span>
+      <span class="o">&lt;</span><span class="nx">CompletedParagraph</span> <span class="nx">text</span><span class="o">=</span><span class="dl">"</span><span class="s2">'And now some dialogue'</span><span class="dl">"</span> <span class="o">/&gt;</span>
+    <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">const</span> <span class="nx">CompletedParagraph</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">Typography</span>
+      <span class="nx">variant</span><span class="o">=</span><span class="dl">"</span><span class="s2">body1</span><span class="dl">"</span>
+      <span class="nx">component</span><span class="o">=</span><span class="dl">"</span><span class="s2">p</span><span class="dl">"</span>
+      <span class="nx">align</span><span class="o">=</span><span class="dl">"</span><span class="s2">left</span><span class="dl">"</span>
+      <span class="nx">paragraph</span><span class="o">=</span><span class="p">{</span><span class="kc">true</span><span class="p">}</span><span class="o">&gt;</span>
+      <span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">text</span><span class="p">}</span>
+    <span class="o">&lt;</span><span class="sr">/Typography</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>Finally, the <code class="language-plaintext highlighter-rouge">WritingPanel</code> is a very simple component, consisting of a <code class="language-plaintext highlighter-rouge">TextField</code> and a few boxes to center it.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">WritingPanel</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span><span class="p">{</span>
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">m</span><span class="o">=</span><span class="p">{</span><span class="mi">2</span><span class="p">}</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">p</span><span class="o">=</span><span class="p">{</span><span class="mi">2</span><span class="p">}</span><span class="o">&gt;</span>
+          <span class="o">&lt;</span><span class="nx">TextField</span>
+            <span class="nx">fullWidth</span>
+            <span class="nx">multiline</span>
+            <span class="nx">placeholder</span><span class="o">=</span><span class="dl">"</span><span class="s2">Get inspired!</span><span class="dl">"</span>
+          <span class="o">/&gt;</span>
+      <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>All together, the components look something like this:</p>
+
+<p><img src="/assets/img/posts/writing-sprint/rough-sprint-page.png" alt="alt text" /></p>
+
+<p>It’s very simple and clean, although I might be changing some of the colors. Overall, however, I like the basic nature of it; it keeps things from being too complex and distracting you while you write. Similarly, I don’t show the actual amount of time left because I don’t want too many moving parts to catch the eye.</p>
+
+<h3 id="modal-components">Modal Components</h3>
+
+<p>I wrote out the modal that provides customization options in a similar way. I also made my first use of the <code class="language-plaintext highlighter-rouge">useStyles</code> hook that Material-UI provides, although I hope to more fully customize things later.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">useStyles</span> <span class="o">=</span> <span class="nx">makeStyles</span><span class="p">({</span>
+  <span class="na">root</span><span class="p">:</span> <span class="p">{</span>
+    <span class="na">outline</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+  <span class="p">}</span>
+<span class="p">})</span>
+
+<span class="kd">const</span> <span class="nx">SettingsModal</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">classes</span> <span class="o">=</span> <span class="nx">useStyles</span><span class="p">()</span>
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">Modal</span> <span class="nx">open</span><span class="o">=</span><span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">open</span><span class="p">}</span> <span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">m</span><span class="o">=</span><span class="p">{</span><span class="mi">3</span><span class="p">}</span> <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">root</span><span class="p">}</span><span class="o">&gt;</span>
+          <span class="o">&lt;</span><span class="nx">Paper</span> <span class="nx">variant</span><span class="o">=</span><span class="dl">"</span><span class="s2">outlined</span><span class="dl">"</span><span class="o">&gt;</span>
+            <span class="o">&lt;</span><span class="nx">SettingsTitle</span> <span class="o">/&gt;</span>
+            <span class="o">&lt;</span><span class="nx">TimePicker</span> <span class="o">/&gt;</span>
+            <span class="o">&lt;</span><span class="nx">Instructions</span> <span class="o">/&gt;</span>
+          <span class="o">&lt;</span><span class="sr">/Paper</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/Modal</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>Here, the <code class="language-plaintext highlighter-rouge">SettingsTitle</code> component simply provides the title of the modal, the <code class="language-plaintext highlighter-rouge">TimePicker</code> is the form that allows for customization, and the <code class="language-plaintext highlighter-rouge">Instructions</code> component provides a dropdown with instructions on how the app will work.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">TimePicker</code> component provides two main areas of customization: it allows the user to decide how long to write, and allows them to choose if they want an image prompt, a text prompt, both, or neither. It’s essentially a bunch of form controls and labels.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">TimePicker</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">Grid</span> <span class="nx">container</span> <span class="nx">justify</span><span class="o">=</span><span class="dl">"</span><span class="s2">center</span><span class="dl">"</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">FormControl</span>
+      <span class="nx">component</span><span class="o">=</span><span class="dl">"</span><span class="s2">fieldset</span><span class="dl">"</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">RadioGroup</span> <span class="nx">row</span> <span class="nx">value</span><span class="o">=</span><span class="dl">"</span><span class="s2">10</span><span class="dl">"</span><span class="o">&gt;</span>
+          <span class="o">&lt;</span><span class="nx">FormControlLabel</span>
+            <span class="nx">value</span><span class="o">=</span><span class="dl">"</span><span class="s2">5</span><span class="dl">"</span>
+            <span class="nx">control</span><span class="o">=</span><span class="p">{</span><span class="o">&lt;</span><span class="nx">Radio</span> <span class="o">/&gt;</span><span class="p">}</span>
+            <span class="nx">label</span><span class="o">=</span><span class="dl">"</span><span class="s2">5 minutes</span><span class="dl">"</span>
+            <span class="nx">labelPlacement</span><span class="o">=</span><span class="dl">"</span><span class="s2">bottom</span><span class="dl">"</span><span class="o">/&gt;</span>
+          <span class="o">&lt;</span><span class="nx">FormControlLabel</span>
+            <span class="nx">value</span><span class="o">=</span><span class="dl">"</span><span class="s2">10</span><span class="dl">"</span>
+            <span class="nx">control</span><span class="o">=</span><span class="p">{</span><span class="o">&lt;</span><span class="nx">Radio</span> <span class="o">/&gt;</span><span class="p">}</span>
+            <span class="nx">label</span><span class="o">=</span><span class="dl">"</span><span class="s2">10 minutes</span><span class="dl">"</span>
+            <span class="nx">labelPlacement</span><span class="o">=</span><span class="dl">"</span><span class="s2">bottom</span><span class="dl">"</span><span class="o">/&gt;</span>
+          <span class="o">&lt;</span><span class="nx">FormControlLabel</span>
+            <span class="nx">value</span><span class="o">=</span><span class="dl">"</span><span class="s2">15</span><span class="dl">"</span>
+            <span class="nx">control</span><span class="o">=</span><span class="p">{</span><span class="o">&lt;</span><span class="nx">Radio</span> <span class="o">/&gt;</span><span class="p">}</span>
+            <span class="nx">label</span><span class="o">=</span><span class="dl">"</span><span class="s2">15 minutes</span><span class="dl">"</span>
+            <span class="nx">labelPlacement</span><span class="o">=</span><span class="dl">"</span><span class="s2">bottom</span><span class="dl">"</span><span class="o">/&gt;</span>
+        <span class="o">&lt;</span><span class="sr">/RadioGroup</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">mt</span><span class="o">=</span><span class="p">{</span><span class="mi">2</span><span class="p">}</span><span class="o">&gt;</span>
+          <span class="o">&lt;</span><span class="nx">FormGroup</span> <span class="nx">row</span><span class="o">&gt;</span>
+            <span class="o">&lt;</span><span class="nx">FormControlLabel</span>
+              <span class="nx">control</span><span class="o">=</span><span class="p">{</span><span class="o">&lt;</span><span class="nx">Checkbox</span> <span class="nx">checked</span><span class="o">/&gt;</span><span class="p">}</span>
+              <span class="nx">label</span><span class="o">=</span><span class="dl">"</span><span class="s2">Include image</span><span class="dl">"</span><span class="o">/&gt;</span>
+            <span class="o">&lt;</span><span class="nx">FormControlLabel</span>
+              <span class="nx">control</span><span class="o">=</span><span class="p">{</span><span class="o">&lt;</span><span class="nx">Checkbox</span> <span class="nx">checked</span><span class="o">/&gt;</span><span class="p">}</span>
+              <span class="nx">label</span><span class="o">=</span><span class="dl">"</span><span class="s2">Include excerpt</span><span class="dl">"</span><span class="o">/&gt;</span>
+          <span class="o">&lt;</span><span class="sr">/FormGroup</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">mt</span><span class="o">=</span><span class="p">{</span><span class="mi">2</span><span class="p">}</span><span class="o">&gt;</span>
+          <span class="o">&lt;</span><span class="nx">Button</span>
+            <span class="nx">variant</span><span class="o">=</span><span class="dl">"</span><span class="s2">contained</span><span class="dl">"</span>
+            <span class="nx">fullWidth</span><span class="o">&gt;</span>
+            <span class="nx">Get</span> <span class="nx">Started</span><span class="o">!</span>
+          <span class="o">&lt;</span><span class="sr">/Button</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="sr">/Box</span><span class="err">&gt;
+</span>      <span class="o">&lt;</span><span class="sr">/FormControl</span><span class="err">&gt;
+</span>    <span class="o">&lt;</span><span class="sr">/Grid</span><span class="err">&gt;
+</span>  <span class="p">)</span>
+<span class="p">}</span></code></pre></figure>
+
+<p>The <code class="language-plaintext highlighter-rouge">Instructions</code> component makes use of an <code class="language-plaintext highlighter-rouge">ExpansionPanel</code> componet and the <code class="language-plaintext highlighter-rouge">useStyles</code> hook to create a small dropdown menu that explains how the app works. Since the app is pretty simple, I don’t think it will need much more than this, but if I get feedback requesting additional information, I may change this.</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">useStyles</span> <span class="o">=</span> <span class="nx">makeStyles</span><span class="p">({</span>
+  <span class="na">outer</span><span class="p">:</span> <span class="p">{</span>
+    <span class="na">boxShadow</span><span class="p">:</span> <span class="dl">"</span><span class="s2">none</span><span class="dl">"</span><span class="p">,</span>
+  <span class="p">},</span>
+  <span class="na">panel</span><span class="p">:</span> <span class="p">{</span>
+    <span class="na">fontSize</span><span class="p">:</span> <span class="dl">"</span><span class="s2">1rem</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">color</span><span class="p">:</span> <span class="dl">"</span><span class="s2">darkgray</span><span class="dl">"</span>
+  <span class="p">},</span>
+  <span class="na">panelText</span><span class="p">:</span> <span class="p">{</span>
+    <span class="na">color</span><span class="p">:</span> <span class="dl">"</span><span class="s2">black</span><span class="dl">"</span>
+  <span class="p">}</span>
+<span class="p">})</span>
+
+<span class="kd">const</span> <span class="nx">Instructions</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">classes</span> <span class="o">=</span> <span class="nx">useStyles</span><span class="p">()</span>
+  <span class="k">return</span><span class="p">(</span>
+    <span class="o">&lt;</span><span class="nx">Box</span> <span class="nx">mt</span><span class="o">=</span><span class="p">{</span><span class="mi">2</span><span class="p">}</span> <span class="nx">mb</span><span class="o">=</span><span class="p">{</span><span class="mi">1</span><span class="p">}</span><span class="o">&gt;</span>
+    <span class="o">&lt;</span><span class="nx">Grid</span> <span class="nx">container</span> <span class="nx">justify</span><span class="o">=</span><span class="dl">"</span><span class="s2">center</span><span class="dl">"</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">ExpansionPanel</span> <span class="nx">className</span> <span class="o">=</span> <span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">outer</span><span class="p">}</span><span class="o">&gt;</span>
+        <span class="o">&lt;</span><span class="nx">ExpansionPanelSummary</span> <span class="nx">className</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">panel</span><span class="p">}</span><span class="o">&gt;</span>
+            <span class="nx">How</span> <span class="nx">does</span> <span class="k">this</span> <span class="nx">work</span><span class="p">?</span>
+        <span class="o">&lt;</span><span class="sr">/ExpansionPanelSummary</span><span class="err">&gt;
+</span>        <span class="o">&lt;</span><span class="nx">ExpansionPanelDetails</span> <span class="nx">classname</span><span class="o">=</span><span class="p">{</span><span class="nx">classes</span><span class="p">.</span><span class="nx">panelText</span><span class="p">}</span><span class="o">&gt;</span>
+            <span class="nx">Simply</span> <span class="nx">decide</span> <span class="nx">how</span> <span class="nx">long</span> <span class="nx">you</span> <span class="nx">want</span> <span class="nx">to</span> <span class="nx">write</span> <span class="k">for</span><span class="p">,</span> <span class="nx">and</span> <span class="p">[</span><span class="nx">NAME</span><span class="p">]</span> <span class="nx">will</span> <span class="nx">begin</span> <span class="nx">to</span> <span class="nx">count</span> <span class="nx">down</span><span class="p">.</span> <span class="nx">To</span> <span class="nx">encourage</span> <span class="nx">writing</span> <span class="k">as</span> <span class="nx">fast</span> <span class="k">as</span> <span class="nx">possible</span><span class="p">,</span> <span class="nx">you</span> <span class="nx">won</span><span class="dl">'</span><span class="s1">t be
+            able to delete any paragraph once you have completed it. If selected, a quote and a picture will be provided at random for inspiration,
+            but you can deselect these options or just ignore them if your muse takes you elsewhere.
+        &lt;/ExpansionPanelDetails&gt;
+      &lt;/ExpansionPanel&gt;
+    &lt;/Grid&gt;
+    &lt;/Box&gt;
+  )
+}</span></code></pre></figure>
+
+<p>Taken together, the modal looks like this:</p>
+
+<p><img src="/assets/img/posts/writing-sprint/sprint-modal.png" alt="alt text" /></p>
+
+<p>It’s simple and gets the job done.</p>
+
+<h3 id="conclusions">Conclusions</h3>
+
+<p>I will probably make a few changes to this design before all is said and done, most notably with the color scheme. I find that darker colors provide a better inspiration with this sort of thing. But I like the basic look and I think that I have enough pieces in place to begin adding functionality. Overall I have enjoyed this project so far; it’s expanded my familiarity with Material-UI components and my ability to sketch out layouts has improved. Looking forward to putting in the guts, so keep an eye out for that in my next post.</p>
+
+</div>
+
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
+    </div>
+    </div>
+  </body>
+</html>
