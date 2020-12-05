@@ -8,9 +8,25 @@ body {
 header {
   display: flex;
   background-color: burlywood;
-  padding: .75rem;
+  padding: .75rem 5rem;
 }
 
+@media (max-width: 1200px) {
+  .content > .container {
+    margin: 0 1.5rem;
+  }
+  .content > header {
+    padding: .75rem 1.5rem;
+  }
+
+  .container > .projects {
+    margin: .5rem 1rem .5rem 0;
+  }
+
+  .container > .blog {
+    margin: 4.5rem .5rem .5rem 1rem;
+  }
+}
 
 
 li {
@@ -48,14 +64,17 @@ a:hover {
   justify-content: space-around;
   align-items: flex-start;
   box-sizing: border-box;
+  margin: 0 5rem;
 }
 
 @media (max-width: 480px){
-  .container {
+  .content > .container {
     flex-wrap: wrap;
+    margin: 0 .5rem;
   }
-  .projects {
-    width: 95vw;
+  .container > .projects {
+    width: 100%;
+    margin: .5rem;
   }
 
 }
@@ -70,7 +89,7 @@ a:hover {
 }
 
 .projects {
-  margin: .5rem;
+  margin: .5rem .5rem .5rem 0;
 }
 
 .projects h2 {
@@ -88,22 +107,23 @@ a:hover {
 .projects li {
   margin: .5rem 0;
   background-color: #F6DCB9;
-  padding: .5rem;
+  padding: .5rem 1rem;
   border-radius: 3px;
 
 }
 
 
 .blog {
-  margin: 4.5rem .5rem .5rem .5rem;
+  margin: 4.5rem .5rem .5rem 0;
   padding: .5rem;
   border-radius: 3px;
   background-color: #EEDFFB;
 }
 
 @media (max-width: 480px) {
-  .blog {
-    margin: .5rem;
+  .container > .blog {
+    margin: .5rem 0;
+    box-sizing: border-box;
   }
 }
 
@@ -145,7 +165,7 @@ a:hover {
 }
 
 .small-nav-img {
-  margin-top: .75rem;
+  margin: .75rem .5rem 0 0;
   text-decoration: none;
   transition: all .1s ease-in-out;
 }

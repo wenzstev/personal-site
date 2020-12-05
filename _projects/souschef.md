@@ -6,6 +6,7 @@ images:
   - /assets/img/projects/souschef-1.png
   - /assets/img/projects/souschef-2.png
   - /assets/img/projects/souschef-3.png
+order: 2
 ---
 
 Grocery trip planning application. Uses natural language processing to parse ingredients from provided recipes. Recipes can be combined into grocery lists, eliminating duplicate ingredients.

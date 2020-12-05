@@ -1,10 +1,6 @@
 collections:
   projects:
-    order:
-      - anomalies.md
-      - souschef.md
-      - easydraft.md
-      - ner-annotation-helper.md
+    sort_by: order
 
 excerpt_separator: <!--more-->
 

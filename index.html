@@ -2,7 +2,7 @@
 title: Home
 ---
 <header>
-<img src="/assets/img/cropped_picture.jpg" class="title-image" />
+  <img src="/assets/img/cropped_picture.jpg" class="title-image" />
   <div class="subsection">
     <h1 class="heading">Steve Wenzel</h1>
     <h3 class="subheading">Full Stack Developer</h3>
@@ -25,7 +25,12 @@ title: Home
         {{project.content | markdownify }}
         <div class="project-pictures">
           {% for image in project.images %}
-            <img onClick="enlarge(this)" src="{{image}}" />
+            <div class="hover-container">
+              <div class="hover-pointer" onClick="enlarge(this.nextElementSibling)">
+                <span>Expand</span>
+              </div>
+              <img src="{{image}}" />
+            </div>
           {% endfor %}
         </div>
         {% if project.live_site %}
