@@ -1,0 +1,122 @@
+I"h)<p>ERN: Because MongoDB comes next. <!--more--></p>
+
+<p>In this post I want to quickly run over my stack and explain the process I used to set up and deploy a barebones Express, Node, and React project. By the end of this tutorial, you’ll know how to make <a href="http://jobhound.stevenwenzel.com">this</a>. It’s the skeleton for my new project, <a href="/2020/12/11/JobHound-Intro.html">JobHound</a>. Because that link is going to be changing regularly, I’m including a screenshot here of what it looks like at the time of this post:</p>
+
+<p><img src="/assets/img/posts/mern/basic-ern.png" alt="Image showing two lines of text. The first line reads: &quot;And now, an important message from the backend:&quot; The second line reads: &quot;Hello frontend!&quot;" /></p>
+
+<p>This may look like an extremely simple site (and it is), but under the hood there’s more here than you think. This app features:</p>
+
+<ul>
+  <li>a backend built with NodeJS and Express,</li>
+  <li>a frontend built with React using <code class="language-plaintext highlighter-rouge">create-react-app</code>,</li>
+  <li>communication between the frontend and backend using the <code class="language-plaintext highlighter-rouge">axios</code> library, with conditional rendering based on the success or failure of that communication</li>
+</ul>
+
+<p>The whole thing is deployed using my <a href="https://www.digitalocean.com/">DigitalOcean</a> droplet, with a combination of Nginx and pm2.</p>
+
+<p>It’s a lot of the busy work of putting together a project like this, and my goal is to get it out of the way first so I can focus on what I really like: coding.</p>
+
+<p>So, without further ado, let’s get into it!</p>
+
+<h3 id="part-1-creating-the-backend">Part 1: Creating the Backend</h3>
+
+<p>For this part, you will need:</p>
+
+<ul>
+  <li>NodeJS installed on your computer (if you aren’t familiar with NodeSJ, check out <a href="https://nodejs.org/en/">their website</a>)</li>
+  <li>familiarity with JavaScript</li>
+  <li>basic comfort with the command line and using package managers (NPM in this case)</li>
+</ul>
+
+<p>To get started, we’ll first initialize an empty folder in the directory we want to store the project. You can do this in a file explorer or use the <code class="language-plaintext highlighter-rouge">mkdir</code> command, your choice.</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">mkdir new-project</span></code></pre></figure>
+
+<p><em>(You can replace “new-project” with the name of the project you’re making.)</em></p>
+
+<p>Because our application has a split frontend and backend, we’ll need to initialize each project separately. They’ll both be Node applications, but will feature a different set of dependencies and thus require different directories and <code class="language-plaintext highlighter-rouge">package.json</code> files.</p>
+
+<p>We’ll build the backend first. Navigate into your new folder using the <code class="language-plaintext highlighter-rouge">cd</code> command and make a <em>second</em> folder inside the first:</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">cd new-project
+mkdir backend</span></code></pre></figure>
+
+<p>From there, we’ll initialize a new node program using <code class="language-plaintext highlighter-rouge">npm init</code>. This will ask you a couple of quiestions, and you can respond to them with whatever relevant information you have for your project (or just skip them entirely).</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">npm init </span></code></pre></figure>
+
+<p>Next, we have to install some packages. Our backend will primairly use Express, so we’ll start there. Additionally, we’ll want to install the node CORS package (allowing the frontend and the backend to communicate from different origins), and the nodemon package, which will automaticaly reload the server when changes are detected.</p>
+
+<p>You can install them all at once, like so:</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">npm install express cors nodemon</span></code></pre></figure>
+
+<p>With the setup out of the way, let’s code our backend! It’s extremely simple, and will take about two minutes:</p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">express</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">express</span><span class="dl">'</span><span class="p">)</span>
+<span class="kd">const</span> <span class="nx">cors</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">"</span><span class="s2">cors</span><span class="dl">"</span><span class="p">)</span>
+
+<span class="kd">var</span> <span class="nx">app</span> <span class="o">=</span> <span class="nx">express</span><span class="p">()</span>
+<span class="nx">app</span><span class="p">.</span><span class="nx">use</span><span class="p">(</span><span class="nx">cors</span><span class="p">())</span>
+
+
+<span class="nx">app</span><span class="p">.</span><span class="kd">get</span><span class="p">(</span><span class="dl">'</span><span class="s1">/api</span><span class="dl">'</span><span class="p">,</span> <span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span><span class="o">=&gt;</span><span class="nx">res</span><span class="p">.</span><span class="nx">json</span><span class="p">(</span><span class="dl">"</span><span class="s2">Hello frontend!</span><span class="dl">"</span><span class="p">));</span>
+
+<span class="nx">app</span><span class="p">.</span><span class="nx">listen</span><span class="p">(</span><span class="mi">5002</span><span class="p">)</span></code></pre></figure>
+
+<p>That’s it! Let’s break down what we’re doing here.</p>
+
+<p>First, bring in our two main packages, <code class="language-plaintext highlighter-rouge">express</code> and <code class="language-plaintext highlighter-rouge">cors</code> using the <code class="language-plaintext highlighter-rouge">require()</code> method. Our app is then intialized (<code class="language-plaintext highlighter-rouge">var app = express()</code>) and given the CORS middleware to use (<code class="language-plaintext highlighter-rouge">app.use(cors())</code>).</p>
+
+<p>Then, we create a single route at <code class="language-plaintext highlighter-rouge">/api</code>. This route, when accessed, sends a single JSON message. That little proof of communication is all we need to do right now, but it will provide the foundation for the rest of our backend calls.</p>
+
+<p>And that’s it! We’ve created the skeleton of our backend. Now it’s time to do the same for the frontend.</p>
+
+<h3 id="part-2-creating-the-frontend">Part 2: Creating the Frontend</h3>
+
+<p>First, navigate back to the main directory of your project. If you still have your previous terminal window open, you can use the command</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">cd ..</span></code></pre></figure>
+
+<p>to go back. Now, we’re going to create the frontend. Setting up React on our own requires quite a bit of finangling, but luckily the creators of the framework have provided a handy command that streamlines the process.</p>
+
+<p>In the command line, type the following:</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">npx create-react-app client</span></code></pre></figure>
+
+<p>Sit back for a minute or two while the command does it’s thing. This will probably be the longest single command you’ll run.</p>
+
+<p>What does it do? Let’s break it down word by word.</p>
+
+<ul>
+  <li>
+    <p><code class="language-plaintext highlighter-rouge">npx</code> is a tool used to execute node packages. We don’t use <code class="language-plaintext highlighter-rouge">npm</code> becuase we want to do more than just install packages; we want to create the scaffolding for a project.</p>
+  </li>
+  <li>
+    <p><code class="language-plaintext highlighter-rouge">create-react-app</code> is the name of the package to execute. Behind the scenes, it installs a number of different packages and configures them, taking care of the hard parts of setting up a React project and letting us focus on coding.</p>
+  </li>
+  <li>
+    <p><code class="language-plaintext highlighter-rouge">client</code> is the name of our React project. In practical terms, this is the name of the folder that <code class="language-plaintext highlighter-rouge">create-react-app</code> will install React in.</p>
+  </li>
+</ul>
+
+<p>When the command is finished running, navigate into the new folder and start the React project like so:</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">cd client
+npm start</span></code></pre></figure>
+
+<p>This should produce a page that will be quite familiar to anyone who has used <code class="language-plaintext highlighter-rouge">create-react-app</code> before.</p>
+
+<p><img src="/assets/img/posts/mern/create-react-app.png" alt="Default screen for create-react-app function. Shows a grey background with a blue atom symbol. Text on the bottom reads: &quot;Edit src/App.js and save to reload" /></p>
+
+<p><em>(Thanks to <a href="https://medium.com/@danielgwilson/https-and-create-react-app-3a30ed31c904">this post</a> for the picture, since I forgot to get one myself.)</em></p>
+
+<p>We don’t need most of this, so open <code class="language-plaintext highlighter-rouge">App.js</code> in the <code class="language-plaintext highlighter-rouge">src</code> folder and delete most of what’s there.</p>
+
+<p>Before we leave the terminal, though, we need to install one more package: <a href="https://www.npmjs.com/package/axios">axios</a> is an HTTP client for the browser that’s a bit easier to work with than the built-in <code class="language-plaintext highlighter-rouge">fetch()</code> method.</p>
+
+<p>Let’s go ahead and install that now the same way we installed the packeges in the backend. Hit Control-C to stop the server (we don’t need it yet). Then type the following command.</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">npm install axios</span></code></pre></figure>
+
+:ET

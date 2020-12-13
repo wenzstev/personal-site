@@ -78,11 +78,17 @@ small { font-style: italic; color: darkslategray; font-size: .75rem; }
 
 .post a { color: darkgray; }
 
+.post img { width: 100%; }
+
+.post ul { padding-inline-start: 1.5rem; }
+
+.post li { list-style-type: disc; margin-bottom: .5rem; }
+
 .blog-container { margin: auto; }
 
 .blog-header { width: 600px; }
 
-@media only screen and (max-width: 600px) { .blog-header { width: 95vw; } .blog-container { margin: 0; } }
+@media only screen and (max-width: 600px) { .blog-header { width: 100%; } .blog-container { margin: 0; } }
 
 .margin { margin: 1rem; }
 

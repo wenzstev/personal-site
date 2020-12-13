@@ -18,6 +18,19 @@ small {
   color: darkgray;
 }
 
+.post img {
+  width: 100%;
+}
+
+.post ul {
+  padding-inline-start: 1.5rem;
+}
+
+.post li {
+  list-style-type: disc;
+  margin-bottom: .5rem;
+}
+
 .blog-container {
   margin: auto;
 }
@@ -28,7 +41,7 @@ small {
 
 @media only screen and (max-width: 600px) {
   .blog-header {
-    width: 95vw;
+    width: 100%;
   }
   .blog-container {
     margin: 0;

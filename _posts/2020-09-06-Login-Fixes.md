@@ -40,7 +40,7 @@ This became the basis for all additional informational pages.
 
 Next, I refactored out the "Go Back" and "Go Home" buttons from my 404 page into a new component, `WrongTurnNavOptions`.
 
-{% highlight javascript %}
+{% highlight jsx %}
 const WrongTurnNavOptions = (props) => {
   const history = useHistory()
   return (
@@ -69,7 +69,7 @@ export default withRouter(WrongTurnNavOptions)
 
 I combined this with the `BasicInfoPage` to create a generic "error" page, `WrongTurnPage.`
 
-{% highlight javascript %}
+{% highlight jsx %}
 const WrongTurnPage = (props) => {
   const classes = useStyles()
   const history = useHistory()
@@ -84,7 +84,7 @@ const WrongTurnPage = (props) => {
 
 Finally, I was able to recreate the 404 page using these new components.
 
-{% highlight javascript %}
+{% highlight jsx %}
 
 const NotFoundPage = () => {
   return (
@@ -104,7 +104,7 @@ export default NotFoundPage
 
 I then created a new page, `NotYourResource`, which would be displayed whenever a user tried to access a list or recipe that they had not created.
 
-{% highlight javascript %}
+{% highlight jsx %}
 const NotYourResource = (props) => {
   return (
     <WrongTurnPage>

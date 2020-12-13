@@ -1,28 +1,4 @@
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta content="width=device-width, initial-scale=1" name="viewport" />
-    <title>More Users and a Better Login</title>
-    <link rel="stylesheet" href="/assets/css/styles.css">
-    <link rel="preconnect" href="https://fonts.gstatic.com">
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
-  </head>
-  <body>
-    <div class="full-page">
-    <div class="content">
-    <header>
-  <div class="blog-container">
-  <div class="blog-header">
-      <h2>More Users and a Better Login</h2>
-      <small>06 Sep 2020</small>
-  </div>
-  </div>
-</header>
-
-
-<div class="post">
-<p>This post is split into two main areas of fixes: governing what to do when a user attempts to access resources that don’t belong to them, and creating a more responsive login process.</p>
+I"k�<p>This post is split into two main areas of fixes: governing what to do when a user attempts to access resources that don’t belong to them, and creating a more responsive login process.</p>
 
 <h3 id="user-interaction">User Interaction</h3>
 
@@ -113,19 +89,19 @@
 
 <p>I then created a new page, <code class="language-plaintext highlighter-rouge">NotYourResource</code>, which would be displayed whenever a user tried to access a list or recipe that they had not created.</p>
 
-<figure class="highlight"><pre><code class="language-jsx" data-lang="jsx"><span class="kd">const</span> <span class="nx">NotYourResource</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">NotYourResource</span> <span class="o">=</span> <span class="p">(</span><span class="nx">props</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
   <span class="k">return</span> <span class="p">(</span>
-    <span class="p">&lt;</span><span class="nc">WrongTurnPage</span><span class="p">&gt;</span>
-      <span class="p">&lt;</span><span class="nc">Typography</span><span class="p">&gt;</span>
-        Sorry, but this <span class="si">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">resource</span><span class="si">}</span> doesn't belong to you. In the future, we
+    <span class="o">&lt;</span><span class="nx">WrongTurnPage</span><span class="o">&gt;</span>
+      <span class="o">&lt;</span><span class="nx">Typography</span><span class="o">&gt;</span>
+        <span class="nx">Sorry</span><span class="p">,</span> <span class="nx">but</span> <span class="k">this</span> <span class="p">{</span><span class="nx">props</span><span class="p">.</span><span class="nx">resource</span><span class="p">}</span> <span class="nx">doesn</span><span class="dl">'</span><span class="s1">t belong to you. In the future, we
         hope to allow use of recipes and lists created by other users, but this
         is not currently supported.
-      <span class="p">&lt;/</span><span class="nc">Typography</span><span class="p">&gt;</span>
-    <span class="p">&lt;/</span><span class="nc">WrongTurnPage</span><span class="p">&gt;</span>
-  <span class="p">)</span>
-<span class="p">}</span>
+      &lt;/Typography&gt;
+    &lt;/WrongTurnPage&gt;
+  )
+}
 
-<span class="k">export</span> <span class="k">default</span> <span class="nx">NotYourResource</span></code></pre></figure>
+export default NotYourResource</span></code></pre></figure>
 
 <p>Doing it this way created a standard look for all of my error pages, which I liked. But I wasn’t finished: I still needed the server to actually check if the accessed list or recipe belonged to the user or not. I implemented this in a similar way to how I implemented the 404 page for recipe and lists, just one step later in the process. After recieving the resource, the app checks if the <code class="language-plaintext highlighter-rouge">id</code> of the user is the same as the <code class="language-plaintext highlighter-rouge">creator_id</code> of the resource. If not, it displays the <code class="language-plaintext highlighter-rouge">NotYourResource</code> page instead of the recipe. From the <code class="language-plaintext highlighter-rouge">EditRecipePage</code> (implementation is identical for lists):</p>
 
@@ -293,21 +269,4 @@
     <p>Documentation</p>
   </li>
 </ul>
-
-</div>
-
-<footer>
-  <div class="footer-spread">
-  <span><a href="/index.html">Home</a></span>
-  <span><a href="/blog">Blog</a></span>
-  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
-  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
-  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
-  </div>
-</footer>
-
-
-    </div>
-    </div>
-  </body>
-</html>
+:ET

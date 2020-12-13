@@ -1,0 +1,54 @@
+I"�<p>ERN: Because MongoDB comes next. <!--more--></p>
+
+<p>In this post I want to quickly run over my stack and explain the process I used to set up and deploy a barebones Express, Node, and React project. By the end of this tutorial, you’ll know how to make <a href="http://jobhound.stevenwenzel.com">this</a>. It’s the skeleton for my new project, <a href="/2020/12/11/JobHound-Intro.html">JobHound</a>. Because that link is going to be changing regularly, I’m including a screenshot here of what it looks like at the time of this post:</p>
+
+<p><img src="/assets/img/posts/mern/basic-ern.png" alt="Image showing two lines of text. The first line reads: &quot;And now, an important message from the backend:&quot; The second line reads: &quot;Hello frontend!&quot;" /></p>
+
+<p>This may look like an extremely simple site (and it is), but under the hood there’s more here than you think. This app features:</p>
+
+<ul>
+  <li>a backend built with NodeJS and Express,</li>
+  <li>a frontend built with React using <code class="language-plaintext highlighter-rouge">create-react-app</code>,</li>
+  <li>communication between the frontend and backend using the <code class="language-plaintext highlighter-rouge">axios</code> library, with conditional rendering based on the success or failure of that communication</li>
+</ul>
+
+<p>The whole thing is deployed using my <a href="https://www.digitalocean.com/">DigitalOcean</a> droplet, with a combination of Nginx and pm2.</p>
+
+<p>It’s a lot of the busy work of putting together a project like this, and my goal is to get it out of the way first so I can focus on what I really like: coding.</p>
+
+<p>So, without further ado, let’s get into it!</p>
+
+<h3 id="part-1-creating-the-application">Part 1: Creating the Application</h3>
+
+<p>For this part, you will need:</p>
+
+<ul>
+  <li>NodeJS installed on your computer (if you aren’t familiar with NodeSJ, check out <a href="https://nodejs.org/en/">their website</a>)</li>
+  <li>familiarity with JavaScript</li>
+  <li>basic comfort with the command line and using package managers (NPM in this case)</li>
+</ul>
+
+<p>To get started, we’ll first initialize an empty folder in the directory we want to store the project. You can do this in a file explorer or use the <code class="language-plaintext highlighter-rouge">mkdir</code> command, your choice.</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">mkdir new-project</span></code></pre></figure>
+
+<p><em>(You can replace “new-project” with the name of the project you’re making.)</em></p>
+
+<p>Because our application has a split frontend and backend, we’ll need to initialize each project separately. They’ll both be Node applications, but will feature a different set of dependencies and thus require different directories and <code class="language-plaintext highlighter-rouge">package.json</code> files.</p>
+
+<p>We’ll build the backend first. Navigate into your new folder using the <code class="language-plaintext highlighter-rouge">cd</code> command and make a <em>second</em> folder inside the first:</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">cd new-project
+mkdir backend</span></code></pre></figure>
+
+<p>From there, we’ll initialize a new node program using <code class="language-plaintext highlighter-rouge">npm init</code>. This will ask you a couple of quiestions, and you can respond to them with whatever relevant information you have for your project (or just skip them entirely).</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">npm init </span></code></pre></figure>
+
+<p>Next, we have to install some packages. Our backend will primairly use Express, so we’ll start there. Additionally, we’ll want to install the node CORS package (allowing the frontend and the backend to communicate from different origins), and the nodemon package, which will automaticaly reload the server when changes are detected.</p>
+
+<p>You can install them all at once, like so:</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">npm install express cors nodemon</span></code></pre></figure>
+
+:ET

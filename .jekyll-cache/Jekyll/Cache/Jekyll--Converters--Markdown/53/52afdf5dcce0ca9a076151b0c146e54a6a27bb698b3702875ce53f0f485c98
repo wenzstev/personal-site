@@ -1,28 +1,4 @@
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta content="width=device-width, initial-scale=1" name="viewport" />
-    <title>More Users and a Better Login</title>
-    <link rel="stylesheet" href="/assets/css/styles.css">
-    <link rel="preconnect" href="https://fonts.gstatic.com">
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
-  </head>
-  <body>
-    <div class="full-page">
-    <div class="content">
-    <header>
-  <div class="blog-container">
-  <div class="blog-header">
-      <h2>More Users and a Better Login</h2>
-      <small>06 Sep 2020</small>
-  </div>
-  </div>
-</header>
-
-
-<div class="post">
-<p>This post is split into two main areas of fixes: governing what to do when a user attempts to access resources that don‚Äôt belong to them, and creating a more responsive login process.</p>
+I"πÅ<p>This post is split into two main areas of fixes: governing what to do when a user attempts to access resources that don‚Äôt belong to them, and creating a more responsive login process.</p>
 
 <h3 id="user-interaction">User Interaction</h3>
 
@@ -293,21 +269,4 @@
     <p>Documentation</p>
   </li>
 </ul>
-
-</div>
-
-<footer>
-  <div class="footer-spread">
-  <span><a href="/index.html">Home</a></span>
-  <span><a href="/blog">Blog</a></span>
-  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
-  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
-  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
-  </div>
-</footer>
-
-
-    </div>
-    </div>
-  </body>
-</html>
+:ET
