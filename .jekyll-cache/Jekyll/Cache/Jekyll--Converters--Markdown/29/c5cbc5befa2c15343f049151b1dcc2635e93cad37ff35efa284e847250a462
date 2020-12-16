@@ -1,28 +1,4 @@
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta content="width=device-width, initial-scale=1" name="viewport" />
-    <title>How to Set Up and Deploy a Dead-Simple ERN App Part 1 - Creating the App</title>
-    <link rel="stylesheet" href="/assets/css/styles.css">
-    <link rel="preconnect" href="https://fonts.gstatic.com">
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
-  </head>
-  <body>
-    <div class="full-page">
-    <div class="content">
-    <header>
-  <div class="blog-container">
-  <div class="blog-header">
-      <h2>How to Set Up and Deploy a Dead-Simple ERN App Part 1 - Creating the App</h2>
-      <small>12 Dec 2020</small>
-  </div>
-  </div>
-</header>
-
-
-<div class="post">
-<p>ERN: Because MongoDB comes next. <!--more--></p>
+I"k?<p>ERN: Because MongoDB comes next. <!--more--></p>
 
 <p>In this post I want to quickly run over my stack and explain the process I used to set up and deploy a barebones Express, Node, and React project. By the end of this tutorial, you’ll know how to make <a href="http://jobhound.stevenwenzel.com">this</a>. It’s the skeleton for my new project, <a href="/2020/12/11/JobHound-Intro.html">JobHound</a>. Because that link is going to be changing regularly, I’m including a screenshot here of what it looks like at the time of this post:</p>
 
@@ -189,21 +165,4 @@ npm start</span></code></pre></figure>
 
 <p>Congragulations! You have successfully created a functional frontend and backend that speak to each other, and laid the groundwork for a much more complex project. In part 2 of this tutorial (coming in the next few days), we’ll learn how to host it.</p>
 
-
-</div>
-
-<footer>
-  <div class="footer-spread">
-  <span><a href="/index.html">Home</a></span>
-  <span><a href="/blog">Blog</a></span>
-  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
-  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
-  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
-  </div>
-</footer>
-
-
-    </div>
-    </div>
-  </body>
-</html>
+:ET

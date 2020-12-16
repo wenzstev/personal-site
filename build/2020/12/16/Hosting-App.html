@@ -1,0 +1,243 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>How to Set Up and Deploy a Dead-Simple ERN App Part 2 - Deploying our Creation</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="full-page">
+    <div class="content">
+    <header>
+  <div class="blog-container">
+  <div class="blog-header">
+      <h2>How to Set Up and Deploy a Dead-Simple ERN App Part 2 - Deploying our Creation</h2>
+      <small>16 Dec 2020</small>
+  </div>
+  </div>
+</header>
+
+
+<div class="post">
+<p>Time to bring our baby into the cold, cruel world. <!--more--></p>
+
+<p>In <a href="/2020/12/12/How-To-Deploy-Simple-Mern.html">Part 1</a> of this tutorial, we learned how to set up a simple React frontend and Express backend. Now, in Part 2, we’ll learn how to host it. There are many, many ways to do this, but for today I’m going to be using <a href="https://digitalocean.com">DigitalOcean</a>.</p>
+
+<p>DigitalOcean has a ton of extremely good tutorials, and I’m going to be using <a href="https://www.digitalocean.com/community/tutorials/how-to-set-up-a-node-js-application-for-production-on-ubuntu-16-04">this one</a> as the backbone for this tutorial. It’s good but only covers the backend, and there are a few changes that we’ll need to make in order for both the front and back ends to be called from the same resource.</p>
+
+<h3 id="step-1-getting-your-application-on-github">Step 1: Getting Your Application on GitHub</h3>
+
+<p>In order to transfer the application to your droplet, we’re going to use Git, specifically GitHub. If you’ve never used GitHub before, you can <a href="https://github.com/join?ref_cta=Sign+up&amp;ref_loc=header+logged+out&amp;ref_page=%2F&amp;source=header-home">sign up here</a>. This isn’t a Git tutorial, but if you’ve never used the program before, you can check out some handy instructional material <a href="https://try.github.io/">here</a>. For now, we’re going to assume you have a GitHub account, and take it from there.</p>
+
+<p>Log in to your account and select the “New” button by the Repositories list, on the upper left side of the screen.</p>
+
+<p><img src="/assets/img/posts/mern/new-repo.png" alt="Picture of Github home page. The green &quot;New&quot; button is highlighted in red." /></p>
+
+<p>On the next page, name your new repo whatever you like, and provide a description if you want. Make sure that you do NOT provide a README or .gitignore. We’re going to take care of them ourselves.</p>
+
+<p><img src="/assets/img/posts/mern/new-repo-2.png" alt="Picture of the &quot;new repository&quot; page, along with instructions that mirror the ones in the previous paragraph." /></p>
+
+<p>Click “Create repository” and you should now be on the main page for your brand new repo!</p>
+
+<p>We’re going to be following the instructions there, but first you need to make a few changes to our actual project. The <code class="language-plaintext highlighter-rouge">create-react-app</code> function creates it’s own git repository, and we’re going to need to get rid of it in order to make sure everything goes smoothly.</p>
+
+<p>In your file explorer, navigate to the “client” folder that was created when you ran <code class="language-plaintext highlighter-rouge">create-react-app</code>. Depending on your settings, you should either see a <code class="language-plaintext highlighter-rouge">.git</code> file or not. If you don’t, you’ll need to show hidden files. <a href="https://support.microsoft.com/en-us/windows/view-hidden-files-and-folders-in-windows-10-97fbc472-c603-9d90-91d0-1166d1d9f4b5#:~:text=Open%20File%20Explorer%20from%20the,folders%2C%20and%20drives%20and%20OK.">Here’s how to do it on Windows</a></p>
+
+<p>When you’ve found the .git file, just delete it. That’s all you need to do to get rid of the repo there.</p>
+
+<p>You should also see a “.gitignore” file. Rather than delete it, we’re going to move it up a folder and modify it to be our own gitignore.</p>
+
+<p>Move the file up into your main project folder, and alter it so that it reads as follows:</p>
+
+<figure class="highlight"><pre><code class="language-escape" data-lang="escape"># See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+client/node_modules/
+backend/node_modules/
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# production
+client/build
+
+# misc
+.DS_Store
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*</code></pre></figure>
+
+<p>The main change we made here is to change the default <code class="language-plaintext highlighter-rouge">/node_modules/</code> path to work for both the <code class="language-plaintext highlighter-rouge">client</code> and the <code class="language-plaintext highlighter-rouge">backend</code> folders. Otherwise, we’d be committing all of our Node packages to the git repository, which would be a huge waste of space.</p>
+
+<p>When you’re finished, it’s time to create the actual repo that we’re going to be using. In your terminal screen, navigate to the main project folder and initialize a new git repository with this command:</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">git init</span></code></pre></figure>
+
+<p>This will create the new repository, and the .gitignore file you modifed will automatically be used for the repository.</p>
+
+<p>Now we’ve created our repo, but we still need to get it on the internet. To do this, return to the main page of the repo you just created. There will be several options for how to populate this repo, and we’re going to use the second one on the list (“push an existing repository from the command line”).</p>
+
+<p><img src="/assets/img/posts/mern/push-repo-to-github.png" alt="Page of instructions for how to set up the Github repository. The second optoon on the list, &quot;push an existing repository from the command line&quot; is highlighted." /></p>
+
+<p>The commands you see here are to be done in your main git folder. You should still have it open in your console screen, so enter the commands as you see them in the example above (or in your own repository instructions):</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">git remote add origin https://github.com/[your-username]/[repo-name].git
+git branch -M main 
+git push -u origin main</span></code></pre></figure>
+
+<p>In the example above, the bracketed information should be replaced with your particular username and repo name. Using the <code class="language-plaintext highlighter-rouge">git branch</code> command creates a new branch in the repository, and <code class="language-plaintext highlighter-rouge">git push -u origin main</code> pushes the information in the repository to your new branch.</p>
+
+<p>If everything was done right, you should be able to refresh the page and see your repository information online.</p>
+
+<p>Congragulations! Your app is now hosted on Github, and can be cloned to any machine, phyiscal or otherwise. Now, we need to get it on your droplet.</p>
+
+<h3 id="step-2-upload-your-application-onto-your-droplet">Step 2: Upload your application onto your droplet</h3>
+
+<p>For this step, you will need a DigitalOcean droplet running Ubuntu and a domain name that you control. Getting both is outside the scope of this tutorial, but you can use <a href="https://www.digitalocean.com/docs/droplets/how-to/create/">this</a> tutorial as a guide for how to set it up. When you’ve finished doing so, come back here and pick up where you left off.</p>
+
+<p>…finished? Excellent. Now that you’ve got your droplet, let’s get your repo on it.</p>
+
+<p>First, make sure that git is installed on your machine.</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">sudo apt-get update
+sudo apt-get install git </span></code></pre></figure>
+
+<p>Then, navigate to the folder that you want your repo to be installed on. I generally use my home folder. From there, you need to clone your repository into the folder. You can do this using the command</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">git clone https://github.com/[your-username]/[repo-name].git</span></code></pre></figure>
+
+<p>This will download the contents of the above repository into a new folder in your chosen directory. Congradulations! Your application is now uploaded into your droplet. Now it’s time to deploy it.</p>
+
+<h3 id="step-3-deploy-your-application">Step 3: Deploy your Application</h3>
+
+<p>This is actually two distinct steps: deploying the backend and deploying the frontend. Since they are split, we’ll have to do them separately, but don’t worry, the process isn’t complicated.</p>
+
+<p>First, however, we’ll need to install Node.js onto the droplet. In order to do so, we must first install the <a href="https://github.com/nodesource/distributions">NodeSource</a> package archives. Navigate to your home directory and install the latest version of NodeSource with the following command:</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">curl -sL https://deb.nodesource.com/setup_6.x -o nodesource_setup.sh</span></code></pre></figure>
+
+<p>Then, run the script with</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">sudo bash nodesource_setup.sh</span></code></pre></figure>
+
+<p>This will automatically add the NodeSource PPA to your configuration. You can now install Node.js using your packet manager:</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">sudo apt-get install nodejs</span></code></pre></figure>
+
+<p>You’ll also want to install the <code class="language-plaintext highlighter-rouge">build-essential</code> package in order to allow many of the most important npm packages to work.</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">sudo apt-get install build-essential</span></code></pre></figure>
+
+<p>Node.js has been officially installed, and it’s time to deploy our site!</p>
+
+<h4 id="start-up-the-backend">Start up the Backend</h4>
+
+<p>Let’s start with the backend. We’re going to be using <a href="https://pm2.keymetrics.io/">PM2</a>, a program that manages Node processes in the background. First, navigate to the backend folder in your console and install pm2 using the following command:</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">npm install pm2 -g</span></code></pre></figure>
+
+<p>This is similar to other node commands you’ve run, except the <code class="language-plaintext highlighter-rouge">-g</code> command installs the package globally, rather than locally to the “backend” package.</p>
+
+<p>After pm2 is finished downloading, you’ll also want to install the rest of the dependencies. These are specified in your <code class="language-plaintext highlighter-rouge">package.json</code> and can be easily installed with the command:</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">npm install</span></code></pre></figure>
+
+<p>Next, you’ll want to start your application using a pm2 command. The following command will start a new pm2 application running your server (assuming your server is named “server.js”):</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">pm2 start server.js</span></code></pre></figure>
+
+<p>This will spawn a new pm2 application and add it to pm2’s process list. Next, you’ll want to ensure that the pm2 process will restart if the system restarts. Use the <code class="language-plaintext highlighter-rouge">startup</code> command to generate and configure a script to launch pm2 and it’s processes.</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">pm2 startup systemd</span></code></pre></figure>
+
+<p>This will generate a command that you must run. Copy the command and run it exactly as specified, and pm2 will be configured to start on boot.</p>
+
+<p>And that’s it for your backend (for now). We’ll circle back around here when it’s time to bring the project together, but for now let’s look at the frontend.</p>
+
+<h4 id="deploying-the-frontend">Deploying the Frontend</h4>
+
+<p>React applications created using <code class="language-plaintext highlighter-rouge">create-react-app</code> and run with <code class="language-plaintext highlighter-rouge">npm start</code> are not optimized for deployment. Fortunatly, the creators of <code class="language-plaintext highlighter-rouge">create-react-app</code> have made this process easy. First you have to install all Node dependencies in the frontend, same as you did with the backend. Navigate to the frontend folder and run</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">npm install</span></code></pre></figure>
+
+<p>This will install the dependencies. Then, you can run</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">npm run build</span></code></pre></figure>
+
+<p>to create a production-ready build of the client.</p>
+
+<p>When the process is finished, you will see a new folder in the directory called <code class="language-plaintext highlighter-rouge">build.</code> This is the folder that that has the version of the client we actually want to run.</p>
+
+<h4 id="tying-it-together-with-nginx">Tying it together with Nginx</h4>
+
+<p>But in order to deploy it, we’ll need a server. For this tutorial, I’m going to use <a href="https://www.nginx.com/">NGINX</a>, which is popular for DigitalOcean tutorials. You should use <a href="https://www.digitalocean.com/community/tutorials/how-to-install-nginx-on-ubuntu-16-04">this tutorial</a> to install and set up Nginx on your droplet.</p>
+
+<p>Once you have Nginx installed, navigate to your <code class="language-plaintext highlighter-rouge">/etc/nginx/sites-available</code> folder. This stores all the sites that Nginx serves. We’re going to create a new file to serve our application.</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">sudo nano application.nginx </span></code></pre></figure>
+
+<p>This will open up the new file. Enter the following configuration:</p>
+
+<figure class="highlight"><pre><code class="language-escape" data-lang="escape">server {
+    server_name [yoursitename] www.[yoursitename];
+    root /home/[yourname]/client/build;
+    index index.html index.htm;
+
+    location / {
+        try_files $uri /index.html;
+    }
+
+    location /api {
+        include proxy_params;
+        proxy_pass http://localhost:5002;
+    }
+}</code></pre></figure>
+
+<p>Replace the bracked information with your personal info.</p>
+
+<p>Let’s break down what this configuration files does. The <code class="language-plaintext highlighter-rouge">server_name</code> key establishes the name of the server that the file will be searching for. The <code class="language-plaintext highlighter-rouge">root</code> key tells Nginx where to look for the entrance into the application. In this case, it’s the <code class="language-plaintext highlighter-rouge">build</code> folder that we created earlier. Specifically, it looks for the <code class="language-plaintext highlighter-rouge">index.html</code> file, as referenced on the next line.</p>
+
+<p>The two <code class="language-plaintext highlighter-rouge">location</code> keys establish the link between the front and backends. For routes beginning with “/”, Nginx directs the request to our frontend. For routes beginning with “/api”, Nginx will direct the request to our backend by using the <code class="language-plaintext highlighter-rouge">proxy_pass</code> command to pass the request along to <code class="language-plaintext highlighter-rouge">localhost:5002</code>, which is where we have the server listening.</p>
+
+<p>And that’s all the setup you need. Initialize the new server by creating a link between the <code class="language-plaintext highlighter-rouge">sites-available</code> and <code class="language-plaintext highlighter-rouge">sites-enabled</code> folders.</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">sudo ln /etc/nginx/sites-available/application.nginx /etc/nginx/sites-enabled</span></code></pre></figure>
+
+<p>Then, test your server to make sure everything is running properly.</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">sudo nginx -t</span></code></pre></figure>
+
+<p>Finally, restart the Nginx application for your changes to take effect.</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">sudo systemctl restart nginx </span></code></pre></figure>
+
+<p>If everything worked properly, you should be able to navigate to your domain name and see our project! Congragulations, your ERN stack application is officially hosted!</p>
+
+
+</div>
+
+<footer>
+  <div class="footer-spread">
+  <span><a href="/index.html">Home</a></span>
+  <span><a href="/blog">Blog</a></span>
+  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
+  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
+  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
+  </div>
+</footer>
+
+
+    </div>
+    </div>
+  </body>
+</html>
