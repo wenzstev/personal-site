@@ -74,15 +74,17 @@ small { font-style: italic; color: darkslategray; font-size: .75rem; }
 
 .post { max-width: 600px; margin: auto; padding: .75rem; }
 
-.post p { margin-bottom: 2rem; }
+.post p { margin-bottom: 2rem; font-size: 1.2rem; }
 
-.post a { color: darkgray; }
+.post a { color: #515181; transition: color .2s ease-in-out; }
+
+.post a:hover { color: darkgray; }
 
 .post img { width: 100%; }
 
 .post ul { padding-inline-start: 1.5rem; }
 
-.post li { list-style-type: disc; margin-bottom: .5rem; }
+.post li { list-style-type: disc; margin-bottom: .5rem; font-size: 1rem; }
 
 .blog-container { margin: auto; }
 

@@ -242,5 +242,5 @@ Finally, restart the Nginx application for your changes to take effect.
 sudo systemctl restart nginx 
 {% endhighlight %}
 
-If everything worked properly, you should be able to navigate to your domain name and see our project! Congragulations, your ERN stack application is officially hosted!
+If everything worked properly, you should be able to navigate to your domain name and see our project! Congratulations, your ERN stack application is officially hosted!
 

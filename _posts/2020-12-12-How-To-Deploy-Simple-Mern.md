@@ -25,14 +25,14 @@ So, without further ado, let's get into it!
 
 For this part, you will need:
 
-* NodeJS installed on your computer (if you aren't familiar with NodeSJ, check out [their website](https://nodejs.org/en/))
+* NodeJS installed on your computer (if you aren't familiar with NodeJS, check out [their website](https://nodejs.org/en/))
 * familiarity with JavaScript
 * basic comfort with the command line and using package managers (NPM in this case)
 
 To get started, we'll first initialize an empty folder in the directory we want to store the project. You can do this in a file explorer or use the `mkdir` command, your choice.
 
 {% highlight console %}
-mkdir new-project
+mkdir [new-project]
 {% endhighlight %}
 
 *(You can replace "new-project" with the name of the project you're making.)* 
@@ -46,7 +46,7 @@ cd new-project
 mkdir backend
 {% endhighlight %}
 
-From there, we'll initialize a new node program using `npm init`. This will ask you a couple of quiestions, and you can respond to them with whatever relevant information you have for your project (or just skip them entirely).
+From there, we'll initialize a new node program using the following command. This will ask you a couple of questions, and you can respond to them with the relevant information for your project (or just skip them entirely).
 
 {% highlight console %}
 npm init 
@@ -60,7 +60,7 @@ You can install them all at once, like so:
 npm install express cors nodemon
 {% endhighlight %}
 
-With the setup out of the way, let's code our backend! It's extremely simple, and will take about two minutes:
+With the setup out of the way, let's code our backend! It's extremely simple, and will take about a minute:
 
 {% highlight javascript %}
 const express = require('express')
@@ -91,7 +91,7 @@ First, navigate back to the main directory of your project. If you still have yo
 cd ..
 {% endhighlight %}
 
-to go back. Now, we're going to create the frontend. Setting up React on our own requires quite a bit of finangling, but luckily the creators of the framework have provided a handy command that streamlines the process. 
+to go back. Now, we're going to create the frontend. Setting up React on our own requires quite a bit of finagling, but luckily the creators of the framework have provided a handy command that streamlines the process. 
 
 In the command line, type the following:
 
@@ -99,7 +99,7 @@ In the command line, type the following:
 npx create-react-app client
 {% endhighlight %}
 
-Sit back for a minute or two while the command does it's thing. This will probably be the longest single command you'll run. 
+Sit back for a minute or two while the command does its thing. This will probably be the longest single command you'll run. 
 
 What does it do? Let's break it down word by word. 
 
@@ -122,9 +122,7 @@ This should produce a page that will be quite familiar to anyone who has used `c
 
 *(Thanks to [this post](https://medium.com/@danielgwilson/https-and-create-react-app-3a30ed31c904) for the picture, since I forgot to get one myself.)*
 
-We don't need most of this, so open `App.js` in the `src` folder and delete most of what's there. 
-
-Before we leave the terminal, though, we need to install one more package: [axios](https://www.npmjs.com/package/axios) is an HTTP client for the browser that's a bit easier to work with than the built-in `fetch()` method.
+Before we leave the terminal, we need to install one more package: [axios](https://www.npmjs.com/package/axios) is an HTTP client for the browser that's a bit easier to work with than the built-in `fetch()` method.
 
  Let's go ahead and install that now the same way we installed the packeges in the backend. Hit Control-C to stop the server (we don't need it yet). Then type the following command.
 
@@ -132,7 +130,7 @@ Before we leave the terminal, though, we need to install one more package: [axio
 npm install axios
 {% endhighlight %}
 
-Now it's time to actually code our frontend. Just like the backend, it's pretty simple:
+Now it's time to actually code our frontend. Just like the backend, it's pretty simple. Delete everything that's in the current `App.js` file, and replace it with the following:
 
 {% highlight jsx %}
 import React, {useState, useEffect} from "react"
@@ -164,9 +162,9 @@ export default App;
 
 This isn't a primer for React, so I'm going to assume that you know what `useEffect` and `useState` are. If not, you can check out [this guide to hooks in the official React documentation](https://reactjs.org/docs/hooks-intro.html). You can also check out [this introduction to React](https://reactjs.org/docs/hooks-intro.html) if you're totally new to the framework. 
 
-Suffice to say, this component creates a piece of state called "message" and on initialization, requests content from an api endpoint. This is the same endpoint that our backend is listening from (port 5002, "`/api`"). When it recieves a response, it uses the `setMessage` function to store the message in our piece of state. 
+Suffice to say, this component creates a piece of state called "`message`" and on initialization requests content from an api endpoint. This is the same endpoint that our backend is listening from (port 5002, "`/api`"). When it recieves a response, it uses the `setMessage()` function to store the message in our piece of state. 
 
-Finally, the function returns a piece of JSX. We use [conditional rendering](https://reactjs.org/docs/conditional-rendering.html) to either outpot the message, or "Loading..." to show that we are still requesting something from the backend. 
+Finally, the function returns a piece of JSX. We use [conditional rendering](https://reactjs.org/docs/conditional-rendering.html) to either outpot the message or "Loading..." to show that we are still requesting something from the backend. 
 
 And that's it! Now it's time to actually run the thing. I do this using two different command lines: one for the frontend and one for the backend. On your first command line, navigate to your backend server and intialize the backend with your `nodemon` command:
 
@@ -182,5 +180,5 @@ npm start
 
 This should start the frontend in a new tab. If you did everything right, you should see the same message as I have at the beginning of this document. 
 
-Congragulations! You have successfully created a functional frontend and backend that speak to each other, and laid the groundwork for a much more complex project. In part 2 of this tutorial (coming in the next few days), we'll learn how to host it.
+Congratulations! You have successfully created a functional frontend and backend that speak to each other, and laid the groundwork for a much more complex project. Now go on to [Part 2]({% post_url 2020-12-16-Hosting-App %}) of this tutorial, where you'll learn how to host it.
 

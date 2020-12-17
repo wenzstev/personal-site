@@ -1,28 +1,4 @@
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta content="width=device-width, initial-scale=1" name="viewport" />
-    <title>How to Set Up and Deploy a Dead-Simple ERN App Part 1 - Creating the App</title>
-    <link rel="stylesheet" href="/assets/css/styles.css">
-    <link rel="preconnect" href="https://fonts.gstatic.com">
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
-  </head>
-  <body>
-    <div class="full-page">
-    <div class="content">
-    <header>
-  <div class="blog-container">
-  <div class="blog-header">
-      <h2>How to Set Up and Deploy a Dead-Simple ERN App Part 1 - Creating the App</h2>
-      <small>12 Dec 2020</small>
-  </div>
-  </div>
-</header>
-
-
-<div class="post">
-<p>ERN: Because MongoDB comes next. <!--more--></p>
+I"k?<p>ERN: Because MongoDB comes next. <!--more--></p>
 
 <p>In this post I want to quickly run over my stack and explain the process I used to set up and deploy a barebones Express, Node, and React project. By the end of this tutorial, you’ll know how to make <a href="http://jobhound.stevenwenzel.com">this</a>. It’s the skeleton for my new project, <a href="/2020/12/11/JobHound-Intro.html">JobHound</a>. Because that link is going to be changing regularly, I’m including a screenshot here of what it looks like at the time of this post:</p>
 
@@ -54,7 +30,7 @@
 
 <p>To get started, we’ll first initialize an empty folder in the directory we want to store the project. You can do this in a file explorer or use the <code class="language-plaintext highlighter-rouge">mkdir</code> command, your choice.</p>
 
-<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">mkdir [new-project]</span></code></pre></figure>
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">mkdir new-project</span></code></pre></figure>
 
 <p><em>(You can replace “new-project” with the name of the project you’re making.)</em></p>
 
@@ -65,7 +41,7 @@
 <figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">cd new-project
 mkdir backend</span></code></pre></figure>
 
-<p>From there, we’ll initialize a new node program using the following command. This will ask you a couple of questions, and you can respond to them with the relevant information for your project (or just skip them entirely).</p>
+<p>From there, we’ll initialize a new node program using <code class="language-plaintext highlighter-rouge">npm init</code>. This will ask you a couple of quiestions, and you can respond to them with whatever relevant information you have for your project (or just skip them entirely).</p>
 
 <figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">npm init </span></code></pre></figure>
 
@@ -75,7 +51,7 @@ mkdir backend</span></code></pre></figure>
 
 <figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">npm install express cors nodemon</span></code></pre></figure>
 
-<p>With the setup out of the way, let’s code our backend! It’s extremely simple, and will take about a minute:</p>
+<p>With the setup out of the way, let’s code our backend! It’s extremely simple, and will take about two minutes:</p>
 
 <figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">const</span> <span class="nx">express</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">express</span><span class="dl">'</span><span class="p">)</span>
 <span class="kd">const</span> <span class="nx">cors</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="dl">"</span><span class="s2">cors</span><span class="dl">"</span><span class="p">)</span>
@@ -102,13 +78,13 @@ mkdir backend</span></code></pre></figure>
 
 <figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">cd ..</span></code></pre></figure>
 
-<p>to go back. Now, we’re going to create the frontend. Setting up React on our own requires quite a bit of finagling, but luckily the creators of the framework have provided a handy command that streamlines the process.</p>
+<p>to go back. Now, we’re going to create the frontend. Setting up React on our own requires quite a bit of finangling, but luckily the creators of the framework have provided a handy command that streamlines the process.</p>
 
 <p>In the command line, type the following:</p>
 
 <figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">npx create-react-app client</span></code></pre></figure>
 
-<p>Sit back for a minute or two while the command does its thing. This will probably be the longest single command you’ll run.</p>
+<p>Sit back for a minute or two while the command does it’s thing. This will probably be the longest single command you’ll run.</p>
 
 <p>What does it do? Let’s break it down word by word.</p>
 
@@ -135,13 +111,15 @@ npm start</span></code></pre></figure>
 
 <p><em>(Thanks to <a href="https://medium.com/@danielgwilson/https-and-create-react-app-3a30ed31c904">this post</a> for the picture, since I forgot to get one myself.)</em></p>
 
-<p>Before we leave the terminal, we need to install one more package: <a href="https://www.npmjs.com/package/axios">axios</a> is an HTTP client for the browser that’s a bit easier to work with than the built-in <code class="language-plaintext highlighter-rouge">fetch()</code> method.</p>
+<p>We don’t need most of this, so open <code class="language-plaintext highlighter-rouge">App.js</code> in the <code class="language-plaintext highlighter-rouge">src</code> folder and delete most of what’s there.</p>
+
+<p>Before we leave the terminal, though, we need to install one more package: <a href="https://www.npmjs.com/package/axios">axios</a> is an HTTP client for the browser that’s a bit easier to work with than the built-in <code class="language-plaintext highlighter-rouge">fetch()</code> method.</p>
 
 <p>Let’s go ahead and install that now the same way we installed the packeges in the backend. Hit Control-C to stop the server (we don’t need it yet). Then type the following command.</p>
 
 <figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">npm install axios</span></code></pre></figure>
 
-<p>Now it’s time to actually code our frontend. Just like the backend, it’s pretty simple. Delete everything that’s in the current <code class="language-plaintext highlighter-rouge">App.js</code> file, and replace it with the following:</p>
+<p>Now it’s time to actually code our frontend. Just like the backend, it’s pretty simple:</p>
 
 <figure class="highlight"><pre><code class="language-jsx" data-lang="jsx"><span class="k">import</span> <span class="nx">React</span><span class="p">,</span> <span class="p">{</span><span class="nx">useState</span><span class="p">,</span> <span class="nx">useEffect</span><span class="p">}</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">react</span><span class="dl">"</span>
 
@@ -171,9 +149,9 @@ npm start</span></code></pre></figure>
 
 <p>This isn’t a primer for React, so I’m going to assume that you know what <code class="language-plaintext highlighter-rouge">useEffect</code> and <code class="language-plaintext highlighter-rouge">useState</code> are. If not, you can check out <a href="https://reactjs.org/docs/hooks-intro.html">this guide to hooks in the official React documentation</a>. You can also check out <a href="https://reactjs.org/docs/hooks-intro.html">this introduction to React</a> if you’re totally new to the framework.</p>
 
-<p>Suffice to say, this component creates a piece of state called “<code class="language-plaintext highlighter-rouge">message</code>” and on initialization requests content from an api endpoint. This is the same endpoint that our backend is listening from (port 5002, “<code class="language-plaintext highlighter-rouge">/api</code>”). When it recieves a response, it uses the <code class="language-plaintext highlighter-rouge">setMessage()</code> function to store the message in our piece of state.</p>
+<p>Suffice to say, this component creates a piece of state called “message” and on initialization, requests content from an api endpoint. This is the same endpoint that our backend is listening from (port 5002, “<code class="language-plaintext highlighter-rouge">/api</code>”). When it recieves a response, it uses the <code class="language-plaintext highlighter-rouge">setMessage</code> function to store the message in our piece of state.</p>
 
-<p>Finally, the function returns a piece of JSX. We use <a href="https://reactjs.org/docs/conditional-rendering.html">conditional rendering</a> to either outpot the message or “Loading…” to show that we are still requesting something from the backend.</p>
+<p>Finally, the function returns a piece of JSX. We use <a href="https://reactjs.org/docs/conditional-rendering.html">conditional rendering</a> to either outpot the message, or “Loading…” to show that we are still requesting something from the backend.</p>
 
 <p>And that’s it! Now it’s time to actually run the thing. I do this using two different command lines: one for the frontend and one for the backend. On your first command line, navigate to your backend server and intialize the backend with your <code class="language-plaintext highlighter-rouge">nodemon</code> command:</p>
 
@@ -185,23 +163,6 @@ npm start</span></code></pre></figure>
 
 <p>This should start the frontend in a new tab. If you did everything right, you should see the same message as I have at the beginning of this document.</p>
 
-<p>Congratulations! You have successfully created a functional frontend and backend that speak to each other, and laid the groundwork for a much more complex project. Now go on to <a href="/2020/12/16/Hosting-App.html">Part 2</a> of this tutorial, where you’ll learn how to host it.</p>
+<p>Congragulations! You have successfully created a functional frontend and backend that speak to each other, and laid the groundwork for a much more complex project. In part 2 of this tutorial (coming in the next few days), we’ll learn how to host it.</p>
 
-
-</div>
-
-<footer>
-  <div class="footer-spread">
-  <span><a href="/index.html">Home</a></span>
-  <span><a href="/blog">Blog</a></span>
-  <span>Email: <a href="mailto:wenzelstev@gmail.com">wenzelstev@gmail.com</a></span>
-  <span><a href="https://www.linkedin.com/in/steven-wenzel/">LinkedIn</a></span>
-  <span><a href="https://www.github.com/wenzstev">GitHub</a></span>
-  </div>
-</footer>
-
-
-    </div>
-    </div>
-  </body>
-</html>
+:ET

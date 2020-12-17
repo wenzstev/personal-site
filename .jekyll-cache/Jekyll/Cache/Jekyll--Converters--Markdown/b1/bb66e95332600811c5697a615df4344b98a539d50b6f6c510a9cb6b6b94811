@@ -1,4 +1,4 @@
-I"k0<p>Time to bring our baby into the cold, cruel world. <!--more--></p>
+I"�A<p>Time to bring our baby into the cold, cruel world. <!--more--></p>
 
 <p>In <a href="/2020/12/12/How-To-Deploy-Simple-Mern.html">Part 1</a> of this tutorial, we learned how to set up a simple React frontend and Express backend. Now, in Part 2, we’ll learn how to host it. There are many, many ways to do this, but for today I’m going to be using <a href="https://digitalocean.com">DigitalOcean</a>.</p>
 
@@ -116,6 +116,8 @@ sudo apt-get install git </span></code></pre></figure>
 
 <p>Node.js has been officially installed, and it’s time to deploy our site!</p>
 
+<h4 id="start-up-the-backend">Start up the Backend</h4>
+
 <p>Let’s start with the backend. We’re going to be using <a href="https://pm2.keymetrics.io/">PM2</a>, a program that manages Node processes in the background. First, navigate to the backend folder in your console and install pm2 using the following command:</p>
 
 <figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">npm install pm2 -g</span></code></pre></figure>
@@ -140,5 +142,61 @@ sudo apt-get install git </span></code></pre></figure>
 
 <h4 id="deploying-the-frontend">Deploying the Frontend</h4>
 
-<p>React applications created using <code class="language-plaintext highlighter-rouge">create-react-app</code> and run with <code class="language-plaintext highlighter-rouge">npm start</code> are not optimized for deployment. Fortunatly, the creators of <code class="language-plaintext highlighter-rouge">create-react-app</code> have made this process easy.</p>
+<p>React applications created using <code class="language-plaintext highlighter-rouge">create-react-app</code> and run with <code class="language-plaintext highlighter-rouge">npm start</code> are not optimized for deployment. Fortunatly, the creators of <code class="language-plaintext highlighter-rouge">create-react-app</code> have made this process easy. First you have to install all Node dependencies in the frontend, same as you did with the backend. Navigate to the frontend folder and run</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">npm install</span></code></pre></figure>
+
+<p>This will install the dependencies. Then, you can run</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">npm run build</span></code></pre></figure>
+
+<p>to create a production-ready build of the client.</p>
+
+<p>When the process is finished, you will see a new folder in the directory called <code class="language-plaintext highlighter-rouge">build.</code> This is the folder that that has the version of the client we actually want to run.</p>
+
+<h4 id="tying-it-together-with-nginx">Tying it together with Nginx</h4>
+
+<p>But in order to deploy it, we’ll need a server. For this tutorial, I’m going to use <a href="https://www.nginx.com/">NGINX</a>, which is popular for DigitalOcean tutorials. You should use <a href="https://www.digitalocean.com/community/tutorials/how-to-install-nginx-on-ubuntu-16-04">this tutorial</a> to install and set up Nginx on your droplet.</p>
+
+<p>Once you have Nginx installed, navigate to your <code class="language-plaintext highlighter-rouge">/etc/nginx/sites-available</code> folder. This stores all the sites that Nginx serves. We’re going to create a new file to serve our application.</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">sudo nano application.nginx </span></code></pre></figure>
+
+<p>This will open up the new file. Enter the following configuration:</p>
+
+<figure class="highlight"><pre><code class="language-escape" data-lang="escape">server {
+    server_name [yoursitename] www.[yoursitename];
+    root /home/[yourname]/client/build;
+    index index.html index.htm;
+
+    location / {
+        try_files $uri /index.html;
+    }
+
+    location /api {
+        include proxy_params;
+        proxy_pass http://localhost:5002;
+    }
+}</code></pre></figure>
+
+<p>Replace the bracked information with your personal info.</p>
+
+<p>Let’s break down what this configuration files does. The <code class="language-plaintext highlighter-rouge">server_name</code> key establishes the name of the server that the file will be searching for. The <code class="language-plaintext highlighter-rouge">root</code> key tells Nginx where to look for the entrance into the application. In this case, it’s the <code class="language-plaintext highlighter-rouge">build</code> folder that we created earlier. Specifically, it looks for the <code class="language-plaintext highlighter-rouge">index.html</code> file, as referenced on the next line.</p>
+
+<p>The two <code class="language-plaintext highlighter-rouge">location</code> keys establish the link between the front and backends. For routes beginning with “/”, Nginx directs the request to our frontend. For routes beginning with “/api”, Nginx will direct the request to our backend by using the <code class="language-plaintext highlighter-rouge">proxy_pass</code> command to pass the request along to <code class="language-plaintext highlighter-rouge">localhost:5002</code>, which is where we have the server listening.</p>
+
+<p>And that’s all the setup you need. Initialize the new server by creating a link between the <code class="language-plaintext highlighter-rouge">sites-available</code> and <code class="language-plaintext highlighter-rouge">sites-enabled</code> folders.</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">sudo ln /etc/nginx/sites-available/application.nginx /etc/nginx/sites-enabled</span></code></pre></figure>
+
+<p>Then, test your server to make sure everything is running properly.</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">sudo nginx -t</span></code></pre></figure>
+
+<p>Finally, restart the Nginx application for your changes to take effect.</p>
+
+<figure class="highlight"><pre><code class="language-console" data-lang="console"><span class="go">sudo systemctl restart nginx </span></code></pre></figure>
+
+<p>If everything worked properly, you should be able to navigate to your domain name and see our project! Congratulations, your ERN stack application is officially hosted!</p>
+
 :ET
